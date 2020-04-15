@@ -1,17 +1,43 @@
-use crate::world::Tile;
+use crate::world::{Tile, World};
 use kiss3d::{
+    camera::{ArcBall, Camera},
+    light::Light,
+    planar_camera::PlanarCamera,
+    post_processing::PostProcessingEffect,
+    renderer::Renderer,
     resource::{Mesh, MeshManager},
     scene::SceneNode,
+    window::{State, Window},
 };
 use nalgebra::{Point3, Translation3, Vector3};
 use std::{cell::RefCell, rc::Rc};
 
 const TILE_SIDE_LENGTH: f32 = 1.0;
 const TILE_INSIDE_RADIUS: f32 = TILE_SIDE_LENGTH * 0.866_025; // approx sqrt(3)/2
-const TILE_WIDTH: f32 = TILE_SIDE_LENGTH * 2;
+const TILE_WIDTH: f32 = TILE_SIDE_LENGTH * 2.0;
 const TILE_MESH_NAME: &str = "tile";
 
-fn get_tile_mesh() -> Mesh {
+struct AppState {
+    camera: Box<dyn Camera>,
+}
+
+impl State for AppState {
+    fn step(&mut self, _: &mut Window) {}
+
+    #[allow(clippy::type_complexity)]
+    fn cameras_and_effect_and_renderer(
+        &mut self,
+    ) -> (
+        Option<&mut dyn Camera>,
+        Option<&mut dyn PlanarCamera>,
+        Option<&mut dyn Renderer>,
+        Option<&mut dyn PostProcessingEffect>,
+    ) {
+        (Some(self.camera.as_mut()), None, None, None)
+    }
+}
+
+fn build_tile_mesh() -> Mesh {
     Mesh::new(
         vec![
             // Each of these starts at the center, then goes to the top-right,
@@ -73,14 +99,14 @@ fn get_tile_mesh() -> Mesh {
     )
 }
 
-pub fn init_meshes() {
-    let mesh = Rc::new(RefCell::new(get_tile_mesh()));
+fn init_meshes() {
+    let mesh = Rc::new(RefCell::new(build_tile_mesh()));
     MeshManager::get_global_manager(move |mm| {
         mm.add(mesh.clone(), TILE_MESH_NAME)
     });
 }
 
-pub fn render_tile(parent: &mut SceneNode, tile: &Tile) -> SceneNode {
+fn render_tile(parent: &mut SceneNode, tile: &Tile) -> SceneNode {
     let mut node = parent
         .add_geom_with_name(
             TILE_MESH_NAME,
@@ -98,8 +124,32 @@ pub fn render_tile(parent: &mut SceneNode, tile: &Tile) -> SceneNode {
     ));
 
     // Set color
-    let color = tile.get_color();
+    let color = tile.color();
     node.set_color(color.red(), color.green(), color.blue());
 
     node
+}
+
+pub fn run(world: World) {
+    let mut window = Window::new("Terra");
+    init_meshes();
+
+    let mut node = window.add_group();
+    for tile in world.tiles() {
+        render_tile(&mut node, tile);
+    }
+
+    window.set_light(Light::StickToCamera);
+
+    let state = AppState {
+        camera: Box::new(ArcBall::new_with_frustrum(
+            std::f32::consts::PI / 4.0,
+            0.1,
+            1024.0,
+            Point3::new(-50.0, 50.0, -50.0),
+            Point3::origin(),
+        )),
+    };
+
+    window.render_loop(state)
 }

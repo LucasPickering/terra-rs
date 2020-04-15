@@ -1,9 +1,11 @@
 [package]
-name = "terra-rs"
+name = "terra"
 version = "0.1.0"
 authors = ["Lucas Pickering <lucas@lucaspickering.me>"]
 edition = "2018"
 
 [dependencies]
 kiss3d = "^0.23.0"
+env_logger = "^0.7.1"
+log = "^0.4.8"
 nalgebra = "^0.20.0" # This needs to stay the same as kiss3d's version

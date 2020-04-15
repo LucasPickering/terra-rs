@@ -1,9 +1,12 @@
 mod generate;
 
-use crate::util::Color3;
+use crate::{
+    util::Color3,
+    world::generate::{ElevationGenerator, MagicGenerator, WorldBuilder},
+};
 use std::collections::BTreeMap;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct HexPoint {
     x: isize,
     y: isize,
@@ -32,6 +35,18 @@ impl HexPoint {
         (pixel_x * scale, pixel_y * scale)
     }
 }
+
+pub trait HasHexPosition: Sized {
+    fn position(&self) -> HexPoint;
+
+    /// Convert this value into a tuple with the position. Useful when mapping
+    /// an iterator then collecting into a [HexPointMap].
+    fn into_tuple(self) -> (HexPoint, Self) {
+        (self.position(), self)
+    }
+}
+
+pub type HexPointMap<T> = BTreeMap<HexPoint, T>;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum BiomeType {
@@ -68,7 +83,7 @@ impl Biome {
         }
     }
 
-    fn get_color(self) -> Color3 {
+    fn color(self) -> Color3 {
         match self {
             Self::Ocean => Color3::new(0.08, 0.30, 0.64),
             Self::Coast => Color3::new(0.22, 0.55, 0.78),
@@ -94,11 +109,39 @@ pub struct Tile {
 }
 
 impl Tile {
-    pub fn get_color(&self) -> Color3 {
-        self.biome.get_color()
+    pub fn color(&self) -> Color3 {
+        self.biome.color()
     }
 }
 
+impl HasHexPosition for Tile {
+    fn position(&self) -> HexPoint {
+        self.position
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct WorldConfig {
+    pub seed: u32,
+    pub tile_radius: usize,
+}
+
+#[derive(Clone, Debug)]
 pub struct World {
-    tiles: BTreeMap<HexPoint, Tile>,
+    config: WorldConfig,
+    tiles: HexPointMap<Tile>,
+}
+
+impl World {
+    pub fn tiles(&self) -> impl Iterator<Item = &Tile> {
+        self.tiles.values()
+    }
+
+    pub fn generate(config: WorldConfig) -> Self {
+        let tiles = WorldBuilder::new(config)
+            .generate(&ElevationGenerator)
+            .generate(&MagicGenerator)
+            .into_tiles();
+        Self { config, tiles }
+    }
 }

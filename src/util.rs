@@ -1,4 +1,5 @@
-/// Color uses f32 because the extra precision from f64 is pointless.
+/// An RGB color. Values are stored as floats between 0 and 1 (inclusive).
+/// Thisses f32 because the extra precision from f64 is pointless.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Color3 {
     red: f32,
@@ -7,6 +8,8 @@ pub struct Color3 {
 }
 
 impl Color3 {
+    /// Create a new RGB color. Will panic if any of the components are out of
+    /// the range [0.0, 1.0].
     pub fn new(red: f32, green: f32, blue: f32) -> Self {
         Self {
             red: Self::check_component("red", red),
