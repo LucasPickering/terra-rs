@@ -59,6 +59,7 @@ impl Color3 {
 }
 
 /// A range between two float values, inclusive on both ends.
+#[derive(Copy, Clone, Debug)]
 pub struct FloatRange {
     pub min: f64,
     pub max: f64,

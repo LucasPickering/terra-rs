@@ -1,7 +1,8 @@
 use crate::world::{
     generate::{humidity::HumidityMetadata, Generate},
-    Biome, HexPointMap, WorldConfig,
+    Biome, HexPointMap,
 };
+use std::fmt::{self, Display, Formatter};
 
 pub struct BiomeMetadata {
     pub elevation: f64,
@@ -40,10 +41,16 @@ fn calculate_biome(tile: &HumidityMetadata) -> Biome {
     }
 }
 
+impl Display for BiomePainter {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "BiomePainter")?;
+        Ok(())
+    }
+}
+
 impl Generate<HumidityMetadata, BiomeMetadata> for BiomePainter {
     fn generate(
         &self,
-        _config: &WorldConfig,
         tiles: HexPointMap<HumidityMetadata>,
     ) -> HexPointMap<BiomeMetadata> {
         tiles

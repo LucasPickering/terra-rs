@@ -14,7 +14,7 @@ use crate::{
     },
 };
 use log::{debug, info};
-use std::fmt::Debug;
+use std::fmt::{self, Display, Formatter};
 
 pub struct WorldBuilder<T> {
     config: WorldConfig,
@@ -60,9 +60,8 @@ impl<T> WorldBuilder<T> {
         self,
         generator: &G,
     ) -> WorldBuilder<U> {
-        let (new_tiles, elapsed) =
-            timed!(generator.generate(&self.config, self.tiles));
-        debug!("{:?} took {}ms", generator, elapsed.as_millis());
+        let (new_tiles, elapsed) = timed!(generator.generate(self.tiles));
+        debug!("{} took {}ms", generator, elapsed.as_millis());
 
         WorldBuilder {
             config: self.config,
@@ -75,23 +74,22 @@ impl<T> WorldBuilder<T> {
 /// of tiles that have some data generated, and generates new data for the
 /// output. Generally there will be a series of generators chained together,
 /// where each one adds some more data until the world is complete.
-pub trait Generate<In, Out>: Debug {
-    fn generate(
-        &self,
-        config: &WorldConfig,
-        tiles: HexPointMap<In>,
-    ) -> HexPointMap<Out>;
+pub trait Generate<In, Out>: Display {
+    fn generate(&self, tiles: HexPointMap<In>) -> HexPointMap<Out>;
 }
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct MagicGenerator;
 
+impl Display for MagicGenerator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "MagicGenerator")?;
+        Ok(())
+    }
+}
+
 impl Generate<BiomeMetadata, Tile> for MagicGenerator {
-    fn generate(
-        &self,
-        _config: &WorldConfig,
-        tiles: HexPointMap<BiomeMetadata>,
-    ) -> HexPointMap<Tile> {
+    fn generate(&self, tiles: HexPointMap<BiomeMetadata>) -> HexPointMap<Tile> {
         tiles
             .into_iter()
             .map(|(pos, data)| {
