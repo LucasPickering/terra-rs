@@ -1,6 +1,6 @@
 use crate::{
     util::FloatRange,
-    world::{generate::Generate, HexPointMap, WorldConfig, ELEVATION_RANGE},
+    world::{generate::Generate, HexPointMap, Tile, WorldConfig},
 };
 use noise::{NoiseFn, Perlin, Seedable};
 
@@ -36,20 +36,15 @@ impl Generate<(), ElevationMetadata> for ElevationGenerator {
             .map(|(pos, ())| {
                 // This value is in [-1, 1], we want to map it to our
                 // elevation range
-                let elevation_norm = self.perlin.get([
+                let elevation_unit = self.perlin.get([
                     normalize(pos.x),
                     normalize(pos.y),
                     normalize(pos.z),
                 ]);
-                let mapped_elevation = FloatRange::UNIT_RANGE
-                    .map_to(&ELEVATION_RANGE, elevation_norm);
+                let elevation = FloatRange::UNIT_RANGE
+                    .map_to(&Tile::ELEVATION_RANGE, elevation_unit);
 
-                (
-                    pos,
-                    ElevationMetadata {
-                        elevation: mapped_elevation,
-                    },
-                )
+                (pos, ElevationMetadata { elevation })
             })
             .collect()
     }

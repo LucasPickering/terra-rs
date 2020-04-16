@@ -1,4 +1,4 @@
-use crate::world::{Tile, World, ELEVATION_RANGE};
+use crate::world::{Tile, World};
 use kiss3d::{
     camera::{ArcBall, Camera},
     light::Light,
@@ -112,7 +112,7 @@ fn render_tile(parent: &mut SceneNode, tile: &Tile) -> SceneNode {
             TILE_MESH_NAME,
             Vector3::new(
                 1.0,
-                (tile.elevation - ELEVATION_RANGE.min) as f32,
+                (tile.elevation - Tile::ELEVATION_RANGE.min) as f32,
                 1.0,
             ),
         )

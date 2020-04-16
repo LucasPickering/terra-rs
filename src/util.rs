@@ -1,3 +1,6 @@
+/// A macro to measure the evaluation time of an expression. Wraps an
+/// expression, and outputs a tuple of the value of the expression with the
+/// elapsed time, as a [Duration](std::time::Duration).
 #[macro_export]
 macro_rules! timed {
     ($ex:expr) => {{
@@ -62,7 +65,10 @@ pub struct FloatRange {
 }
 
 impl FloatRange {
+    /// The range [-1.0, 1.0].
     pub const UNIT_RANGE: Self = Self::new(-1.0, 1.0);
+    /// The range [0.0, 1.0].
+    pub const NORMAL_RANGE: Self = Self::new(0.0, 1.0);
 
     pub const fn new(min: f64, max: f64) -> Self {
         Self { min, max }

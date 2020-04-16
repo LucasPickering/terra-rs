@@ -1,10 +1,16 @@
 mod elevation;
+mod humidity;
 
 use crate::{
     timed,
-    world::{Biome, HasHexPosition, HexPoint, HexPointMap, Tile, WorldConfig},
+    world::{
+        generate::{
+            elevation::ElevationGenerator,
+            humidity::{HumidityGenerator, HumidityMetadata},
+        },
+        Biome, HasHexPosition, HexPoint, HexPointMap, Tile, WorldConfig,
+    },
 };
-pub use elevation::*;
 use log::{debug, info};
 use std::fmt::Debug;
 
@@ -32,12 +38,22 @@ impl WorldBuilder<()> {
         info!("Initialized world with {} tiles", tiles.len());
         Self { config, tiles }
     }
+
+    /// Generate a world by running a series of generation steps sequentially.
+    /// Must be run from a blank slate. Outputs the finalized set of tiles.
+    pub fn generate_world(self) -> HexPointMap<Tile> {
+        let config = self.config;
+        self.apply_generator(&ElevationGenerator::new(&config))
+            .apply_generator(&HumidityGenerator::new(&config))
+            .apply_generator(&MagicGenerator)
+            .tiles
+    }
 }
 
 impl<T> WorldBuilder<T> {
     /// A helper to run a generation step on this builder, returning a new
-    /// builder. Allows for chained `.generate` calls.
-    pub fn apply_generator<U, G: Generate<T, U>>(
+    /// builder. Allows for chained calls on an instance.
+    fn apply_generator<U, G: Generate<T, U>>(
         self,
         generator: &G,
     ) -> WorldBuilder<U> {
@@ -49,11 +65,6 @@ impl<T> WorldBuilder<T> {
             config: self.config,
             tiles: new_tiles,
         }
-    }
-
-    /// Get the tiles out of this builder
-    pub fn into_tiles(self) -> HexPointMap<T> {
-        self.tiles
     }
 }
 
@@ -72,19 +83,19 @@ pub trait Generate<In, Out>: Debug + Default {
 #[derive(Copy, Clone, Debug, Default)]
 pub struct MagicGenerator;
 
-impl Generate<ElevationMetadata, Tile> for MagicGenerator {
+impl Generate<HumidityMetadata, Tile> for MagicGenerator {
     fn generate(
         &self,
         _config: &WorldConfig,
-        tiles: HexPointMap<ElevationMetadata>,
+        tiles: HexPointMap<HumidityMetadata>,
     ) -> HexPointMap<Tile> {
         tiles
             .into_iter()
-            .map(|(pos, elev)| {
+            .map(|(pos, data)| {
                 Tile {
                     position: pos,
-                    elevation: elev.elevation,
-                    humidity: 0.0,
+                    elevation: data.elevation,
+                    humidity: data.humidity,
                     biome: Biome::Alpine,
                 }
                 .into_tuple()
