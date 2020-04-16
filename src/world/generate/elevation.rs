@@ -9,7 +9,7 @@ pub struct ElevationMetadata {
 }
 
 /// Generate an elevation map using a noise function.
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug)]
 pub struct ElevationGenerator {
     perlin: Perlin,
 }

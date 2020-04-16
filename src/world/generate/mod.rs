@@ -1,3 +1,4 @@
+mod biome;
 mod elevation;
 mod humidity;
 
@@ -5,10 +6,11 @@ use crate::{
     timed,
     world::{
         generate::{
+            biome::{BiomeMetadata, BiomePainter},
             elevation::ElevationGenerator,
-            humidity::{HumidityGenerator, HumidityMetadata},
+            humidity::HumidityGenerator,
         },
-        Biome, HasHexPosition, HexPoint, HexPointMap, Tile, WorldConfig,
+        HasHexPosition, HexPoint, HexPointMap, Tile, WorldConfig,
     },
 };
 use log::{debug, info};
@@ -45,6 +47,7 @@ impl WorldBuilder<()> {
         let config = self.config;
         self.apply_generator(&ElevationGenerator::new(&config))
             .apply_generator(&HumidityGenerator::new(&config))
+            .apply_generator(&BiomePainter)
             .apply_generator(&MagicGenerator)
             .tiles
     }
@@ -59,7 +62,7 @@ impl<T> WorldBuilder<T> {
     ) -> WorldBuilder<U> {
         let (new_tiles, elapsed) =
             timed!(generator.generate(&self.config, self.tiles));
-        debug!("{:?} took {:.3}s", generator, elapsed.as_secs_f32());
+        debug!("{:?} took {}ms", generator, elapsed.as_millis());
 
         WorldBuilder {
             config: self.config,
@@ -72,7 +75,7 @@ impl<T> WorldBuilder<T> {
 /// of tiles that have some data generated, and generates new data for the
 /// output. Generally there will be a series of generators chained together,
 /// where each one adds some more data until the world is complete.
-pub trait Generate<In, Out>: Debug + Default {
+pub trait Generate<In, Out>: Debug {
     fn generate(
         &self,
         config: &WorldConfig,
@@ -83,11 +86,11 @@ pub trait Generate<In, Out>: Debug + Default {
 #[derive(Copy, Clone, Debug, Default)]
 pub struct MagicGenerator;
 
-impl Generate<HumidityMetadata, Tile> for MagicGenerator {
+impl Generate<BiomeMetadata, Tile> for MagicGenerator {
     fn generate(
         &self,
         _config: &WorldConfig,
-        tiles: HexPointMap<HumidityMetadata>,
+        tiles: HexPointMap<BiomeMetadata>,
     ) -> HexPointMap<Tile> {
         tiles
             .into_iter()
@@ -96,7 +99,7 @@ impl Generate<HumidityMetadata, Tile> for MagicGenerator {
                     position: pos,
                     elevation: data.elevation,
                     humidity: data.humidity,
-                    biome: Biome::Alpine,
+                    biome: data.biome,
                 }
                 .into_tuple()
             })

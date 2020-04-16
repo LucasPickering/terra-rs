@@ -13,7 +13,7 @@ pub struct HumidityMetadata {
 }
 
 /// Generate an humidity map using a noise function.
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug)]
 pub struct HumidityGenerator {
     perlin: Perlin,
 }
