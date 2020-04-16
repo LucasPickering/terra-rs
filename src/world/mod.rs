@@ -1,10 +1,12 @@
 mod generate;
 
 use crate::{
-    util::Color3,
+    util::{Color3, FloatRange},
     world::generate::{ElevationGenerator, MagicGenerator, WorldBuilder},
 };
 use std::collections::BTreeMap;
+
+pub const ELEVATION_RANGE: FloatRange = FloatRange::new(-50.0, 50.0);
 
 #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct HexPoint {
@@ -139,8 +141,8 @@ impl World {
 
     pub fn generate(config: WorldConfig) -> Self {
         let tiles = WorldBuilder::new(config)
-            .generate(&ElevationGenerator)
-            .generate(&MagicGenerator)
+            .apply_generator(&ElevationGenerator::new(&config))
+            .apply_generator(&MagicGenerator)
             .into_tiles();
         Self { config, tiles }
     }

@@ -1,4 +1,4 @@
-use crate::world::{Tile, World};
+use crate::world::{Tile, World, ELEVATION_RANGE};
 use kiss3d::{
     camera::{ArcBall, Camera},
     light::Light,
@@ -110,9 +110,15 @@ fn render_tile(parent: &mut SceneNode, tile: &Tile) -> SceneNode {
     let mut node = parent
         .add_geom_with_name(
             TILE_MESH_NAME,
-            Vector3::new(1.0, tile.elevation as f32, 1.0),
+            Vector3::new(
+                1.0,
+                (tile.elevation - ELEVATION_RANGE.min) as f32,
+                1.0,
+            ),
         )
         .unwrap();
+
+    node.enable_backface_culling(true);
 
     // Shift tile based on its position
     let translation: (f64, f64) =

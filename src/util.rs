@@ -1,5 +1,17 @@
+#[macro_export]
+macro_rules! timed {
+    ($ex:expr) => {{
+        use std::time::Instant;
+
+        let start = Instant::now();
+        let value = $ex;
+        let elapsed = Instant::now() - start;
+        (value, elapsed)
+    }};
+}
+
 /// An RGB color. Values are stored as floats between 0 and 1 (inclusive).
-/// Thisses f32 because the extra precision from f64 is pointless.
+/// This uses f32 because the extra precision from f64 is pointless.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Color3 {
     red: f32,
@@ -40,5 +52,28 @@ impl Color3 {
 
     pub fn blue(&self) -> f32 {
         self.blue
+    }
+}
+
+/// A range between two float values, inclusive on both ends.
+pub struct FloatRange {
+    pub min: f64,
+    pub max: f64,
+}
+
+impl FloatRange {
+    pub const UNIT_RANGE: Self = Self::new(-1.0, 1.0);
+
+    pub const fn new(min: f64, max: f64) -> Self {
+        Self { min, max }
+    }
+
+    pub fn span(&self) -> f64 {
+        self.max - self.min
+    }
+
+    pub fn map_to(&self, dest_range: &Self, value: f64) -> f64 {
+        let normalized = (value - self.min) / self.span();
+        (normalized * dest_range.span()) + dest_range.min
     }
 }

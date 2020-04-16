@@ -7,8 +7,8 @@ use crate::world::{World, WorldConfig};
 fn main() {
     env_logger::init();
     let world = World::generate(WorldConfig {
-        seed: 4,
-        tile_radius: 16,
+        seed: 239_239_230,
+        tile_radius: 25,
     });
     render::run(world);
 }

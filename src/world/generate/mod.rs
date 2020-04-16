@@ -1,10 +1,11 @@
 mod elevation;
 
-use crate::world::{
-    Biome, HasHexPosition, HexPoint, HexPointMap, Tile, WorldConfig,
+use crate::{
+    timed,
+    world::{Biome, HasHexPosition, HexPoint, HexPointMap, Tile, WorldConfig},
 };
 pub use elevation::*;
-use log::info;
+use log::{debug, info};
 use std::fmt::Debug;
 
 pub struct WorldBuilder<T> {
@@ -14,14 +15,21 @@ pub struct WorldBuilder<T> {
 
 impl WorldBuilder<()> {
     pub fn new(config: WorldConfig) -> Self {
+        // Initialize a set of tiles with no data
         let mut tiles = HexPointMap::new();
         let radius: isize = config.tile_radius as isize;
+
+        // Some of these inserts will be duplicates, when `x == y`. It's easier
+        // just to overwrite those instead of programming around them.
         for x in -radius..=radius {
             for y in -radius..=radius {
                 let pos = HexPoint::new(x, y, -(x + y));
                 tiles.insert(pos, ());
             }
         }
+
+        // The final count should always be `4r^2 + 2r + 1`, where r is radius
+        info!("Initialized world with {} tiles", tiles.len());
         Self { config, tiles }
     }
 }
@@ -29,12 +37,14 @@ impl WorldBuilder<()> {
 impl<T> WorldBuilder<T> {
     /// A helper to run a generation step on this builder, returning a new
     /// builder. Allows for chained `.generate` calls.
-    pub fn generate<U, G: Generate<T, U>>(
+    pub fn apply_generator<U, G: Generate<T, U>>(
         self,
         generator: &G,
     ) -> WorldBuilder<U> {
-        info!("Running generator {:?}", generator);
-        let new_tiles = generator.generate(&self.config, self.tiles);
+        let (new_tiles, elapsed) =
+            timed!(generator.generate(&self.config, self.tiles));
+        debug!("{:?} took {:.3}s", generator, elapsed.as_secs_f32());
+
         WorldBuilder {
             config: self.config,
             tiles: new_tiles,
@@ -47,6 +57,10 @@ impl<T> WorldBuilder<T> {
     }
 }
 
+/// A type that generates some sort of data for the world. This takes in a set
+/// of tiles that have some data generated, and generates new data for the
+/// output. Generally there will be a series of generators chained together,
+/// where each one adds some more data until the world is complete.
 pub trait Generate<In, Out>: Debug + Default {
     fn generate(
         &self,
