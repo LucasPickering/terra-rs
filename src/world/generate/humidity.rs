@@ -24,10 +24,10 @@ impl HumidityGenerator {
     pub fn new(config: &WorldConfig) -> Self {
         let noise_fn = BasicMulti::new()
             .set_seed(config.seed)
-            .set_frequency(8.0)
+            .set_frequency(2.0)
             .set_lacunarity(2.0)
-            .set_persistence(0.5)
-            .set_octaves(6);
+            .set_persistence(0.25)
+            .set_octaves(3);
 
         let radius_f = config.tile_radius as f64;
         Self {
