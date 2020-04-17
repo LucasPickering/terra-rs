@@ -10,3 +10,9 @@ env_logger = "^0.7.1"
 log = "^0.4.8"
 nalgebra = "^0.20.0" # This needs to stay the same as kiss3d's version
 noise = "^0.6.0"
+serde = { version = "^1.0.106", features = ["derive"] }
+
+[dependencies.config]
+version = "^0.10.1"
+default-features = false
+features = ["toml"]

@@ -1,4 +1,6 @@
-use crate::world::{HasHexPosition, HexPointMap, Tile, TileLens, World};
+use crate::world::{
+    HasHexPosition, HexPointMap, Tile, TileLens, World, WorldConfig,
+};
 use kiss3d::{
     camera::{ArcBall, Camera},
     event::{Action, Key, WindowEvent},
@@ -21,10 +23,40 @@ const TILE_MESH_NAME: &str = "tile";
 struct AppState {
     camera: Box<dyn Camera>,
     world: World,
+    root_node: SceneNode,
     tile_nodes: HexPointMap<SceneNode>,
 }
 
 impl AppState {
+    fn new(window: &mut Window) -> Self {
+        let camera = ArcBall::new_with_frustrum(
+            std::f32::consts::PI / 4.0,
+            0.1,
+            1024.0,
+            Point3::new(-50.0, 50.0, -50.0),
+            Point3::origin(),
+        );
+
+        let world_config = WorldConfig::load().unwrap();
+        let world = World::generate(world_config);
+
+        let mut root_node = window.add_group();
+        let tile_nodes: HexPointMap<_> = world
+            .tiles()
+            .values()
+            .map(|tile| (tile.position(), render_tile(&mut root_node, tile)))
+            .collect();
+
+        let mut state = Self {
+            camera: Box::new(camera),
+            world,
+            root_node,
+            tile_nodes,
+        };
+        state.update_tile_color(TileLens::Composite);
+        state
+    }
+
     fn handle_event(&mut self, event: &WindowEvent) {
         match event {
             WindowEvent::Key(Key::Key1, Action::Press, _) => {
@@ -167,31 +199,10 @@ fn render_tile(parent: &mut SceneNode, tile: &Tile) -> SceneNode {
     node
 }
 
-pub fn run(world: World) {
+pub fn run() {
     let mut window = Window::new("Terra");
     init_meshes();
-
-    let mut root_node = window.add_group();
-    let tile_nodes: HexPointMap<_> = world
-        .tiles()
-        .values()
-        .map(|tile| (tile.position(), render_tile(&mut root_node, tile)))
-        .collect();
-
     window.set_light(Light::StickToCamera);
-
-    let mut state = AppState {
-        camera: Box::new(ArcBall::new_with_frustrum(
-            std::f32::consts::PI / 4.0,
-            0.1,
-            1024.0,
-            Point3::new(-50.0, 50.0, -50.0),
-            Point3::origin(),
-        )),
-        world,
-        tile_nodes,
-    };
-    state.update_tile_color(TileLens::Composite);
-
+    let state = AppState::new(&mut window);
     window.render_loop(state)
 }

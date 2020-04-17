@@ -1,5 +1,7 @@
+mod config;
 mod generate;
 
+pub use self::config::WorldConfig;
 use crate::{
     util::{Color3, FloatRange},
     world::generate::WorldBuilder,
@@ -68,7 +70,7 @@ pub enum Biome {
 }
 
 impl Biome {
-    fn biome_type(self) -> BiomeType {
+    fn _biome_type(self) -> BiomeType {
         match self {
             Self::Ocean | Self::Coast | Self::Lake => BiomeType::Water,
             Self::Snow
@@ -146,12 +148,6 @@ impl HasHexPosition for Tile {
     fn position(&self) -> HexPoint {
         self.position
     }
-}
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct WorldConfig {
-    pub seed: u32,
-    pub tile_radius: usize,
 }
 
 #[derive(Clone, Debug)]

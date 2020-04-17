@@ -6,6 +6,7 @@ use crate::{
     timed,
     util::FloatRange,
     world::{
+        config::NoiseFnConfig,
         generate::{
             biome::{BiomeMetadata, BiomePainter},
             elevation::ElevationGenerator,
@@ -78,25 +79,6 @@ impl<T> WorldBuilder<T> {
 /// where each one adds some more data until the world is complete.
 pub trait Generate<In, Out>: Display {
     fn generate(&self, tiles: HexPointMap<In>) -> HexPointMap<Out>;
-}
-
-#[derive(Copy, Clone, Debug)]
-pub struct NoiseFnConfig {
-    octaves: usize,
-    frequency: f64,
-    lacunarity: f64,
-    persistence: f64,
-}
-
-impl Default for NoiseFnConfig {
-    fn default() -> Self {
-        Self {
-            octaves: 2,
-            frequency: 1.0,
-            lacunarity: 2.0,
-            persistence: 0.5,
-        }
-    }
 }
 
 /// A wrapper around a noise function that makes it easy to use for generating

@@ -1,7 +1,5 @@
 use crate::world::{
-    generate::{
-        elevation::ElevationMetadata, Generate, NoiseFnConfig, TileNoiseFn,
-    },
+    generate::{elevation::ElevationMetadata, Generate, TileNoiseFn},
     HexPointMap, Tile, WorldConfig,
 };
 use noise::{BasicMulti, NoiseFn};
@@ -20,17 +18,10 @@ pub struct HumidityGenerator {
 
 impl HumidityGenerator {
     pub fn new(config: &WorldConfig) -> Self {
-        let noise_fn_config = NoiseFnConfig {
-            octaves: 3,
-            frequency: 2.0,
-            lacunarity: 2.0,
-            persistence: 0.25,
-        };
-
         Self {
             noise_fn: TileNoiseFn::new(
                 config,
-                &noise_fn_config,
+                &config.humidity,
                 Tile::HUMDITY_RANGE,
             ),
         }

@@ -1,5 +1,5 @@
 use crate::world::{
-    generate::{Generate, NoiseFnConfig, TileNoiseFn},
+    generate::{Generate, TileNoiseFn},
     HexPointMap, Tile, WorldConfig,
 };
 use noise::{BasicMulti, NoiseFn};
@@ -17,17 +17,10 @@ pub struct ElevationGenerator {
 
 impl ElevationGenerator {
     pub fn new(config: &WorldConfig) -> Self {
-        let noise_fn_config = NoiseFnConfig {
-            octaves: 12,
-            frequency: 1.0,
-            lacunarity: 4.0,
-            persistence: 0.5,
-        };
-
         Self {
             noise_fn: TileNoiseFn::new(
                 config,
-                &noise_fn_config,
+                &config.elevation,
                 Tile::ELEVATION_RANGE,
             ),
         }
