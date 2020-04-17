@@ -23,6 +23,7 @@ const TILE_MESH_NAME: &str = "tile";
 struct AppState {
     camera: Box<dyn Camera>,
     world: World,
+    lens: TileLens,
     root_node: SceneNode,
     tile_nodes: HexPointMap<SceneNode>,
 }
@@ -41,23 +42,19 @@ impl AppState {
         let world = World::generate(world_config);
 
         let mut root_node = window.add_group();
-        let tile_nodes: HexPointMap<_> = world
-            .tiles()
-            .values()
-            .map(|tile| (tile.position(), render_tile(&mut root_node, tile)))
-            .collect();
+        let tile_nodes =
+            render_tiles(&mut root_node, world.tiles(), TileLens::Composite);
 
-        let mut state = Self {
+        Self {
             camera: Box::new(camera),
             world,
+            lens: TileLens::Composite,
             root_node,
             tile_nodes,
-        };
-        state.update_tile_color(TileLens::Composite);
-        state
+        }
     }
 
-    fn handle_event(&mut self, event: &WindowEvent) {
+    fn handle_event(&mut self, window: &mut Window, event: &WindowEvent) {
         match event {
             WindowEvent::Key(Key::Key1, Action::Press, _) => {
                 self.update_tile_color(TileLens::Composite);
@@ -71,23 +68,35 @@ impl AppState {
             WindowEvent::Key(Key::Key4, Action::Press, _) => {
                 self.update_tile_color(TileLens::Biome);
             }
+            WindowEvent::Key(Key::R, Action::Press, _) => {
+                self.regenerate_world(window);
+            }
             _ => {}
         }
     }
 
+    fn regenerate_world(&mut self, window: &mut Window) {
+        // Generate a new world
+        let world_config = WorldConfig::load().unwrap();
+        self.world = World::generate(world_config);
+
+        // Swap out the nodes
+        window.remove_node(&mut self.root_node);
+        self.root_node = window.add_group();
+        self.tile_nodes =
+            render_tiles(&mut self.root_node, self.world.tiles(), self.lens);
+    }
+
     fn update_tile_color(&mut self, lens: TileLens) {
-        for (pos, node) in self.tile_nodes.iter_mut() {
-            let tile = self.world.tiles().get(pos).unwrap();
-            let color = tile.color(lens);
-            node.set_color(color.red(), color.green(), color.blue());
-        }
+        self.lens = lens;
+        apply_tile_colors(self.world.tiles(), &mut self.tile_nodes, lens);
     }
 }
 
 impl State for AppState {
     fn step(&mut self, window: &mut Window) {
         for event in window.events().iter() {
-            self.handle_event(&event.value);
+            self.handle_event(window, &event.value);
         }
     }
 
@@ -171,6 +180,31 @@ fn init_meshes() {
     MeshManager::get_global_manager(move |mm| {
         mm.add(mesh.clone(), TILE_MESH_NAME)
     });
+}
+
+fn apply_tile_colors(
+    tiles: &HexPointMap<Tile>,
+    tile_nodes: &mut HexPointMap<SceneNode>,
+    lens: TileLens,
+) {
+    for (pos, node) in tile_nodes.iter_mut() {
+        let tile = tiles.get(pos).unwrap();
+        let color = tile.color(lens);
+        node.set_color(color.red(), color.green(), color.blue());
+    }
+}
+
+fn render_tiles(
+    root_node: &mut SceneNode,
+    tiles: &HexPointMap<Tile>,
+    lens: TileLens,
+) -> HexPointMap<SceneNode> {
+    let mut tile_nodes: HexPointMap<_> = tiles
+        .values()
+        .map(|tile| (tile.position(), render_tile(root_node, tile)))
+        .collect();
+    apply_tile_colors(tiles, &mut tile_nodes, lens);
+    tile_nodes
 }
 
 fn render_tile(parent: &mut SceneNode, tile: &Tile) -> SceneNode {

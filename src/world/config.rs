@@ -1,4 +1,5 @@
 use config::{Config, ConfigError, File};
+use log::{debug, info};
 use serde::Deserialize;
 
 #[derive(Copy, Clone, Debug, Deserialize)]
@@ -19,9 +20,12 @@ pub struct WorldConfig {
 
 impl WorldConfig {
     pub fn load() -> Result<Self, ConfigError> {
+        info!("Loading world config...");
         let mut settings = Config::default();
         // Look for "./terra.toml"
         settings.merge(File::with_name("terra.toml"))?;
-        settings.try_into::<Self>()
+        let config = settings.try_into::<Self>()?;
+        debug!("Loaded world config:\n{:#?}", &config);
+        Ok(config)
     }
 }

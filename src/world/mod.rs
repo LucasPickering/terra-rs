@@ -6,7 +6,10 @@ use crate::{
     util::{Color3, FloatRange},
     world::generate::WorldBuilder,
 };
-use std::collections::BTreeMap;
+use std::{
+    collections::BTreeMap,
+    fmt::{Display, Formatter},
+};
 
 #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct HexPoint {
@@ -33,6 +36,12 @@ impl HexPoint {
         let pixel_y: f64 =
             (self.x as f64 / 2.0 + self.y as f64) * -(3.0_f64.sqrt() / 2.0);
         (pixel_x * scale, pixel_y * scale)
+    }
+}
+
+impl Display for HexPoint {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {}, {})", self.x, self.y, self.z)
     }
 }
 

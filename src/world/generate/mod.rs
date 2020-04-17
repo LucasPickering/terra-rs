@@ -115,6 +115,12 @@ impl<F: NoiseFn<[f64; 3]>> TileNoiseFn<F> {
             output_range,
         }
     }
+
+    /// Helper to map one value in a [HexPoint] to [-1, 1].
+    fn normalize_input(&self, value: isize) -> f64 {
+        self.tile_pos_range
+            .map_to(&Self::NOISE_FN_INPUT_RANGE, value as f64)
+    }
 }
 
 impl<F: Default + Seedable + MultiFractal + NoiseFn<[f64; 3]>> TileNoiseFn<F> {
@@ -145,15 +151,12 @@ impl<F: Default + Seedable + MultiFractal + NoiseFn<[f64; 3]>> TileNoiseFn<F> {
 
 impl<F: NoiseFn<[f64; 3]>> NoiseFn<HexPoint> for TileNoiseFn<F> {
     fn get(&self, point: HexPoint) -> f64 {
-        // Helper to map each axis value to [-1, 1]
-        let normalize = |v: isize| {
-            self.tile_pos_range
-                .map_to(&Self::NOISE_FN_INPUT_RANGE, v as f64)
-        };
-
         // Map each input value to [-1, 1]
-        let normalized_input =
-            [normalize(point.x), normalize(point.y), normalize(point.z)];
+        let normalized_input = [
+            self.normalize_input(point.x),
+            self.normalize_input(point.y),
+            self.normalize_input(point.z),
+        ];
         let normalized_output = self.noise_fn.get(normalized_input);
         Self::NOISE_FN_OUTPUT_RANGE
             .map_to(&self.output_range, normalized_output)
