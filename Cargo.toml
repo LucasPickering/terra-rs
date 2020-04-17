@@ -1,0 +1,9 @@
+[package]
+name = "terra-rs"
+version = "0.1.0"
+authors = ["Lucas Pickering <lucas@lucaspickering.me>"]
+edition = "2018"
+
+[dependencies]
+kiss3d = "^0.23.0"
+nalgebra = "^0.20.0" # This needs to stay the same as kiss3d's version
