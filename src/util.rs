@@ -66,8 +66,6 @@ pub struct FloatRange {
 }
 
 impl FloatRange {
-    /// The range [-1.0, 1.0].
-    pub const UNIT_RANGE: Self = Self::new(-1.0, 1.0);
     /// The range [0.0, 1.0].
     pub const NORMAL_RANGE: Self = Self::new(0.0, 1.0);
 

@@ -4,6 +4,7 @@ mod humidity;
 
 use crate::{
     timed,
+    util::FloatRange,
     world::{
         generate::{
             biome::{BiomeMetadata, BiomePainter},
@@ -14,6 +15,7 @@ use crate::{
     },
 };
 use log::{debug, info};
+use noise::{MultiFractal, NoiseFn, Seedable};
 use std::fmt::{self, Display, Formatter};
 
 pub struct WorldBuilder<T> {
@@ -76,6 +78,104 @@ impl<T> WorldBuilder<T> {
 /// where each one adds some more data until the world is complete.
 pub trait Generate<In, Out>: Display {
     fn generate(&self, tiles: HexPointMap<In>) -> HexPointMap<Out>;
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct NoiseFnConfig {
+    octaves: usize,
+    frequency: f64,
+    lacunarity: f64,
+    persistence: f64,
+}
+
+impl Default for NoiseFnConfig {
+    fn default() -> Self {
+        Self {
+            octaves: 2,
+            frequency: 1.0,
+            lacunarity: 2.0,
+            persistence: 0.5,
+        }
+    }
+}
+
+/// A wrapper around a noise function that makes it easy to use for generating
+/// tile values. This is initialized for a particular function type, and
+/// makes it easy to pass in a [HexPoint] and get out values in an arbitrary
+/// output range.
+#[derive(Clone, Debug)]
+pub struct TileNoiseFn<F: NoiseFn<[f64; 3]>> {
+    /// The noise generation function
+    noise_fn: F,
+    /// The range of tile position values. Used to map the input.
+    tile_pos_range: FloatRange,
+    output_range: FloatRange,
+}
+
+impl<F: NoiseFn<[f64; 3]>> TileNoiseFn<F> {
+    /// The output range of the internal noise function. Used to map our
+    /// input values to the noise function's input values.
+    const NOISE_FN_INPUT_RANGE: FloatRange = FloatRange::new(-1.0, 1.0);
+    /// The output range of the internal noise function. Used to map the noise
+    /// values to our own output range.
+    const NOISE_FN_OUTPUT_RANGE: FloatRange = FloatRange::new(-1.0, 1.0);
+
+    /// Initialize a wrapper around the given function.
+    fn from_fn(
+        world_radius: usize,
+        noise_fn: F,
+        output_range: FloatRange,
+    ) -> Self {
+        let radius_f = world_radius as f64;
+        Self {
+            noise_fn,
+            tile_pos_range: FloatRange::new(-radius_f, radius_f),
+            output_range,
+        }
+    }
+}
+
+impl<F: Default + Seedable + MultiFractal + NoiseFn<[f64; 3]>> TileNoiseFn<F> {
+    /// Initialize a new function for some underlying noise fn type.
+    ///
+    /// ### Arguments
+    /// - `world_config` - The overall world config, needed for seed and world
+    /// radius.
+    /// - `fn_config` - Configuration for the underlying noise fn.
+    /// - `output_range` - The output range of this function. Noise values will
+    /// be mapped to this range during generation.
+    pub fn new(
+        world_config: &WorldConfig,
+        fn_config: &NoiseFnConfig,
+        output_range: FloatRange,
+    ) -> Self {
+        // Configure the noise function
+        let noise_fn = F::default()
+            .set_seed(world_config.seed)
+            .set_octaves(fn_config.octaves)
+            .set_frequency(fn_config.frequency)
+            .set_lacunarity(fn_config.lacunarity)
+            .set_persistence(fn_config.persistence);
+
+        Self::from_fn(world_config.tile_radius, noise_fn, output_range)
+    }
+}
+
+impl<F: NoiseFn<[f64; 3]>> NoiseFn<HexPoint> for TileNoiseFn<F> {
+    fn get(&self, point: HexPoint) -> f64 {
+        // Helper to map each axis value to [-1, 1]
+        let normalize = |v: isize| {
+            self.tile_pos_range
+                .map_to(&Self::NOISE_FN_INPUT_RANGE, v as f64)
+        };
+
+        // Map each input value to [-1, 1]
+        let normalized_input =
+            [normalize(point.x), normalize(point.y), normalize(point.z)];
+        let normalized_output = self.noise_fn.get(normalized_input);
+        Self::NOISE_FN_OUTPUT_RANGE
+            .map_to(&self.output_range, normalized_output)
+    }
 }
 
 #[derive(Copy, Clone, Debug, Default)]
