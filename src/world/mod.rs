@@ -110,9 +110,36 @@ impl Tile {
     pub const ELEVATION_RANGE: FloatRange = FloatRange::new(-50.0, 50.0);
     pub const HUMDITY_RANGE: FloatRange = FloatRange::NORMAL_RANGE;
 
-    pub fn color(&self) -> Color3 {
-        self.biome.color()
+    /// Compute the color of a tile based on the lens being viewed. The lens
+    /// controls what data the color is derived from.
+    pub fn color(&self, lens: TileLens) -> Color3 {
+        match lens {
+            // For now, composite is just biome. Later it will include more
+            // data.
+            TileLens::Composite | TileLens::Biome => self.biome.color(),
+            TileLens::Elevation => {
+                let normalized_elev = Self::ELEVATION_RANGE
+                    .map_to(&FloatRange::NORMAL_RANGE, self.elevation)
+                    as f32;
+                Color3::new(1.0, normalized_elev, normalized_elev)
+            }
+            TileLens::Humidity => {
+                let normalized_humidity = Self::HUMDITY_RANGE
+                    .map_to(&FloatRange::NORMAL_RANGE, self.humidity)
+                    as f32;
+                Color3::new(normalized_humidity, normalized_humidity, 1.0)
+            }
+        }
     }
+}
+
+/// A definition of what data is used to compute a tile's color.
+#[derive(Copy, Clone, Debug)]
+pub enum TileLens {
+    Composite,
+    Elevation,
+    Humidity,
+    Biome,
 }
 
 impl HasHexPosition for Tile {
@@ -134,8 +161,8 @@ pub struct World {
 }
 
 impl World {
-    pub fn tiles(&self) -> impl Iterator<Item = &Tile> {
-        self.tiles.values()
+    pub fn tiles(&self) -> &HexPointMap<Tile> {
+        &self.tiles
     }
 
     pub fn generate(config: WorldConfig) -> Self {

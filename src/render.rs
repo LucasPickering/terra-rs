@@ -1,6 +1,7 @@
-use crate::world::{Tile, World};
+use crate::world::{HasHexPosition, HexPointMap, Tile, TileLens, World};
 use kiss3d::{
     camera::{ArcBall, Camera},
+    event::{Action, Key, WindowEvent},
     light::Light,
     planar_camera::PlanarCamera,
     post_processing::PostProcessingEffect,
@@ -19,10 +20,44 @@ const TILE_MESH_NAME: &str = "tile";
 
 struct AppState {
     camera: Box<dyn Camera>,
+    world: World,
+    tile_nodes: HexPointMap<SceneNode>,
+}
+
+impl AppState {
+    fn handle_event(&mut self, event: &WindowEvent) {
+        match event {
+            WindowEvent::Key(Key::Key1, Action::Press, _) => {
+                self.update_tile_color(TileLens::Composite);
+            }
+            WindowEvent::Key(Key::Key2, Action::Press, _) => {
+                self.update_tile_color(TileLens::Elevation);
+            }
+            WindowEvent::Key(Key::Key3, Action::Press, _) => {
+                self.update_tile_color(TileLens::Humidity);
+            }
+            WindowEvent::Key(Key::Key4, Action::Press, _) => {
+                self.update_tile_color(TileLens::Biome);
+            }
+            _ => {}
+        }
+    }
+
+    fn update_tile_color(&mut self, lens: TileLens) {
+        for (pos, node) in self.tile_nodes.iter_mut() {
+            let tile = self.world.tiles().get(pos).unwrap();
+            let color = tile.color(lens);
+            node.set_color(color.red(), color.green(), color.blue());
+        }
+    }
 }
 
 impl State for AppState {
-    fn step(&mut self, _: &mut Window) {}
+    fn step(&mut self, window: &mut Window) {
+        for event in window.events().iter() {
+            self.handle_event(&event.value);
+        }
+    }
 
     #[allow(clippy::type_complexity)]
     fn cameras_and_effect_and_renderer(
@@ -129,10 +164,6 @@ fn render_tile(parent: &mut SceneNode, tile: &Tile) -> SceneNode {
         translation.1 as f32,
     ));
 
-    // Set color
-    let color = tile.color();
-    node.set_color(color.red(), color.green(), color.blue());
-
     node
 }
 
@@ -140,14 +171,16 @@ pub fn run(world: World) {
     let mut window = Window::new("Terra");
     init_meshes();
 
-    let mut node = window.add_group();
-    for tile in world.tiles() {
-        render_tile(&mut node, tile);
-    }
+    let mut root_node = window.add_group();
+    let tile_nodes: HexPointMap<_> = world
+        .tiles()
+        .values()
+        .map(|tile| (tile.position(), render_tile(&mut root_node, tile)))
+        .collect();
 
     window.set_light(Light::StickToCamera);
 
-    let state = AppState {
+    let mut state = AppState {
         camera: Box::new(ArcBall::new_with_frustrum(
             std::f32::consts::PI / 4.0,
             0.1,
@@ -155,7 +188,10 @@ pub fn run(world: World) {
             Point3::new(-50.0, 50.0, -50.0),
             Point3::origin(),
         )),
+        world,
+        tile_nodes,
     };
+    state.update_tile_color(TileLens::Composite);
 
     window.render_loop(state)
 }
