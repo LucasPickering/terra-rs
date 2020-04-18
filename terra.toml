@@ -1,5 +1,5 @@
 seed = 1292848
-tile_radius = 16
+tile_radius = 30
 
 [elevation]
 octaves = 12

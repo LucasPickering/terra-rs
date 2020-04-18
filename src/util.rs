@@ -56,6 +56,13 @@ impl Color3 {
     pub fn blue(&self) -> f32 {
         self.blue
     }
+
+    pub fn hex(&self) -> u32 {
+        let red = (self.red * 255.0) as u32;
+        let green = (self.green * 255.0) as u32;
+        let blue = (self.blue * 255.0) as u32;
+        (red << 16) | (green << 8) | blue
+    }
 }
 
 /// A range between two float values, inclusive on both ends.

@@ -31,11 +31,11 @@ impl HexPoint {
 
     /// Convert this hexagonal coordinate into a 2d pixel coordinate. Useful
     /// for figuring out where to position a tile on the screen.
-    pub fn get_pixel_pos(&self, scale: f64) -> (f64, f64) {
-        let pixel_x: f64 = self.x as f64 * 0.75;
-        let pixel_y: f64 =
+    pub fn get_pixel_pos(&self, scale: f64) -> [f64; 2] {
+        let pixel_x: f64 =
             (self.x as f64 / 2.0 + self.y as f64) * -(3.0_f64.sqrt() / 2.0);
-        (pixel_x * scale, pixel_y * scale)
+        let pixel_y: f64 = self.x as f64 * 0.75;
+        [pixel_x * scale, pixel_y * scale]
     }
 }
 
