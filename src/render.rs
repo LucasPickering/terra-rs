@@ -12,6 +12,7 @@ use kiss3d::{
     scene::SceneNode,
     window::{State, Window},
 };
+use log::debug;
 use nalgebra::{Point3, Translation3, Vector3};
 use std::{cell::RefCell, rc::Rc};
 
@@ -188,7 +189,7 @@ fn apply_tile_colors(
     lens: TileLens,
 ) {
     for (pos, node) in tile_nodes.iter_mut() {
-        let tile = tiles.get(pos).unwrap();
+        let tile = tiles.get(pos).expect("Missing SceneNode for Tile");
         let color = tile.color(lens);
         node.set_color(color.red(), color.green(), color.blue());
     }
@@ -213,7 +214,7 @@ fn render_tile(parent: &mut SceneNode, tile: &Tile) -> SceneNode {
             TILE_MESH_NAME,
             Vector3::new(
                 1.0,
-                (tile.elevation - Tile::ELEVATION_RANGE.min) as f32,
+                (tile.elevation() - Tile::ELEVATION_RANGE.min) as f32,
                 1.0,
             ),
         )
@@ -223,7 +224,7 @@ fn render_tile(parent: &mut SceneNode, tile: &Tile) -> SceneNode {
 
     // Shift tile based on its position
     let translation: (f64, f64) =
-        tile.position.get_pixel_pos(TILE_WIDTH as f64);
+        tile.position().get_pixel_pos(TILE_WIDTH as f64);
     node.set_local_translation(Translation3::new(
         translation.0 as f32,
         0.0,

@@ -106,17 +106,29 @@ impl Biome {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Builder)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Tile {
-    pub position: HexPoint,
-    pub elevation: f64,
-    pub humidity: f64,
-    pub biome: Biome,
+    position: HexPoint,
+    elevation: f64,
+    humidity: f64,
+    biome: Biome,
 }
 
 impl Tile {
     pub const ELEVATION_RANGE: FloatRange = FloatRange::new(-50.0, 50.0);
     pub const HUMDITY_RANGE: FloatRange = FloatRange::NORMAL_RANGE;
+
+    pub fn elevation(&self) -> f64 {
+        self.elevation
+    }
+
+    pub fn humidity(&self) -> f64 {
+        self.humidity
+    }
+
+    pub fn biome(&self) -> Biome {
+        self.biome
+    }
 
     /// Compute the color of a tile based on the lens being viewed. The lens
     /// controls what data the color is derived from.
