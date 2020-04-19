@@ -1,13 +1,9 @@
 use crate::world::{
-    generate::{Generate, TileNoiseFn},
-    HexPointMap, Tile, WorldConfig,
+    generate::{Generate, TileBuilder, TileNoiseFn},
+    HasHexPosition, HexPointMap, Tile, WorldConfig,
 };
 use noise::{BasicMulti, NoiseFn};
 use std::fmt::{self, Display, Formatter};
-
-pub struct ElevationMetadata {
-    pub elevation: f64,
-}
 
 /// Generate an elevation map using a noise function.
 #[derive(Clone, Debug)]
@@ -34,21 +30,10 @@ impl Display for ElevationGenerator {
     }
 }
 
-impl Generate<(), ElevationMetadata> for ElevationGenerator {
-    fn generate(
-        &self,
-        tiles: HexPointMap<()>,
-    ) -> HexPointMap<ElevationMetadata> {
-        tiles
-            .into_iter()
-            .map(|(pos, ())| {
-                (
-                    pos,
-                    ElevationMetadata {
-                        elevation: self.noise_fn.get(pos),
-                    },
-                )
-            })
-            .collect()
+impl Generate for ElevationGenerator {
+    fn generate(&self, tiles: &mut HexPointMap<TileBuilder>) {
+        for tile in tiles.values_mut() {
+            tile.set_elevation(self.noise_fn.get(tile.position()));
+        }
     }
 }

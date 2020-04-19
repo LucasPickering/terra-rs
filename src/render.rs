@@ -18,7 +18,7 @@ pub fn init_scene(window: &mut Window, world: &World) {
     window.scene.add(light);
 
     for (pos, tile) in world.tiles() {
-        let height = (tile.elevation - Tile::ELEVATION_RANGE.min) as f32
+        let height = (tile.elevation() - Tile::ELEVATION_RANGE.min) as f32
             * TILE_HEIGHT_SCALE;
         let geometry = Geometry::cylinder(0.5, 0.5, height, 6);
         let material = material::Lambert {

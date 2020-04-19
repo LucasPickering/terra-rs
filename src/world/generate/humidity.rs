@@ -1,14 +1,9 @@
 use crate::world::{
-    generate::{elevation::ElevationMetadata, Generate, TileNoiseFn},
-    HexPointMap, Tile, WorldConfig,
+    generate::{Generate, TileBuilder, TileNoiseFn},
+    HasHexPosition, HexPointMap, Tile, WorldConfig,
 };
 use noise::{BasicMulti, NoiseFn};
 use std::fmt::{self, Display, Formatter};
-
-pub struct HumidityMetadata {
-    pub elevation: f64,
-    pub humidity: f64,
-}
 
 /// Generate an humidity map using a noise function.
 #[derive(Clone, Debug)]
@@ -35,22 +30,10 @@ impl Display for HumidityGenerator {
     }
 }
 
-impl Generate<ElevationMetadata, HumidityMetadata> for HumidityGenerator {
-    fn generate(
-        &self,
-        tiles: HexPointMap<ElevationMetadata>,
-    ) -> HexPointMap<HumidityMetadata> {
-        tiles
-            .into_iter()
-            .map(|(pos, prev)| {
-                (
-                    pos,
-                    HumidityMetadata {
-                        elevation: prev.elevation,
-                        humidity: self.noise_fn.get(pos),
-                    },
-                )
-            })
-            .collect()
+impl Generate for HumidityGenerator {
+    fn generate(&self, tiles: &mut HexPointMap<TileBuilder>) {
+        for tile in tiles.values_mut() {
+            tile.set_humidity(self.noise_fn.get(tile.position()));
+        }
     }
 }

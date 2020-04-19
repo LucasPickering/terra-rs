@@ -1,14 +1,8 @@
 use crate::world::{
-    generate::{humidity::HumidityMetadata, Generate},
+    generate::{Generate, TileBuilder},
     Biome, HexPointMap,
 };
 use std::fmt::{self, Display, Formatter};
-
-pub struct BiomeMetadata {
-    pub elevation: f64,
-    pub humidity: f64,
-    pub biome: Biome,
-}
 
 /// A generator to apply a biome for each tile. The biome is calculated based
 /// on elevation and humidity.
@@ -16,11 +10,9 @@ pub struct BiomeMetadata {
 pub struct BiomePainter;
 
 /// Calculate the biome for a single tile.
-fn calculate_biome(tile: &HumidityMetadata) -> Biome {
-    let &HumidityMetadata {
-        elevation,
-        humidity,
-    } = tile;
+fn calculate_biome(tile: &TileBuilder) -> Biome {
+    let elevation = tile.elevation();
+    let humidity = tile.humidity();
 
     // A piecewise function to map elevation/humidity to biome.
     // I swear there's logic behind this, I even drew a picture.
@@ -48,24 +40,10 @@ impl Display for BiomePainter {
     }
 }
 
-impl Generate<HumidityMetadata, BiomeMetadata> for BiomePainter {
-    fn generate(
-        &self,
-        tiles: HexPointMap<HumidityMetadata>,
-    ) -> HexPointMap<BiomeMetadata> {
-        tiles
-            .into_iter()
-            .map(|(pos, tile)| {
-                let biome = calculate_biome(&tile);
-                (
-                    pos,
-                    BiomeMetadata {
-                        elevation: tile.elevation,
-                        humidity: tile.humidity,
-                        biome,
-                    },
-                )
-            })
-            .collect()
+impl Generate for BiomePainter {
+    fn generate(&self, tiles: &mut HexPointMap<TileBuilder>) {
+        for tile in tiles.values_mut() {
+            tile.set_biome(calculate_biome(tile));
+        }
     }
 }
