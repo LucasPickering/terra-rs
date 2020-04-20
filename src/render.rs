@@ -1,7 +1,8 @@
 use crate::world::{Tile, TileLens, World};
+use std::{cell::RefCell, time::Instant};
 use three::{
     camera::Camera, color, controls::orbit::Orbit, material, Background,
-    Geometry, Object, Window,
+    Geometry, Object, Text, Window,
 };
 
 const TILE_HEIGHT_SCALE: f32 = 0.5;
@@ -41,4 +42,29 @@ pub fn init_camera(window: &mut Window) -> (Camera, Orbit) {
         .up([0.0, 1.0, 0.0])
         .build();
     (camera, orbit)
+}
+
+pub fn init_fps_text(window: &mut Window) -> Text {
+    let font = window.factory.load_font_karla();
+    let mut text = window.factory.ui_text(&font, "FPS: 0");
+    text.set_pos([10.0, 10.0]);
+    text.set_font_size(30.0);
+    text.set_color(color::BLACK);
+    window.scene.add(&text);
+    text
+}
+
+/// Create a closure that will track frames per second. The closure should be
+/// called once per frame, and each time it will emit the current frame rate.
+pub fn make_fps_tracker() -> impl Fn() -> f32 {
+    let last_frame_start = RefCell::new(Instant::now());
+
+    move || {
+        let now = Instant::now();
+        let frame_time =
+            (now - *(&last_frame_start.borrow() as &Instant)).as_secs_f32();
+        let fps = 1.0 / frame_time;
+        last_frame_start.replace(now);
+        fps
+    }
 }
