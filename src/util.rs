@@ -4,11 +4,13 @@
 #[macro_export]
 macro_rules! timed {
     ($ex:expr) => {{
-        use std::time::Instant;
+        // use std::time::Instant;
+        use std::time::Duration;
 
-        let start = Instant::now();
+        // let start = Instant::now();
         let value = $ex;
-        let elapsed = Instant::now() - start;
+        // let elapsed = Instant::now() - start;
+        let elapsed = Duration::new(0, 0);
         (value, elapsed)
     }};
 }

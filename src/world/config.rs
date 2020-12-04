@@ -21,10 +21,26 @@ pub struct WorldConfig {
 impl WorldConfig {
     pub fn load() -> Result<Self, ConfigError> {
         info!("Loading world config...");
-        let mut settings = Config::default();
-        // Look for "./terra.toml"
-        settings.merge(File::with_name("terra.toml"))?;
-        let config = settings.try_into::<Self>()?;
+        let config = WorldConfig {
+            seed: 1292848,
+            tile_radius: 16,
+            elevation: NoiseFnConfig {
+                octaves: 12,
+                frequency: 1.0,
+                lacunarity: 4.0,
+                persistence: 0.5,
+            },
+            humidity: NoiseFnConfig {
+                octaves: 3,
+                frequency: 2.0,
+                lacunarity: 2.0,
+                persistence: 0.25,
+            },
+        };
+        // let mut settings = Config::default();
+        // // Look for "./terra.toml"
+        // settings.merge(File::with_name("terra.toml"))?;
+        // let config = settings.try_into::<Self>()?;
         debug!("Loaded world config:\n{:#?}", &config);
         Ok(config)
     }

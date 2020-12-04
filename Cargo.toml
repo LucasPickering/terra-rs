@@ -4,13 +4,20 @@ edition = "2018"
 name = "terra"
 version = "0.1.0"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
-env_logger = "^0.7.1" 
-kiss3d = "0.28" 
-log = "^0.4.8" 
-nalgebra = "0.23" # This needs to stay the same as kiss3d's version
-noise = "^0.6.0" 
-serde = {version = "^1.0.106", features = ["derive"]} 
+env_logger = "^0.7.1"
+kiss3d = "0.28"
+log = "^0.4.8"
+# nalgebra needs to stay the same as kiss3d's version
+console_error_panic_hook = "0.1"
+nalgebra = "0.23"
+noise = "^0.6.0"
+serde = {version = "^1.0.106", features = ["derive"]}
+wasm-bindgen = "0.2"
+wasm-logger = "0.2"
 
 [dependencies.config]
 default-features = false
