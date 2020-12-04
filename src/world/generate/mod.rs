@@ -34,8 +34,12 @@ impl WorldBuilder<()> {
         // just to overwrite those instead of programming around them.
         for x in -radius..=radius {
             for y in -radius..=radius {
-                let pos = HexPoint::new(x, y, -(x + y));
-                tiles.insert(pos, ());
+                // x+y+z == 0 always, so we can derive z from x & y.
+                let pos = HexPoint::new(x, y);
+
+                // There will be duplicate positions, when `x == y`. Avoid an
+                // insert for those.
+                tiles.entry(pos).or_insert_with(|| TileBuilder::new(pos));
             }
         }
 

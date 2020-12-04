@@ -19,14 +19,10 @@ pub struct HexPoint {
 }
 
 impl HexPoint {
-    pub fn new(x: isize, y: isize, z: isize) -> Self {
-        if x + y + z != 0 {
-            panic!(
-                "Sum of coordinates should be zero, but got ({}, {}, {})",
-                x, y, z
-            );
-        }
-        Self { x, y, z }
+    /// Construct a new hex point with the given x and y. Since x+y+z=0 for all
+    /// points, we can derive z from x & y.
+    pub fn new(x: isize, y: isize) -> Self {
+        Self { x, y, z: -(x + y) }
     }
 
     /// Convert this hexagonal coordinate into a 2d pixel coordinate. Useful
@@ -106,10 +102,11 @@ impl Biome {
             Self::Plains => Color3::new(0.68, 0.79, 0.45),
             Self::Beach => Color3::new(0.95, 0.94, 0.35),
         }
+        .unwrap()
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Builder)]
 pub struct Tile {
     pub position: HexPoint,
     pub elevation: f64,
@@ -127,7 +124,7 @@ impl Tile {
         match lens {
             // For now, composite is just biome. Later it will include more
             // data.
-            TileLens::Composite | TileLens::Biome => self.biome.color(),
+            TileLens::Composite | TileLens::Biome => Ok(self.biome.color()),
             TileLens::Elevation => {
                 let normalized_elev = Self::ELEVATION_RANGE
                     .map_to(&FloatRange::NORMAL_RANGE, self.elevation)
@@ -141,6 +138,7 @@ impl Tile {
                 Color3::new(normalized_humidity, normalized_humidity, 1.0)
             }
         }
+        .unwrap()
     }
 }
 

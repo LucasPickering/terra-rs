@@ -1,3 +1,5 @@
+use anyhow::anyhow;
+
 /// A macro to measure the evaluation time of an expression. Wraps an
 /// expression, and outputs a tuple of the value of the expression with the
 /// elapsed time, as a [Duration](std::time::Duration).
@@ -25,26 +27,31 @@ pub struct Color3 {
 }
 
 impl Color3 {
-    /// Create a new RGB color. Will panic if any of the components are out of
+    /// Create a new RGB color. Return if any of the components are out of
     /// the range [0.0, 1.0].
-    pub fn new(red: f32, green: f32, blue: f32) -> Self {
-        Self {
-            red: Self::check_component("red", red),
-            green: Self::check_component("green", green),
-            blue: Self::check_component("blue", blue),
-        }
+    pub fn new(red: f32, green: f32, blue: f32) -> anyhow::Result<Self> {
+        Ok(Self {
+            red: Self::check_component("red", red)?,
+            green: Self::check_component("green", green)?,
+            blue: Self::check_component("blue", blue)?,
+        })
     }
 
     /// Ensure that the given color component is between 0 and 1 (inclusive).
-    /// If it is, return the given value. If not, panic.
-    fn check_component(component_name: &str, value: f32) -> f32 {
-        if value < 0.0 || value > 1.0 {
-            panic!(
+    /// If it is, return the given value. If not, return an error.
+    fn check_component(
+        component_name: &str,
+        value: f32,
+    ) -> anyhow::Result<f32> {
+        if 0.0 <= value && value <= 1.0 {
+            Ok(value)
+        } else {
+            Err(anyhow!(
                 "Color component {} must be in [0.0, 1.0], but was {}",
-                component_name, value
-            );
+                component_name,
+                value
+            ))
         }
-        value
     }
 
     pub fn red(&self) -> f32 {
