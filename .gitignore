@@ -2,4 +2,5 @@ target/
 node_modules/
 .vscode/
 pkg/
-.eslintcache
+
+package-lock.json

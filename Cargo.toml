@@ -7,8 +7,9 @@ name = "terra"
 repository = "https://github.com/LucasPickering/terra-rs"
 version = "0.1.0"
 
-[package.metadata.wasm-pack]
-target = "web"
+[package.metadata.wasm-pack.profile.profiling]
+# workaround to get debug info in
+wasm-opt = ['-O4', '-g']
 
 [lib]
 crate-type = ["cdylib"]
@@ -17,7 +18,8 @@ crate-type = ["cdylib"]
 anyhow = "1.0"
 console_error_panic_hook = "0.1"
 js-sys = "0.3"
-kiss3d = "0.28"
+# kiss3d = "0.28"
+kiss3d = {path = "./kiss3d"}
 log = "0.4"
 # nalgebra needs to stay the same as kiss3d's version
 nalgebra = "0.23"

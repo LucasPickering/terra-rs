@@ -1,0 +1,3 @@
+[submodule "kiss3d"]
+	path = kiss3d
+	url = https://github.com/sebcrozet/kiss3d

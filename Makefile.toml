@@ -1,0 +1,57 @@
+[env.development]
+# Using dev is just too slow, so we default to profiling
+WASM_PACK_PROFILE = "profiling"
+
+[env.debug]
+WASM_PACK_PROFILE = "dev"
+
+# Make sure npx is installed
+[tasks.npx]
+install_script = '''
+if ! hash npx 2> /dev/null; then
+    echo "npx not installed. https://www.npmjs.com/get-npm"
+    exit 1
+fi
+'''
+
+# Make sure light-server is installed
+[tasks.light-server]
+dependencies = ["npx"]
+install_script = '''
+if ! npx light-server 2>&1 > /dev/null; then
+    echo "light-server not installed. Run `npm install -g light-server`"
+    exit 1
+fi
+'''
+
+# Make sure wasm-pack is installed
+[tasks.wasm-pack]
+install_script = '''
+if ! hash wasm-pack 2> /dev/null; then
+    echo "wasm-pack not installed. https://rustwasm.github.io/wasm-pack/installer/"
+    exit 1
+fi
+'''
+
+# Build the Rust code with wasm-pack
+[tasks.build]
+args = ["build", "--target", "web", "-d", "static/pkg", "--${WASM_PACK_PROFILE}"]
+command = "wasm-pack"
+dependencies = ["wasm-pack"]
+
+# Watch source code and build when it changes
+[tasks.build-watch]
+run_task = "build"
+watch = {watch = ["./Cargo.toml", "./src/", "./kiss3d/src"]}
+
+# Build Rust code in a watch loop, and start an HTTP server to server assets
+[tasks.start]
+dependencies = ["light-server"]
+script = '''
+    cargo make build-watch &
+    npx light-server -s static -p 3000 -w 'static/**'
+'''
+
+[tasks.clean]
+args = ["-rf", "target/", "static/pkg/"]
+command = "rm"
