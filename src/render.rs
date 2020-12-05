@@ -2,13 +2,14 @@ use crate::{
     world::{HasHexPosition, HexPointMap, Tile, TileLens, World},
     WorldConfig,
 };
-use luminance::{Semantics, Vertex};
+use cgmath::{EuclideanSpace, Matrix4, Point3, Rad, Vector3};
+use luminance::{shader::Uniform, Semantics, UniformInterface, Vertex};
 use luminance_front::{
     context::GraphicsContext as _,
     pipeline::PipelineState,
     render_state::RenderState,
     shader::Program,
-    tess::{Deinterleaved, Interleaved, Mode, Tess},
+    tess::{Interleaved, Mode, Tess},
 };
 use luminance_web_sys::WebSysWebGL2Surface;
 use wasm_bindgen::prelude::*;
@@ -16,6 +17,10 @@ use wasm_bindgen::prelude::*;
 // We get the shader at compile time from local files
 const VS: &str = include_str!("./shaders/simple-vs.glsl");
 const FS: &str = include_str!("./shaders/simple-fs.glsl");
+
+const FOVY: Rad<f32> = Rad(std::f32::consts::FRAC_PI_2);
+const Z_NEAR: f32 = 0.1;
+const Z_FAR: f32 = 10.;
 
 const TILE_SIDE_LENGTH: f32 = 1.0;
 const TILE_INSIDE_RADIUS: f32 = TILE_SIDE_LENGTH * 0.866_025; // approx sqrt(3)/2
@@ -30,13 +35,14 @@ const TILE_MESH_NAME: &str = "tile";
 // We derive Semantics automatically and provide the mapping as field
 // attributes.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Semantics)]
-pub enum Semantics {
+pub enum VertexSemantics {
     //
-    // - Reference vertex positions with the "co" variable in vertex shaders.
-    // - The underlying representation is [f32; 2], which is a vec2 in GLSL.
+    // - Reference vertex positions with the "position" variable in vertex
+    //   shaders.
+    // - The underlying representation is [f32; 3], which is a vec3 in GLSL.
     // - The wrapper type you can use to handle such a semantics is
     //   VertexPosition.
-    #[sem(name = "co", repr = "[f32; 2]", wrapper = "VertexPosition")]
+    #[sem(name = "position", repr = "[f32; 3]", wrapper = "VertexPosition")]
     Position,
     //
     // - Reference vertex colors with the "color" variable in vertex shaders.
@@ -58,7 +64,7 @@ pub enum Semantics {
 // struct’s fields around.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
-#[vertex(sem = "Semantics")]
+#[vertex(sem = "VertexSemantics")]
 struct Vertex {
     pos: VertexPosition,
     // Here, we can use the special normalized = <bool> construct to state
@@ -69,6 +75,14 @@ struct Vertex {
     // u8, for instance).
     #[vertex(normalized = "true")]
     rgb: VertexColor,
+}
+
+#[derive(Debug, UniformInterface)]
+struct ShaderInterface {
+    #[uniform(unbound)]
+    projection: Uniform<[[f32; 4]; 4]>,
+    #[uniform(unbound)]
+    view: Uniform<[[f32; 4]; 4]>,
 }
 
 // // The vertices. We define two triangles.
@@ -128,31 +142,35 @@ struct Vertex {
 
 const HEX_VERTICES: &[Vertex] = &[
     Vertex::new(
-        VertexPosition::new([0.0, 0.0]),
+        VertexPosition::new([0.0, 0.0, 0.0]),
         VertexColor::new([0, 0, 255]),
     ),
     Vertex::new(
-        VertexPosition::new([TILE_SIDE_LENGTH / 2.0, TILE_INSIDE_RADIUS]),
+        VertexPosition::new([TILE_SIDE_LENGTH / 2.0, 0.0, TILE_INSIDE_RADIUS]),
         VertexColor::new([0, 0, 255]),
     ),
     Vertex::new(
-        VertexPosition::new([TILE_SIDE_LENGTH, 0.0]),
+        VertexPosition::new([TILE_SIDE_LENGTH, 0.0, 0.0]),
         VertexColor::new([0, 0, 255]),
     ),
     Vertex::new(
-        VertexPosition::new([TILE_SIDE_LENGTH / 2.0, -TILE_INSIDE_RADIUS]),
+        VertexPosition::new([TILE_SIDE_LENGTH / 2.0, 0.0, -TILE_INSIDE_RADIUS]),
         VertexColor::new([0, 0, 255]),
     ),
     Vertex::new(
-        VertexPosition::new([-TILE_SIDE_LENGTH / 2.0, -TILE_INSIDE_RADIUS]),
+        VertexPosition::new([
+            -TILE_SIDE_LENGTH / 2.0,
+            0.0,
+            -TILE_INSIDE_RADIUS,
+        ]),
         VertexColor::new([0, 0, 255]),
     ),
     Vertex::new(
-        VertexPosition::new([-TILE_SIDE_LENGTH, 0.0]),
+        VertexPosition::new([-TILE_SIDE_LENGTH, 0.0, 0.0]),
         VertexColor::new([0, 0, 255]),
     ),
     Vertex::new(
-        VertexPosition::new([-TILE_SIDE_LENGTH / 2.0, TILE_INSIDE_RADIUS]),
+        VertexPosition::new([-TILE_SIDE_LENGTH / 2.0, 0.0, TILE_INSIDE_RADIUS]),
         VertexColor::new([0, 0, 255]),
     ),
 ];
@@ -170,15 +188,10 @@ const HEX_INDICES: &[u8] = &[
 #[wasm_bindgen]
 pub struct Scene {
     surface: WebSysWebGL2Surface,
-    program: Program<Semantics, (), ()>,
-    hexagon: Tess<Vertex, u8, (), Interleaved>, /* direct_triangles:
-                                                 * Tess<Vertex, (), (),
-                                                 * Interleaved>,
-                                                 * indexed_triangles:
-                                                 * Tess<Vertex, u8, (),
-                                                 * Interleaved>,
-                                                 * direct_deinterleaved_triangles: Tess<Vertex, (), (), Deinterleaved>,
-                                                 * indexed_deinterleaved_triangles: Tess<Vertex, u8, (), Deinterleaved> */
+    program: Program<VertexSemantics, (), ShaderInterface>,
+    projection: Matrix4<f32>,
+    view: Matrix4<f32>,
+    hexagon: Tess<Vertex, u8, (), Interleaved>,
 }
 
 impl Scene {
@@ -192,15 +205,11 @@ impl Scene {
         // which is the input vertex type, and we’re not interested in
         // the other two type variables for this sample.
         let program = surface
-            .new_shader_program::<Semantics, (), ()>()
+            .new_shader_program::<VertexSemantics, (), ShaderInterface>()
             .from_strings(VS, None, None, FS)
             .expect("program creation")
             .ignore_warnings();
 
-        // Create indexed tessellation; that is, the vertices will be picked by
-        // using the indexes provided by the second slice and this indexes will
-        // reference the first slice (useful not to duplicate vertices on more
-        // complex objects than just two triangles).
         let hexagon = surface
             .new_tess()
             .set_vertices(HEX_VERTICES)
@@ -209,58 +218,22 @@ impl Scene {
             .build()
             .unwrap();
 
-        // // Create tessellation for direct geometry; that is, tessellation
-        // that // will render vertices by taking one after another in
-        // the // provided slice.
-        // let direct_triangles = surface
-        //     .new_tess()
-        //     .set_vertices(&TRI_VERTICES[..])
-        //     .set_mode(Mode::Triangle)
-        //     .build()
-        //     .unwrap();
-
-        // // Create indexed tessellation; that is, the vertices will be picked
-        // by // using the indexes provided by the second slice and this
-        // indexes will // reference the first slice (useful not to
-        // duplicate vertices on more // complex objects than just two
-        // triangles). let indexed_triangles = surface
-        //     .new_tess()
-        //     .set_vertices(&TRI_VERTICES[..])
-        //     .set_indices(&TRI_INDICES[..])
-        //     .set_mode(Mode::Triangle)
-        //     .build()
-        //     .unwrap();
-
-        // // Create direct, deinterleaved tesselations; such tessellations
-        // allow // to separate vertex attributes in several contiguous
-        // regions // of memory.
-        // let direct_deinterleaved_triangles = surface
-        //     .new_deinterleaved_tess::<Vertex, ()>()
-        //     .set_attributes(&TRI_DEINT_POS_VERTICES[..])
-        //     .set_attributes(&TRI_DEINT_COLOR_VERTICES[..])
-        //     .set_mode(Mode::Triangle)
-        //     .build()
-        //     .unwrap();
-
-        // // Create indexed, deinterleaved tessellations; have your cake and
-        // // fucking eat it, now.
-        // let indexed_deinterleaved_triangles = surface
-        //     .new_deinterleaved_tess::<Vertex, ()>()
-        //     .set_attributes(&TRI_DEINT_POS_VERTICES[..])
-        //     .set_attributes(&TRI_DEINT_COLOR_VERTICES[..])
-        //     .set_indices(&TRI_INDICES[..])
-        //     .set_mode(Mode::Triangle)
-        //     .build()
-        //     .unwrap();
+        let projection = cgmath::perspective(FOVY, 1.0, Z_NEAR, Z_FAR);
+        let view = Matrix4::<f32>::look_at(
+            Point3::new(2., 2., 2.),
+            Point3::origin(),
+            Vector3::unit_y(),
+        );
 
         Scene {
             surface,
             program,
             hexagon,
-            /* direct_triangles,
-             * indexed_triangles,
-             * direct_deinterleaved_triangles,
-             * indexed_deinterleaved_triangles, */
+            projection,
+            view, /* direct_triangles,
+                   * indexed_triangles,
+                   * direct_deinterleaved_triangles,
+                   * indexed_deinterleaved_triangles, */
         }
     }
 }
@@ -273,6 +246,8 @@ impl Scene {
         let Self {
             ref mut program,
             ref hexagon,
+            ref projection,
+            ref view,
             ..
         } = self;
 
@@ -284,10 +259,10 @@ impl Scene {
                 &back_buffer,
                 &PipelineState::default(),
                 |_, mut shd_gate| {
-                    // Start shading with our program.
-                    shd_gate.shade(program, |_, _, mut rdr_gate| {
-                        // Start rendering things with the default render state
-                        // provided by luminance.
+                    shd_gate.shade(program, |mut iface, uni, mut rdr_gate| {
+                        iface.set(&uni.projection, (*projection).into());
+                        iface.set(&uni.view, (*view).into());
+
                         rdr_gate
                             .render(&RenderState::default(), |mut tess_gate| {
                                 tess_gate.render(hexagon)
