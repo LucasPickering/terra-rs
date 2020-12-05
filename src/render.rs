@@ -3,6 +3,7 @@ use crate::{
     WorldConfig,
 };
 use cgmath::{EuclideanSpace, Matrix4, Point3, Rad, Vector3};
+use log::debug;
 use luminance::{shader::Uniform, Semantics, UniformInterface, Vertex};
 use luminance_front::{
     context::GraphicsContext as _,
@@ -13,6 +14,7 @@ use luminance_front::{
 };
 use luminance_web_sys::WebSysWebGL2Surface;
 use wasm_bindgen::prelude::*;
+use web_sys::KeyboardEvent;
 
 // We get the shader at compile time from local files
 const VS: &str = include_str!("./shaders/simple-vs.glsl");
@@ -196,6 +198,7 @@ pub struct Scene {
     hexagon: Tess<Vertex, u8, (), Interleaved>,
 }
 
+#[wasm_bindgen]
 impl Scene {
     pub fn new(canvas_id: &str) -> Scene {
         // First thing first: we create a new surface to render to and get
@@ -235,10 +238,18 @@ impl Scene {
             view,
         }
     }
-}
 
-#[wasm_bindgen]
-impl Scene {
+    #[wasm_bindgen]
+    pub fn handle_keyboard_event(&mut self, event: KeyboardEvent) {
+        // let event: KeyboardEvent = event.into();
+        debug!(
+            "{:?}; char_code={}; key_code={}",
+            event,
+            event.char_code(),
+            event.key_code()
+        );
+    }
+
     #[wasm_bindgen]
     pub fn render(&mut self) {
         let back_buffer = self.surface.back_buffer().unwrap();
