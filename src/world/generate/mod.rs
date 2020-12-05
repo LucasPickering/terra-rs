@@ -6,13 +6,13 @@ use crate::{
     timed,
     util::FloatRange,
     world::{
-        config::NoiseFnConfig,
         generate::{
             biome::BiomePainter, elevation::ElevationGenerator,
             humidity::HumidityGenerator,
         },
         Biome, HasHexPosition, HexPoint, HexPointMap, Tile, WorldConfig,
     },
+    NoiseFnConfig,
 };
 use log::{debug, info};
 use noise::{MultiFractal, NoiseFn, Seedable};

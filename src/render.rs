@@ -1,5 +1,6 @@
-use crate::world::{
-    HasHexPosition, HexPointMap, Tile, TileLens, World, WorldConfig,
+use crate::{
+    world::{HasHexPosition, HexPointMap, Tile, TileLens, World},
+    WorldConfig,
 };
 use kiss3d::{
     camera::{ArcBall, Camera},
@@ -12,7 +13,6 @@ use kiss3d::{
     scene::SceneNode,
     window::{State, Window},
 };
-use log::debug;
 use nalgebra::{Point3, Translation3, Vector3};
 use std::{cell::RefCell, rc::Rc};
 
@@ -25,12 +25,12 @@ struct AppState {
     camera: Box<dyn Camera>,
     world: World,
     lens: TileLens,
-    root_node: SceneNode,
     tile_nodes: HexPointMap<SceneNode>,
 }
 
 impl AppState {
-    fn new(window: &mut Window) -> Self {
+    fn new(config: WorldConfig, window: &mut Window) -> Self {
+        let world = World::generate(config);
         let camera = ArcBall::new_with_frustrum(
             std::f32::consts::PI / 4.0,
             0.1,
@@ -38,9 +38,6 @@ impl AppState {
             Point3::new(-50.0, 50.0, -50.0),
             Point3::origin(),
         );
-
-        let world_config = WorldConfig::load().unwrap();
-        let world = World::generate(world_config);
 
         let mut root_node = window.add_group();
         let tile_nodes =
@@ -50,12 +47,11 @@ impl AppState {
             camera: Box::new(camera),
             world,
             lens: TileLens::Composite,
-            root_node,
             tile_nodes,
         }
     }
 
-    fn handle_event(&mut self, window: &mut Window, event: &WindowEvent) {
+    fn handle_event(&mut self, _window: &mut Window, event: &WindowEvent) {
         match event {
             WindowEvent::Key(Key::Key1, Action::Press, _) => {
                 self.update_tile_color(TileLens::Composite);
@@ -69,23 +65,8 @@ impl AppState {
             WindowEvent::Key(Key::Key4, Action::Press, _) => {
                 self.update_tile_color(TileLens::Biome);
             }
-            WindowEvent::Key(Key::R, Action::Press, _) => {
-                self.regenerate_world(window);
-            }
             _ => {}
         }
-    }
-
-    fn regenerate_world(&mut self, window: &mut Window) {
-        // Generate a new world
-        let world_config = WorldConfig::load().unwrap();
-        self.world = World::generate(world_config);
-
-        // Swap out the nodes
-        window.remove_node(&mut self.root_node);
-        self.root_node = window.add_group();
-        self.tile_nodes =
-            render_tiles(&mut self.root_node, self.world.tiles(), self.lens);
     }
 
     fn update_tile_color(&mut self, lens: TileLens) {
@@ -234,10 +215,10 @@ fn render_tile(parent: &mut SceneNode, tile: &Tile) -> SceneNode {
     node
 }
 
-pub fn run() {
+pub fn run(config: WorldConfig) {
     let mut window = Window::new("Terra");
     init_meshes();
     window.set_light(Light::StickToCamera);
-    let state = AppState::new(&mut window);
+    let state = AppState::new(config, &mut window);
     window.render_loop(state)
 }
