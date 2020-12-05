@@ -71,59 +71,99 @@ struct Vertex {
     rgb: VertexColor,
 }
 
-// The vertices. We define two triangles.
-const TRI_VERTICES: [Vertex; 6] = [
-    // First triangle – an RGB one.
+// // The vertices. We define two triangles.
+// const TRI_VERTICES: [Vertex; 6] = [
+//     // First triangle – an RGB one.
+//     Vertex::new(
+//         VertexPosition::new([0.5, -0.5]),
+//         VertexColor::new([0, 255, 0]),
+//     ),
+//     Vertex::new(
+//         VertexPosition::new([0.0, 0.5]),
+//         VertexColor::new([0, 0, 255]),
+//     ),
+//     Vertex::new(
+//         VertexPosition::new([-0.5, -0.5]),
+//         VertexColor::new([255, 0, 0]),
+//     ),
+//     // Second triangle, a purple one, positioned differently.
+//     Vertex::new(
+//         VertexPosition::new([-0.5, 0.5]),
+//         VertexColor::new([255, 51, 255]),
+//     ),
+//     Vertex::new(
+//         VertexPosition::new([0.0, -0.5]),
+//         VertexColor::new([51, 255, 255]),
+//     ),
+//     Vertex::new(
+//         VertexPosition::new([0.5, 0.5]),
+//         VertexColor::new([51, 51, 255]),
+//     ),
+// ];
+
+// // The vertices, deinterleaved versions. We still define two triangles.
+// const TRI_DEINT_POS_VERTICES: &[VertexPosition] = &[
+//     VertexPosition::new([0.5, -0.5]),
+//     VertexPosition::new([0.0, 0.5]),
+//     VertexPosition::new([-0.5, -0.5]),
+//     VertexPosition::new([-0.5, 0.5]),
+//     VertexPosition::new([0.0, -0.5]),
+//     VertexPosition::new([0.5, 0.5]),
+// ];
+
+// const TRI_DEINT_COLOR_VERTICES: &[VertexColor] = &[
+//     VertexColor::new([0, 255, 0]),
+//     VertexColor::new([0, 0, 255]),
+//     VertexColor::new([255, 0, 0]),
+//     VertexColor::new([255, 51, 255]),
+//     VertexColor::new([51, 255, 255]),
+//     VertexColor::new([51, 51, 255]),
+// ];
+
+// // Indices into TRI_VERTICES to use to build up the triangles.
+// const TRI_INDICES: [u8; 6] = [
+//     0, 1, 2, // First triangle.
+//     3, 4, 5, // Second triangle.
+// ];
+
+const HEX_VERTICES: &[Vertex] = &[
     Vertex::new(
-        VertexPosition::new([0.5, -0.5]),
-        VertexColor::new([0, 255, 0]),
-    ),
-    Vertex::new(
-        VertexPosition::new([0.0, 0.5]),
+        VertexPosition::new([0.0, 0.0]),
         VertexColor::new([0, 0, 255]),
     ),
     Vertex::new(
-        VertexPosition::new([-0.5, -0.5]),
-        VertexColor::new([255, 0, 0]),
-    ),
-    // Second triangle, a purple one, positioned differently.
-    Vertex::new(
-        VertexPosition::new([-0.5, 0.5]),
-        VertexColor::new([255, 51, 255]),
+        VertexPosition::new([TILE_SIDE_LENGTH / 2.0, TILE_INSIDE_RADIUS]),
+        VertexColor::new([0, 0, 255]),
     ),
     Vertex::new(
-        VertexPosition::new([0.0, -0.5]),
-        VertexColor::new([51, 255, 255]),
+        VertexPosition::new([TILE_SIDE_LENGTH, 0.0]),
+        VertexColor::new([0, 0, 255]),
     ),
     Vertex::new(
-        VertexPosition::new([0.5, 0.5]),
-        VertexColor::new([51, 51, 255]),
+        VertexPosition::new([TILE_SIDE_LENGTH / 2.0, -TILE_INSIDE_RADIUS]),
+        VertexColor::new([0, 0, 255]),
+    ),
+    Vertex::new(
+        VertexPosition::new([-TILE_SIDE_LENGTH / 2.0, -TILE_INSIDE_RADIUS]),
+        VertexColor::new([0, 0, 255]),
+    ),
+    Vertex::new(
+        VertexPosition::new([-TILE_SIDE_LENGTH, 0.0]),
+        VertexColor::new([0, 0, 255]),
+    ),
+    Vertex::new(
+        VertexPosition::new([-TILE_SIDE_LENGTH / 2.0, TILE_INSIDE_RADIUS]),
+        VertexColor::new([0, 0, 255]),
     ),
 ];
 
-// The vertices, deinterleaved versions. We still define two triangles.
-const TRI_DEINT_POS_VERTICES: &[VertexPosition] = &[
-    VertexPosition::new([0.5, -0.5]),
-    VertexPosition::new([0.0, 0.5]),
-    VertexPosition::new([-0.5, -0.5]),
-    VertexPosition::new([-0.5, 0.5]),
-    VertexPosition::new([0.0, -0.5]),
-    VertexPosition::new([0.5, 0.5]),
-];
-
-const TRI_DEINT_COLOR_VERTICES: &[VertexColor] = &[
-    VertexColor::new([0, 255, 0]),
-    VertexColor::new([0, 0, 255]),
-    VertexColor::new([255, 0, 0]),
-    VertexColor::new([255, 51, 255]),
-    VertexColor::new([51, 255, 255]),
-    VertexColor::new([51, 51, 255]),
-];
-
-// Indices into TRI_VERTICES to use to build up the triangles.
-const TRI_INDICES: [u8; 6] = [
-    0, 1, 2, // First triangle.
-    3, 4, 5, // Second triangle.
+const HEX_INDICES: &[u8] = &[
+    2, 1, 0, // center
+    3, 2, 0, // TODO
+    4, 3, 0, // TODO
+    5, 4, 0, // TODO
+    6, 5, 0, // TODO
+    1, 6, 0, // TODO
 ];
 
 /// A convenient type to return as opaque to JS.
@@ -131,10 +171,14 @@ const TRI_INDICES: [u8; 6] = [
 pub struct Scene {
     surface: WebSysWebGL2Surface,
     program: Program<Semantics, (), ()>,
-    direct_triangles: Tess<Vertex, (), (), Interleaved>,
-    indexed_triangles: Tess<Vertex, u8, (), Interleaved>,
-    direct_deinterleaved_triangles: Tess<Vertex, (), (), Deinterleaved>,
-    indexed_deinterleaved_triangles: Tess<Vertex, u8, (), Deinterleaved>,
+    hexagon: Tess<Vertex, u8, (), Interleaved>, /* direct_triangles:
+                                                 * Tess<Vertex, (), (),
+                                                 * Interleaved>,
+                                                 * indexed_triangles:
+                                                 * Tess<Vertex, u8, (),
+                                                 * Interleaved>,
+                                                 * direct_deinterleaved_triangles: Tess<Vertex, (), (), Deinterleaved>,
+                                                 * indexed_deinterleaved_triangles: Tess<Vertex, u8, (), Deinterleaved> */
 }
 
 impl Scene {
@@ -153,57 +197,70 @@ impl Scene {
             .expect("program creation")
             .ignore_warnings();
 
-        // Create tessellation for direct geometry; that is, tessellation that
-        // will render vertices by taking one after another in the
-        // provided slice.
-        let direct_triangles = surface
-            .new_tess()
-            .set_vertices(&TRI_VERTICES[..])
-            .set_mode(Mode::Triangle)
-            .build()
-            .unwrap();
-
         // Create indexed tessellation; that is, the vertices will be picked by
         // using the indexes provided by the second slice and this indexes will
         // reference the first slice (useful not to duplicate vertices on more
         // complex objects than just two triangles).
-        let indexed_triangles = surface
+        let hexagon = surface
             .new_tess()
-            .set_vertices(&TRI_VERTICES[..])
-            .set_indices(&TRI_INDICES[..])
-            .set_mode(Mode::Triangle)
+            .set_vertices(HEX_VERTICES)
+            .set_indices(HEX_INDICES)
+            .set_mode(Mode::TriangleFan)
             .build()
             .unwrap();
 
-        // Create direct, deinterleaved tesselations; such tessellations allow
-        // to separate vertex attributes in several contiguous regions
-        // of memory.
-        let direct_deinterleaved_triangles = surface
-            .new_deinterleaved_tess::<Vertex, ()>()
-            .set_attributes(&TRI_DEINT_POS_VERTICES[..])
-            .set_attributes(&TRI_DEINT_COLOR_VERTICES[..])
-            .set_mode(Mode::Triangle)
-            .build()
-            .unwrap();
+        // // Create tessellation for direct geometry; that is, tessellation
+        // that // will render vertices by taking one after another in
+        // the // provided slice.
+        // let direct_triangles = surface
+        //     .new_tess()
+        //     .set_vertices(&TRI_VERTICES[..])
+        //     .set_mode(Mode::Triangle)
+        //     .build()
+        //     .unwrap();
 
-        // Create indexed, deinterleaved tessellations; have your cake and
-        // fucking eat it, now.
-        let indexed_deinterleaved_triangles = surface
-            .new_deinterleaved_tess::<Vertex, ()>()
-            .set_attributes(&TRI_DEINT_POS_VERTICES[..])
-            .set_attributes(&TRI_DEINT_COLOR_VERTICES[..])
-            .set_indices(&TRI_INDICES[..])
-            .set_mode(Mode::Triangle)
-            .build()
-            .unwrap();
+        // // Create indexed tessellation; that is, the vertices will be picked
+        // by // using the indexes provided by the second slice and this
+        // indexes will // reference the first slice (useful not to
+        // duplicate vertices on more // complex objects than just two
+        // triangles). let indexed_triangles = surface
+        //     .new_tess()
+        //     .set_vertices(&TRI_VERTICES[..])
+        //     .set_indices(&TRI_INDICES[..])
+        //     .set_mode(Mode::Triangle)
+        //     .build()
+        //     .unwrap();
+
+        // // Create direct, deinterleaved tesselations; such tessellations
+        // allow // to separate vertex attributes in several contiguous
+        // regions // of memory.
+        // let direct_deinterleaved_triangles = surface
+        //     .new_deinterleaved_tess::<Vertex, ()>()
+        //     .set_attributes(&TRI_DEINT_POS_VERTICES[..])
+        //     .set_attributes(&TRI_DEINT_COLOR_VERTICES[..])
+        //     .set_mode(Mode::Triangle)
+        //     .build()
+        //     .unwrap();
+
+        // // Create indexed, deinterleaved tessellations; have your cake and
+        // // fucking eat it, now.
+        // let indexed_deinterleaved_triangles = surface
+        //     .new_deinterleaved_tess::<Vertex, ()>()
+        //     .set_attributes(&TRI_DEINT_POS_VERTICES[..])
+        //     .set_attributes(&TRI_DEINT_COLOR_VERTICES[..])
+        //     .set_indices(&TRI_INDICES[..])
+        //     .set_mode(Mode::Triangle)
+        //     .build()
+        //     .unwrap();
 
         Scene {
             surface,
             program,
-            direct_triangles,
-            indexed_triangles,
-            direct_deinterleaved_triangles,
-            indexed_deinterleaved_triangles,
+            hexagon,
+            /* direct_triangles,
+             * indexed_triangles,
+             * direct_deinterleaved_triangles,
+             * indexed_deinterleaved_triangles, */
         }
     }
 }
@@ -215,7 +272,7 @@ impl Scene {
         let back_buffer = self.surface.back_buffer().unwrap();
         let Self {
             ref mut program,
-            ref direct_triangles,
+            ref hexagon,
             ..
         } = self;
 
@@ -233,7 +290,7 @@ impl Scene {
                         // provided by luminance.
                         rdr_gate
                             .render(&RenderState::default(), |mut tess_gate| {
-                                tess_gate.render(direct_triangles)
+                                tess_gate.render(hexagon)
                             })
                     })
                 },
