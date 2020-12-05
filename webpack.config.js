@@ -22,10 +22,10 @@ module.exports = {
       crateDirectory: path.resolve(__dirname, "."),
       outDir: path.resolve(__dirname, "pkg"),
       forceMode: "profiling",
-      watchDirectories: [
-        path.resolve(__dirname, "Cargo.toml"),
-        path.resolve(__dirname, "src"),
-      ],
+      // watchDirectories: [
+      //   path.resolve(__dirname, "Cargo.toml"),
+      //   path.resolve(__dirname, "src"),
+      // ],
     }),
   ],
   devServer: {

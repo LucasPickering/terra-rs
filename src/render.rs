@@ -85,77 +85,21 @@ struct ShaderInterface {
     view: Uniform<[[f32; 4]; 4]>,
 }
 
-// // The vertices. We define two triangles.
-// const TRI_VERTICES: [Vertex; 6] = [
-//     // First triangle – an RGB one.
-//     Vertex::new(
-//         VertexPosition::new([0.5, -0.5]),
-//         VertexColor::new([0, 255, 0]),
-//     ),
-//     Vertex::new(
-//         VertexPosition::new([0.0, 0.5]),
-//         VertexColor::new([0, 0, 255]),
-//     ),
-//     Vertex::new(
-//         VertexPosition::new([-0.5, -0.5]),
-//         VertexColor::new([255, 0, 0]),
-//     ),
-//     // Second triangle, a purple one, positioned differently.
-//     Vertex::new(
-//         VertexPosition::new([-0.5, 0.5]),
-//         VertexColor::new([255, 51, 255]),
-//     ),
-//     Vertex::new(
-//         VertexPosition::new([0.0, -0.5]),
-//         VertexColor::new([51, 255, 255]),
-//     ),
-//     Vertex::new(
-//         VertexPosition::new([0.5, 0.5]),
-//         VertexColor::new([51, 51, 255]),
-//     ),
-// ];
-
-// // The vertices, deinterleaved versions. We still define two triangles.
-// const TRI_DEINT_POS_VERTICES: &[VertexPosition] = &[
-//     VertexPosition::new([0.5, -0.5]),
-//     VertexPosition::new([0.0, 0.5]),
-//     VertexPosition::new([-0.5, -0.5]),
-//     VertexPosition::new([-0.5, 0.5]),
-//     VertexPosition::new([0.0, -0.5]),
-//     VertexPosition::new([0.5, 0.5]),
-// ];
-
-// const TRI_DEINT_COLOR_VERTICES: &[VertexColor] = &[
-//     VertexColor::new([0, 255, 0]),
-//     VertexColor::new([0, 0, 255]),
-//     VertexColor::new([255, 0, 0]),
-//     VertexColor::new([255, 51, 255]),
-//     VertexColor::new([51, 255, 255]),
-//     VertexColor::new([51, 51, 255]),
-// ];
-
-// // Indices into TRI_VERTICES to use to build up the triangles.
-// const TRI_INDICES: [u8; 6] = [
-//     0, 1, 2, // First triangle.
-//     3, 4, 5, // Second triangle.
-// ];
-
+const VERTEX_COLOR: VertexColor = VertexColor::new([0, 0, 255]);
 const HEX_VERTICES: &[Vertex] = &[
-    Vertex::new(
-        VertexPosition::new([0.0, 0.0, 0.0]),
-        VertexColor::new([0, 0, 255]),
-    ),
+    // 7 vertices make up the bottom face (center plus 6 outer vertices)
+    Vertex::new(VertexPosition::new([0.0, 0.0, 0.0]), VERTEX_COLOR),
     Vertex::new(
         VertexPosition::new([TILE_SIDE_LENGTH / 2.0, 0.0, TILE_INSIDE_RADIUS]),
-        VertexColor::new([0, 0, 255]),
+        VERTEX_COLOR,
     ),
     Vertex::new(
         VertexPosition::new([TILE_SIDE_LENGTH, 0.0, 0.0]),
-        VertexColor::new([0, 0, 255]),
+        VERTEX_COLOR,
     ),
     Vertex::new(
         VertexPosition::new([TILE_SIDE_LENGTH / 2.0, 0.0, -TILE_INSIDE_RADIUS]),
-        VertexColor::new([0, 0, 255]),
+        VERTEX_COLOR,
     ),
     Vertex::new(
         VertexPosition::new([
@@ -163,25 +107,83 @@ const HEX_VERTICES: &[Vertex] = &[
             0.0,
             -TILE_INSIDE_RADIUS,
         ]),
-        VertexColor::new([0, 0, 255]),
+        VERTEX_COLOR,
     ),
     Vertex::new(
         VertexPosition::new([-TILE_SIDE_LENGTH, 0.0, 0.0]),
-        VertexColor::new([0, 0, 255]),
+        VERTEX_COLOR,
     ),
     Vertex::new(
         VertexPosition::new([-TILE_SIDE_LENGTH / 2.0, 0.0, TILE_INSIDE_RADIUS]),
-        VertexColor::new([0, 0, 255]),
+        VERTEX_COLOR,
+    ),
+    // 7 vertices make up the top face as well
+    Vertex::new(VertexPosition::new([0.0, 1.0, 0.0]), VERTEX_COLOR),
+    Vertex::new(
+        VertexPosition::new([TILE_SIDE_LENGTH / 2.0, 1.0, TILE_INSIDE_RADIUS]),
+        VERTEX_COLOR,
+    ),
+    Vertex::new(
+        VertexPosition::new([TILE_SIDE_LENGTH, 1.0, 0.0]),
+        VERTEX_COLOR,
+    ),
+    Vertex::new(
+        VertexPosition::new([TILE_SIDE_LENGTH / 2.0, 1.0, -TILE_INSIDE_RADIUS]),
+        VERTEX_COLOR,
+    ),
+    Vertex::new(
+        VertexPosition::new([
+            -TILE_SIDE_LENGTH / 2.0,
+            1.0,
+            -TILE_INSIDE_RADIUS,
+        ]),
+        VERTEX_COLOR,
+    ),
+    Vertex::new(
+        VertexPosition::new([-TILE_SIDE_LENGTH, 1.0, 0.0]),
+        VERTEX_COLOR,
+    ),
+    Vertex::new(
+        VertexPosition::new([-TILE_SIDE_LENGTH / 2.0, 1.0, TILE_INSIDE_RADIUS]),
+        VERTEX_COLOR,
     ),
 ];
 
+/// A list of indices into the above vertex array. In this order, these vertices
+/// define a hexagonal prism.
 const HEX_INDICES: &[u8] = &[
-    2, 1, 0, // center
-    3, 2, 0, // TODO
-    4, 3, 0, // TODO
-    5, 4, 0, // TODO
-    6, 5, 0, // TODO
-    1, 6, 0, // TODO
+    // top face
+    2, 1, 0, //
+    3, 2, 0, //
+    4, 3, 0, //
+    5, 4, 0, //
+    6, 5, 0, //
+    1, 6, 0, //
+    // Side 1
+    1, 2, 8, //
+    2, 9, 8, //
+    // Side 2
+    2, 3, 9, //
+    3, 10, 9, //
+    // Side 3
+    3, 4, 10, //
+    4, 11, 10, //
+    // Side 4
+    4, 5, 11, //
+    5, 12, 11, //
+    // Side 5
+    5, 6, 12, //
+    6, 13, 12, //
+    // Side 6
+    6, 1, 13, //
+    1, 8, 13, //
+    // Top face
+    7, 8, 9, //
+    7, 9, 10, //
+    7, 10, 11, //
+    7, 11, 12, //
+    7, 12, 13, //
+    7, 13, 8, //
 ];
 
 /// A convenient type to return as opaque to JS.
@@ -218,7 +220,7 @@ impl Scene {
             .build()
             .unwrap();
 
-        let projection = cgmath::perspective(FOVY, 1.0, Z_NEAR, Z_FAR);
+        let projection = cgmath::perspective(FOVY, 4.89, Z_NEAR, Z_FAR);
         let view = Matrix4::<f32>::look_at(
             Point3::new(2., 2., 2.),
             Point3::origin(),
@@ -230,10 +232,7 @@ impl Scene {
             program,
             hexagon,
             projection,
-            view, /* direct_triangles,
-                   * indexed_triangles,
-                   * direct_deinterleaved_triangles,
-                   * indexed_deinterleaved_triangles, */
+            view,
         }
     }
 }
@@ -257,7 +256,7 @@ impl Scene {
             .new_pipeline_gate()
             .pipeline(
                 &back_buffer,
-                &PipelineState::default(),
+                &PipelineState::default().set_clear_color([0.5, 0.5, 0.5, 1.0]),
                 |_, mut shd_gate| {
                     shd_gate.shade(program, |mut iface, uni, mut rdr_gate| {
                         iface.set(&uni.projection, (*projection).into());
