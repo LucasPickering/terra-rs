@@ -35,7 +35,7 @@ fi
 
 # Build the Rust code with wasm-pack
 [tasks.build]
-args = ["build", "--target", "web", "-d", "static/pkg", "--${WASM_PACK_PROFILE}"]
+args = ["build", "--target", "web", "--${WASM_PACK_PROFILE}"]
 command = "wasm-pack"
 dependencies = ["wasm-pack"]
 
@@ -48,7 +48,6 @@ watch = {watch = ["./Cargo.toml", "./src/", "./kiss3d/src"]}
 [tasks.start]
 dependencies = ["light-server"]
 script = '''
-    cargo make build-watch &
     npx light-server -s static -p 3000 -w 'static/**'
 '''
 

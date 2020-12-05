@@ -19,9 +19,12 @@ anyhow = "1.0"
 console_error_panic_hook = "0.1"
 js-sys = "0.3"
 # kiss3d = "0.28"
-kiss3d = {path = "./kiss3d"}
+# kiss3d = {path = "./kiss3d"}
 log = "0.4"
 # nalgebra needs to stay the same as kiss3d's version
+luminance = "0.43"
+luminance-front = "0.3"
+luminance-web-sys = "0.2"
 nalgebra = "0.23"
 noise = "0.6"
 serde = {version = "1.0", features = ["derive"]}
@@ -31,4 +34,4 @@ wasm-logger = "0.2"
 
 [dependencies.web-sys]
 features = ["Window", "Headers", "Request", "RequestInit", "RequestMode", "Response"]
-version = "0.3"
+version = "0.3.40"

@@ -2,223 +2,244 @@ use crate::{
     world::{HasHexPosition, HexPointMap, Tile, TileLens, World},
     WorldConfig,
 };
-use kiss3d::{
-    camera::{ArcBall, Camera},
-    event::{Action, Key, WindowEvent},
-    light::Light,
-    planar_camera::PlanarCamera,
-    post_processing::PostProcessingEffect,
-    renderer::Renderer,
-    resource::{Mesh, MeshManager},
-    scene::SceneNode,
-    window::{State, Window},
+use luminance::{Semantics, Vertex};
+use luminance_front::{
+    context::GraphicsContext as _,
+    pipeline::PipelineState,
+    render_state::RenderState,
+    shader::Program,
+    tess::{Deinterleaved, Interleaved, Mode, Tess},
 };
-use nalgebra::{Point3, Translation3, Vector3};
-use std::{cell::RefCell, rc::Rc};
+use luminance_web_sys::WebSysWebGL2Surface;
+use wasm_bindgen::prelude::*;
+
+// We get the shader at compile time from local files
+const VS: &str = include_str!("./shaders/simple-vs.glsl");
+const FS: &str = include_str!("./shaders/simple-fs.glsl");
 
 const TILE_SIDE_LENGTH: f32 = 1.0;
 const TILE_INSIDE_RADIUS: f32 = TILE_SIDE_LENGTH * 0.866_025; // approx sqrt(3)/2
 const TILE_WIDTH: f32 = TILE_SIDE_LENGTH * 2.0;
 const TILE_MESH_NAME: &str = "tile";
 
-struct AppState {
-    camera: Box<dyn Camera>,
-    world: World,
-    lens: TileLens,
-    tile_nodes: HexPointMap<SceneNode>,
+// Vertex semantics. Those are needed to instruct the GPU how to select vertex’s
+// attributes from the memory we fill at render time, in shaders. You don’t have
+// to worry about them; just keep in mind they’re mandatory and act as
+// “protocol” between GPU’s memory regions and shaders.
+//
+// We derive Semantics automatically and provide the mapping as field
+// attributes.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Semantics)]
+pub enum Semantics {
+    //
+    // - Reference vertex positions with the "co" variable in vertex shaders.
+    // - The underlying representation is [f32; 2], which is a vec2 in GLSL.
+    // - The wrapper type you can use to handle such a semantics is
+    //   VertexPosition.
+    #[sem(name = "co", repr = "[f32; 2]", wrapper = "VertexPosition")]
+    Position,
+    //
+    // - Reference vertex colors with the "color" variable in vertex shaders.
+    // - The underlying representation is [u8; 3], which is a uvec3 in GLSL.
+    // - The wrapper type you can use to handle such a semantics is
+    //   VertexColor.
+    #[sem(name = "color", repr = "[u8; 3]", wrapper = "VertexColor")]
+    Color,
 }
 
-impl AppState {
-    fn new(config: WorldConfig, window: &mut Window) -> Self {
-        let world = World::generate(config);
-        let camera = ArcBall::new_with_frustrum(
-            std::f32::consts::PI / 4.0,
-            0.1,
-            1024.0,
-            Point3::new(-50.0, 50.0, -50.0),
-            Point3::origin(),
-        );
+// Our vertex type.
+//
+// We derive the Vertex trait automatically and we associate to each field the
+// semantics that must be used on the GPU. The proc-macro derive Vertex will
+// make sure for us every field we use has a mapping to the type you specified
+// as semantics.
+//
+// Currently, we need to use #[repr(C))] to ensure Rust is not going to move
+// struct’s fields around.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Vertex)]
+#[vertex(sem = "Semantics")]
+struct Vertex {
+    pos: VertexPosition,
+    // Here, we can use the special normalized = <bool> construct to state
+    // whether we want integral vertex attributes to be available as
+    // normalized floats in the shaders, when fetching them from the vertex
+    // buffers. If you set it to "false" or ignore it, you will get
+    // non-normalized integer values (i.e. value ranging from 0 to 255 for
+    // u8, for instance).
+    #[vertex(normalized = "true")]
+    rgb: VertexColor,
+}
 
-        let mut root_node = window.add_group();
-        let tile_nodes =
-            render_tiles(&mut root_node, world.tiles(), TileLens::Composite);
+// The vertices. We define two triangles.
+const TRI_VERTICES: [Vertex; 6] = [
+    // First triangle – an RGB one.
+    Vertex::new(
+        VertexPosition::new([0.5, -0.5]),
+        VertexColor::new([0, 255, 0]),
+    ),
+    Vertex::new(
+        VertexPosition::new([0.0, 0.5]),
+        VertexColor::new([0, 0, 255]),
+    ),
+    Vertex::new(
+        VertexPosition::new([-0.5, -0.5]),
+        VertexColor::new([255, 0, 0]),
+    ),
+    // Second triangle, a purple one, positioned differently.
+    Vertex::new(
+        VertexPosition::new([-0.5, 0.5]),
+        VertexColor::new([255, 51, 255]),
+    ),
+    Vertex::new(
+        VertexPosition::new([0.0, -0.5]),
+        VertexColor::new([51, 255, 255]),
+    ),
+    Vertex::new(
+        VertexPosition::new([0.5, 0.5]),
+        VertexColor::new([51, 51, 255]),
+    ),
+];
 
-        Self {
-            camera: Box::new(camera),
-            world,
-            lens: TileLens::Composite,
-            tile_nodes,
+// The vertices, deinterleaved versions. We still define two triangles.
+const TRI_DEINT_POS_VERTICES: &[VertexPosition] = &[
+    VertexPosition::new([0.5, -0.5]),
+    VertexPosition::new([0.0, 0.5]),
+    VertexPosition::new([-0.5, -0.5]),
+    VertexPosition::new([-0.5, 0.5]),
+    VertexPosition::new([0.0, -0.5]),
+    VertexPosition::new([0.5, 0.5]),
+];
+
+const TRI_DEINT_COLOR_VERTICES: &[VertexColor] = &[
+    VertexColor::new([0, 255, 0]),
+    VertexColor::new([0, 0, 255]),
+    VertexColor::new([255, 0, 0]),
+    VertexColor::new([255, 51, 255]),
+    VertexColor::new([51, 255, 255]),
+    VertexColor::new([51, 51, 255]),
+];
+
+// Indices into TRI_VERTICES to use to build up the triangles.
+const TRI_INDICES: [u8; 6] = [
+    0, 1, 2, // First triangle.
+    3, 4, 5, // Second triangle.
+];
+
+/// A convenient type to return as opaque to JS.
+#[wasm_bindgen]
+pub struct Scene {
+    surface: WebSysWebGL2Surface,
+    program: Program<Semantics, (), ()>,
+    direct_triangles: Tess<Vertex, (), (), Interleaved>,
+    indexed_triangles: Tess<Vertex, u8, (), Interleaved>,
+    direct_deinterleaved_triangles: Tess<Vertex, (), (), Deinterleaved>,
+    indexed_deinterleaved_triangles: Tess<Vertex, u8, (), Deinterleaved>,
+}
+
+impl Scene {
+    pub fn new(canvas_id: &str) -> Scene {
+        // First thing first: we create a new surface to render to and get
+        // events from.
+        let mut surface =
+            WebSysWebGL2Surface::new(canvas_id).expect("web-sys surface");
+
+        // We need a program to “shade” our triangles and to tell luminance
+        // which is the input vertex type, and we’re not interested in
+        // the other two type variables for this sample.
+        let program = surface
+            .new_shader_program::<Semantics, (), ()>()
+            .from_strings(VS, None, None, FS)
+            .expect("program creation")
+            .ignore_warnings();
+
+        // Create tessellation for direct geometry; that is, tessellation that
+        // will render vertices by taking one after another in the
+        // provided slice.
+        let direct_triangles = surface
+            .new_tess()
+            .set_vertices(&TRI_VERTICES[..])
+            .set_mode(Mode::Triangle)
+            .build()
+            .unwrap();
+
+        // Create indexed tessellation; that is, the vertices will be picked by
+        // using the indexes provided by the second slice and this indexes will
+        // reference the first slice (useful not to duplicate vertices on more
+        // complex objects than just two triangles).
+        let indexed_triangles = surface
+            .new_tess()
+            .set_vertices(&TRI_VERTICES[..])
+            .set_indices(&TRI_INDICES[..])
+            .set_mode(Mode::Triangle)
+            .build()
+            .unwrap();
+
+        // Create direct, deinterleaved tesselations; such tessellations allow
+        // to separate vertex attributes in several contiguous regions
+        // of memory.
+        let direct_deinterleaved_triangles = surface
+            .new_deinterleaved_tess::<Vertex, ()>()
+            .set_attributes(&TRI_DEINT_POS_VERTICES[..])
+            .set_attributes(&TRI_DEINT_COLOR_VERTICES[..])
+            .set_mode(Mode::Triangle)
+            .build()
+            .unwrap();
+
+        // Create indexed, deinterleaved tessellations; have your cake and
+        // fucking eat it, now.
+        let indexed_deinterleaved_triangles = surface
+            .new_deinterleaved_tess::<Vertex, ()>()
+            .set_attributes(&TRI_DEINT_POS_VERTICES[..])
+            .set_attributes(&TRI_DEINT_COLOR_VERTICES[..])
+            .set_indices(&TRI_INDICES[..])
+            .set_mode(Mode::Triangle)
+            .build()
+            .unwrap();
+
+        Scene {
+            surface,
+            program,
+            direct_triangles,
+            indexed_triangles,
+            direct_deinterleaved_triangles,
+            indexed_deinterleaved_triangles,
         }
     }
+}
 
-    fn handle_event(&mut self, _window: &mut Window, event: &WindowEvent) {
-        match event {
-            WindowEvent::Key(Key::Key1, Action::Press, _) => {
-                self.update_tile_color(TileLens::Composite);
-            }
-            WindowEvent::Key(Key::Key2, Action::Press, _) => {
-                self.update_tile_color(TileLens::Elevation);
-            }
-            WindowEvent::Key(Key::Key3, Action::Press, _) => {
-                self.update_tile_color(TileLens::Humidity);
-            }
-            WindowEvent::Key(Key::Key4, Action::Press, _) => {
-                self.update_tile_color(TileLens::Biome);
-            }
-            _ => {}
-        }
+#[wasm_bindgen]
+impl Scene {
+    #[wasm_bindgen]
+    pub fn render(&mut self) {
+        let back_buffer = self.surface.back_buffer().unwrap();
+        let Self {
+            ref mut program,
+            ref direct_triangles,
+            ..
+        } = self;
+
+        // Create a new dynamic pipeline that will render to the back buffer and
+        // must clear it with pitch black prior to do any render to it.
+        self.surface
+            .new_pipeline_gate()
+            .pipeline(
+                &back_buffer,
+                &PipelineState::default(),
+                |_, mut shd_gate| {
+                    // Start shading with our program.
+                    shd_gate.shade(program, |_, _, mut rdr_gate| {
+                        // Start rendering things with the default render state
+                        // provided by luminance.
+                        rdr_gate
+                            .render(&RenderState::default(), |mut tess_gate| {
+                                tess_gate.render(direct_triangles)
+                            })
+                    })
+                },
+            )
+            .assume()
+            .into_result()
+            .unwrap()
     }
-
-    fn update_tile_color(&mut self, lens: TileLens) {
-        self.lens = lens;
-        apply_tile_colors(self.world.tiles(), &mut self.tile_nodes, lens);
-    }
-}
-
-impl State for AppState {
-    fn step(&mut self, window: &mut Window) {
-        for event in window.events().iter() {
-            self.handle_event(window, &event.value);
-        }
-    }
-
-    #[allow(clippy::type_complexity)]
-    fn cameras_and_effect_and_renderer(
-        &mut self,
-    ) -> (
-        Option<&mut dyn Camera>,
-        Option<&mut dyn PlanarCamera>,
-        Option<&mut dyn Renderer>,
-        Option<&mut dyn PostProcessingEffect>,
-    ) {
-        (Some(self.camera.as_mut()), None, None, None)
-    }
-}
-
-fn build_tile_mesh() -> Mesh {
-    Mesh::new(
-        vec![
-            // Each of these starts at the center, then goes to the top-right,
-            // then clockwise from there
-            // Bottom
-            Point3::new(0.0, 0.0, 0.0),
-            Point3::new(TILE_SIDE_LENGTH / 2.0, 0.0, TILE_INSIDE_RADIUS),
-            Point3::new(TILE_SIDE_LENGTH, 0.0, 0.0),
-            Point3::new(TILE_SIDE_LENGTH / 2.0, 0.0, -TILE_INSIDE_RADIUS),
-            Point3::new(-TILE_SIDE_LENGTH / 2.0, 0.0, -TILE_INSIDE_RADIUS),
-            Point3::new(-TILE_SIDE_LENGTH, 0.0, 0.0),
-            Point3::new(-TILE_SIDE_LENGTH / 2.0, 0.0, TILE_INSIDE_RADIUS),
-            // Top
-            Point3::new(0.0, 1.0, 0.0),
-            Point3::new(TILE_SIDE_LENGTH / 2.0, 1.0, TILE_INSIDE_RADIUS),
-            Point3::new(TILE_SIDE_LENGTH, 1.0, 0.0),
-            Point3::new(TILE_SIDE_LENGTH / 2.0, 1.0, -TILE_INSIDE_RADIUS),
-            Point3::new(-TILE_SIDE_LENGTH / 2.0, 1.0, -TILE_INSIDE_RADIUS),
-            Point3::new(-TILE_SIDE_LENGTH, 1.0, 0.0),
-            Point3::new(-TILE_SIDE_LENGTH / 2.0, 1.0, TILE_INSIDE_RADIUS),
-        ],
-        vec![
-            // Bottom face
-            Point3::new(2, 1, 0),
-            Point3::new(3, 2, 0),
-            Point3::new(4, 3, 0),
-            Point3::new(5, 4, 0),
-            Point3::new(6, 5, 0),
-            Point3::new(1, 6, 0),
-            // Side 1
-            Point3::new(1, 2, 8),
-            Point3::new(2, 9, 8),
-            // Side 2
-            Point3::new(2, 3, 9),
-            Point3::new(3, 10, 9),
-            // Side 3
-            Point3::new(3, 4, 10),
-            Point3::new(4, 11, 10),
-            // Side 4
-            Point3::new(4, 5, 11),
-            Point3::new(5, 12, 11),
-            // Side 5
-            Point3::new(5, 6, 12),
-            Point3::new(6, 13, 12),
-            // Side 6
-            Point3::new(6, 1, 13),
-            Point3::new(1, 8, 13),
-            // Top face
-            Point3::new(7, 8, 9),
-            Point3::new(7, 9, 10),
-            Point3::new(7, 10, 11),
-            Point3::new(7, 11, 12),
-            Point3::new(7, 12, 13),
-            Point3::new(7, 13, 8),
-        ],
-        None,
-        None,
-        false,
-    )
-}
-
-fn init_meshes() {
-    let mesh = Rc::new(RefCell::new(build_tile_mesh()));
-    MeshManager::get_global_manager(move |mm| {
-        mm.add(mesh.clone(), TILE_MESH_NAME)
-    });
-}
-
-fn apply_tile_colors(
-    tiles: &HexPointMap<Tile>,
-    tile_nodes: &mut HexPointMap<SceneNode>,
-    lens: TileLens,
-) {
-    for (pos, node) in tile_nodes.iter_mut() {
-        let tile = tiles.get(pos).expect("Missing SceneNode for Tile");
-        let color = tile.color(lens);
-        node.set_color(color.red(), color.green(), color.blue());
-    }
-}
-
-fn render_tiles(
-    root_node: &mut SceneNode,
-    tiles: &HexPointMap<Tile>,
-    lens: TileLens,
-) -> HexPointMap<SceneNode> {
-    let mut tile_nodes: HexPointMap<_> = tiles
-        .values()
-        .map(|tile| (tile.position(), render_tile(root_node, tile)))
-        .collect();
-    apply_tile_colors(tiles, &mut tile_nodes, lens);
-    tile_nodes
-}
-
-fn render_tile(parent: &mut SceneNode, tile: &Tile) -> SceneNode {
-    let mut node = parent
-        .add_geom_with_name(
-            TILE_MESH_NAME,
-            Vector3::new(
-                1.0,
-                (tile.elevation() - Tile::ELEVATION_RANGE.min) as f32,
-                1.0,
-            ),
-        )
-        .unwrap();
-
-    node.enable_backface_culling(true);
-
-    // Shift tile based on its position
-    let translation: (f64, f64) =
-        tile.position().get_pixel_pos(TILE_WIDTH as f64);
-    node.set_local_translation(Translation3::new(
-        translation.0 as f32,
-        0.0,
-        translation.1 as f32,
-    ));
-
-    node
-}
-
-pub fn run(config: WorldConfig) {
-    let mut window = Window::new("Terra");
-    init_meshes();
-    window.set_light(Light::StickToCamera);
-    let state = AppState::new(config, &mut window);
-    window.render_loop(state)
 }

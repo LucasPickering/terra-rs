@@ -2,5 +2,3 @@ target/
 node_modules/
 .vscode/
 pkg/
-
-package-lock.json
