@@ -3,7 +3,6 @@ use std::f32::consts::PI;
 use cgmath::{
     InnerSpace, Matrix4, Point3, Quaternion, Rad, Rotation, Rotation3, Vector3,
 };
-use log::debug;
 
 const FOVY: Rad<f32> = Rad(std::f32::consts::FRAC_PI_2);
 const Z_NEAR: f32 = 0.1;
@@ -16,6 +15,8 @@ pub enum CameraAction {
     MoveBackward,
     MoveLeft,
     MoveRight,
+    MoveUp,
+    MoveDown,
     RotateUp,
     RotateDown,
     RotateLeft,
@@ -35,9 +36,8 @@ pub struct Camera {
 impl Camera {
     pub fn new() -> Self {
         Self {
-            position: Point3::new(0.0, 2.0, -2.0),
+            position: Point3::new(0.0, 50.0, 0.0),
             pitch: Rad(-PI / 4.0),
-            // yaw: Rad(-3.0 * PI / 4.0),
             yaw: Rad(0.0),
         }
     }
@@ -81,6 +81,8 @@ impl Camera {
             CameraAction::MoveBackward => Vector3::unit_z() * -1.0,
             CameraAction::MoveLeft => Vector3::unit_x(),
             CameraAction::MoveRight => Vector3::unit_x() * -1.0,
+            CameraAction::MoveUp => Vector3::unit_y(),
+            CameraAction::MoveDown => Vector3::unit_y() * -1.0,
             _ => Vector3::new(0.0, 0.0, 0.0),
         } * magnitude;
         // Rotate the translation by our current yaw, so that forward and

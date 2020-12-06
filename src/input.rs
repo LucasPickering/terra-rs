@@ -1,9 +1,11 @@
 use crate::camera::{Camera, CameraAction};
 use gloo::events::EventListener;
-use log::error;
+use log::{error, trace};
 use std::sync::mpsc;
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{Event, EventTarget, KeyboardEvent};
+
+// TODO create an InputEvent enum to clean up some of the inputs from JS
 
 pub struct InputHandler {
     /// A channel that we will send all events to
@@ -43,7 +45,12 @@ impl InputHandler {
                     "ArrowDown" => Some(CameraAction::RotateDown),
                     "ArrowLeft" => Some(CameraAction::RotateLeft),
                     "ArrowRight" => Some(CameraAction::RotateRight),
-                    _ => None,
+                    " " => Some(CameraAction::MoveUp),
+                    "Shift" => Some(CameraAction::MoveDown),
+                    other => {
+                        trace!("Unknown key code: {}", other);
+                        None
+                    }
                 };
                 if let Some(cam_action) = cam_action {
                     camera.apply_action(cam_action, 0.1);

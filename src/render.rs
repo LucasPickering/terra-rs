@@ -1,7 +1,7 @@
 use crate::{
     camera::Camera,
     input::InputHandler,
-    world::{HasHexPosition, HexPointMap, Tile, TileLens, World},
+    world::{HasHexPosition, HexPoint, HexPointMap, Tile, TileLens, World},
     WorldConfig,
 };
 use log::debug;
@@ -14,7 +14,6 @@ use luminance_front::{
     tess::{Interleaved, Mode, Tess},
 };
 use luminance_web_sys::WebSysWebGL2Surface;
-use wasm_bindgen::prelude::*;
 
 // We get the shader at compile time from local files
 const VS: &str = include_str!("./shaders/simple-vs.glsl");
@@ -23,7 +22,6 @@ const FS: &str = include_str!("./shaders/simple-fs.glsl");
 const TILE_SIDE_LENGTH: f32 = 1.0;
 const TILE_INSIDE_RADIUS: f32 = TILE_SIDE_LENGTH * 0.866_025; // approx sqrt(3)/2
 const TILE_WIDTH: f32 = TILE_SIDE_LENGTH * 2.0;
-const TILE_MESH_NAME: &str = "tile";
 
 // Vertex semantics. Those are needed to instruct the GPU how to select vertex’s
 // attributes from the memory we fill at render time, in shaders. You don’t have
@@ -34,21 +32,33 @@ const TILE_MESH_NAME: &str = "tile";
 // attributes.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Semantics)]
 pub enum VertexSemantics {
-    //
-    // - Reference vertex positions with the "position" variable in vertex
-    //   shaders.
-    // - The underlying representation is [f32; 3], which is a vec3 in GLSL.
-    // - The wrapper type you can use to handle such a semantics is
-    //   VertexPosition.
-    #[sem(name = "position", repr = "[f32; 3]", wrapper = "VertexPosition")]
+    ///
+    /// - Reference vertex positions with the "position" variable in vertex
+    ///   shaders.
+    /// - The underlying representation is [f32; 3], which is a vec3 in GLSL.
+    /// - The wrapper type you can use to handle such a semantics is
+    ///   VertexPosition.
+    #[sem(name = "co", repr = "[f32; 3]", wrapper = "VertexPosition")]
     Position,
-    //
-    // - Reference vertex colors with the "color" variable in vertex shaders.
-    // - The underlying representation is [u8; 3], which is a uvec3 in GLSL.
-    // - The wrapper type you can use to handle such a semantics is
-    //   VertexColor.
+
+    ///
+    /// - Reference vertex colors with the "color" variable in vertex shaders.
+    /// - The underlying representation is [u8; 3], which is a uvec3 in GLSL.
+    /// - The wrapper type you can use to handle such a semantics is
+    ///   VertexColor.
     #[sem(name = "color", repr = "[u8; 3]", wrapper = "VertexColor")]
     Color,
+
+    // reference vertex instance’s position on screen
+    #[sem(
+        name = "position",
+        repr = "[f32; 3]",
+        wrapper = "VertexInstancePosition"
+    )]
+    InstancePosition,
+    // reference vertex size in vertex shaders (used for vertex instancing)
+    #[sem(name = "scale", repr = "[f32; 3]", wrapper = "VertexScale")]
+    Scale,
 }
 
 // Our vertex type.
@@ -73,6 +83,15 @@ struct Vertex {
     // u8, for instance).
     #[vertex(normalized = "true")]
     rgb: VertexColor,
+}
+
+// definition of a single instance
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Vertex)]
+#[vertex(sem = "VertexSemantics", instanced = "true")]
+pub struct Instance {
+    pub pos: VertexInstancePosition,
+    pub scale: VertexScale,
 }
 
 #[derive(Debug, UniformInterface)]
@@ -185,18 +204,16 @@ const HEX_INDICES: &[u8] = &[
 ];
 
 /// A convenient type to return as opaque to JS.
-#[wasm_bindgen]
 pub struct Scene {
     surface: WebSysWebGL2Surface,
     program: Program<VertexSemantics, (), ShaderInterface>,
     camera: Camera,
-    hexagon: Tess<Vertex, u8, (), Interleaved>,
+    tiles: Tess<Vertex, u8, Instance, Interleaved>,
     input_handler: InputHandler,
 }
 
-#[wasm_bindgen]
 impl Scene {
-    pub fn new(canvas_id: &str) -> Scene {
+    pub fn new(canvas_id: &str, world: &World) -> Scene {
         // First thing first: we create a new surface to render to and get
         // events from.
         let mut surface =
@@ -211,11 +228,29 @@ impl Scene {
             .expect("program creation")
             .ignore_warnings();
 
-        let hexagon = surface
+        // Create a tess instance for each tile in the world. We may need to
+        // introduce chunking at some point, but for now this works
+        let tile_instances: Vec<Instance> = world
+            .tiles()
+            .values()
+            .map(|tile| {
+                let (x, z) = tile.position().pixel_pos(TILE_WIDTH);
+                Instance {
+                    pos: VertexInstancePosition::new([x, 0.0, z]),
+                    scale: VertexScale::new([
+                        1.0,
+                        tile.elevation() as f32,
+                        1.0,
+                    ]),
+                }
+            })
+            .collect();
+        let tiles = surface
             .new_tess()
             .set_vertices(HEX_VERTICES)
             .set_indices(HEX_INDICES)
             .set_mode(Mode::TriangleFan)
+            .set_instances(tile_instances)
             .build()
             .unwrap();
 
@@ -225,13 +260,12 @@ impl Scene {
         Scene {
             surface,
             program,
-            hexagon,
+            tiles,
             camera,
             input_handler,
         }
     }
 
-    #[wasm_bindgen]
     pub fn render(&mut self) {
         let back_buffer = self.surface.back_buffer().unwrap();
         let [width, height] = back_buffer.size();
@@ -247,7 +281,7 @@ impl Scene {
         // must clear it with pitch black prior to do any render to it.
         let Self {
             ref mut program,
-            ref hexagon,
+            ref tiles,
             ..
         } = self;
         self.surface
@@ -262,13 +296,13 @@ impl Scene {
 
                         rdr_gate
                             .render(&RenderState::default(), |mut tess_gate| {
-                                tess_gate.render(hexagon)
+                                tess_gate.render(tiles)
                             })
                     })
                 },
             )
             .assume()
             .into_result()
-            .unwrap()
+            .unwrap();
     }
 }

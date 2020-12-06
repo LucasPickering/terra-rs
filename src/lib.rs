@@ -1,4 +1,4 @@
-use crate::render::Scene;
+use crate::{render::Scene, world::World};
 use log::info;
 use serde::Deserialize;
 use wasm_bindgen::{prelude::*, JsCast};
@@ -64,23 +64,27 @@ impl WorldConfig {
 /// Terra from the outside.
 #[wasm_bindgen]
 pub struct Terra {
-    config: WorldConfig,
+    world: World,
+    scene: Scene,
 }
 
 #[wasm_bindgen]
 impl Terra {
     /// Initialize a Terra instance
     #[wasm_bindgen]
-    pub async fn load() -> Result<Terra, js_sys::Error> {
+    pub async fn load(canvas_id: String) -> Result<Terra, js_sys::Error> {
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));
         wasm_logger::init(wasm_logger::Config::default());
+
         let config = WorldConfig::load().await?;
-        Ok(Self { config })
+        let world = World::generate(config);
+        let scene = Scene::new(&canvas_id, &world);
+
+        Ok(Self { world, scene })
     }
 
     #[wasm_bindgen]
-    /// Create a scene and attach to a specific canvas
-    pub fn create_scene(&self, canvas_id: &str) -> Scene {
-        Scene::new(canvas_id)
+    pub fn render(&mut self) {
+        self.scene.render();
     }
 }
