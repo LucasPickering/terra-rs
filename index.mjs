@@ -4,6 +4,8 @@ const { Terra } = await import("./pkg/terra.js");
 const terra = await Terra.load(CANVAS_ID);
 
 const canvas = document.getElementById(CANVAS_ID);
+canvas.addEventListener("keydown", (e) => terra.handle_event(e));
+// canvas.addEventListener("keyup", (e) => terra.handle_event(e));
 
 const resizeCanvas = () => {
   // TODO debounce this event listener

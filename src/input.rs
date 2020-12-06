@@ -1,41 +1,54 @@
 use crate::camera::{Camera, CameraAction};
-use gloo::events::EventListener;
-use log::{error, trace};
+use log::trace;
 use std::sync::mpsc;
-use wasm_bindgen::{prelude::*, JsCast};
-use web_sys::{Event, EventTarget, KeyboardEvent};
+use wasm_bindgen::JsCast;
+use web_sys::{Event, KeyboardEvent};
 
 // TODO create an InputEvent enum to clean up some of the inputs from JS
 
+#[derive(Clone, Debug)]
+pub enum InputEvent {
+    KeyDown { event: KeyboardEvent },
+    KeyUp { event: KeyboardEvent },
+}
+
+/// A handler for all input events. **Input listeners should be registered in
+/// JS, then calls propagated to [Self::handle_event].** This uses an MPSC
+/// channel to collect input event so that they can be processed during the main
+/// game loop.
 pub struct InputHandler {
-    /// A channel that we will send all events to
-    receiver: mpsc::Receiver<Event>,
-    // These all need to be hung onto, because they are de-registered when
-    // they're dropped
-    _on_key_press: EventListener,
+    /// Sender for the channel we will send all events on
+    sender: mpsc::Sender<InputEvent>,
+    /// Sender for the channel we will send all events on
+    receiver: mpsc::Receiver<InputEvent>,
 }
 
 impl InputHandler {
-    pub fn new(canvas: &EventTarget) -> Self {
+    pub fn new() -> Self {
         let (sender, receiver) = mpsc::channel();
-
-        // Attach an event listener
-        let on_key_press =
-            EventListener::new(canvas, "keydown", move |event| {
-                sender.send(event.clone()).unwrap();
-            });
-
-        Self {
-            receiver,
-            _on_key_press: on_key_press,
-        }
+        Self { sender, receiver }
     }
 
-    // Process a single input event
-    fn process_event(&self, camera: &mut Camera, event: Event) {
-        match event.type_().as_str() {
-            "keydown" => {
-                let event: &KeyboardEvent = event.dyn_ref().unwrap_throw();
+    /// Handle an incoming event from the DOM. This should be called from each
+    /// event listener on the canvas element. The listeners should be registered
+    /// in JS.
+    pub fn handle_event(&self, event: Event) {
+        let input_event = match event.type_().as_str() {
+            "keydown" => InputEvent::KeyDown {
+                event: event.dyn_into().unwrap(),
+            },
+            "keyup" => InputEvent::KeyUp {
+                event: event.dyn_into().unwrap(),
+            },
+            other => panic!("Unknown event type: {}", other),
+        };
+        self.sender.send(input_event).unwrap();
+    }
+
+    /// Apply the actions for a single input event
+    fn process_event(&self, camera: &mut Camera, event: InputEvent) {
+        match event {
+            InputEvent::KeyDown { event } => {
                 let cam_action = match event.key().as_str() {
                     "w" | "W" => Some(CameraAction::MoveForward),
                     "s" | "S" => Some(CameraAction::MoveBackward),
@@ -56,11 +69,12 @@ impl InputHandler {
                     camera.apply_action(cam_action, 0.1);
                 }
             }
-            other => error!("Unhandled event type: {}", other),
+            InputEvent::KeyUp { event } => todo!(),
         }
     }
 
-    /// Process all available input events
+    /// Process all available input events in the MPSC channel. This will apply
+    /// each action, to update whatever game state needs to be updated.
     pub fn process_events(&mut self, camera: &mut Camera) {
         for event in self.receiver.try_iter() {
             self.process_event(camera, event);

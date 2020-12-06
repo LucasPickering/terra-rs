@@ -1,10 +1,8 @@
 use crate::{
     camera::Camera,
     input::InputHandler,
-    world::{HasHexPosition, HexPoint, HexPointMap, Tile, TileLens, World},
-    WorldConfig,
+    world::{HasHexPosition, World},
 };
-use log::debug;
 use luminance::{shader::Uniform, Semantics, UniformInterface, Vertex};
 use luminance_front::{
     context::GraphicsContext as _,
@@ -209,7 +207,7 @@ pub struct Scene {
     program: Program<VertexSemantics, (), ShaderInterface>,
     camera: Camera,
     tiles: Tess<Vertex, u8, Instance, Interleaved>,
-    input_handler: InputHandler,
+    pub input_handler: InputHandler,
 }
 
 impl Scene {
@@ -255,7 +253,7 @@ impl Scene {
             .unwrap();
 
         let camera = Camera::new();
-        let input_handler = InputHandler::new(&surface.canvas);
+        let input_handler = InputHandler::new();
 
         Scene {
             surface,

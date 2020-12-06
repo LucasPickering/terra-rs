@@ -3,7 +3,7 @@ use log::info;
 use serde::Deserialize;
 use wasm_bindgen::{prelude::*, JsCast};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{Request, RequestInit, RequestMode, Response};
+use web_sys::{Event, Request, RequestInit, RequestMode, Response};
 
 mod camera;
 mod input;
@@ -83,8 +83,16 @@ impl Terra {
         Ok(Self { world, scene })
     }
 
+    /// Run a single render. This is the entrypoint into the game loop, so it
+    /// should be called once per frame.
     #[wasm_bindgen]
     pub fn render(&mut self) {
         self.scene.render();
+    }
+
+    /// Forward any events from JS to the input handler
+    #[wasm_bindgen]
+    pub fn handle_event(&self, event: Event) {
+        self.scene.input_handler.handle_event(event);
     }
 }
