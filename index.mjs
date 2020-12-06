@@ -16,7 +16,7 @@ const resizeCanvas = () => {
 
 // Always size the canvas to fit the window
 resizeCanvas();
-window.addEventListener("resize", resizeCanvas());
+window.addEventListener("resize", resizeCanvas);
 
 window.setInterval(() => {
   window.requestAnimationFrame(() => scene.render());

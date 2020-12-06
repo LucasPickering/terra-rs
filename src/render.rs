@@ -234,13 +234,14 @@ impl Scene {
     #[wasm_bindgen]
     pub fn render(&mut self) {
         let back_buffer = self.surface.back_buffer().unwrap();
+        let [width, height] = back_buffer.size();
 
         // Run through all available input events
         self.input_handler.process_events(&mut self.camera);
 
         // Make sure this comes AFTER process_input, so we have the latest data
         let view = self.camera.view();
-        let projection = self.camera.projection();
+        let projection = self.camera.projection(width, height);
 
         // Create a new dynamic pipeline that will render to the back buffer and
         // must clear it with pitch black prior to do any render to it.

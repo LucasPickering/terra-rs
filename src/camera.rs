@@ -30,46 +30,45 @@ pub struct Camera {
     pitch: Rad<f32>,
     /// Rotation about the y axis. 0 is looking parallel to the x axis
     yaw: Rad<f32>,
-    projection: Matrix4<f32>,
 }
 
 impl Camera {
     pub fn new() -> Self {
         Self {
-            position: Point3::new(2.0, 2.0, 2.0),
+            position: Point3::new(0.0, 2.0, -2.0),
             pitch: Rad(-PI / 4.0),
-            yaw: Rad(-3.0 * PI / 4.0),
-            projection: cgmath::perspective(
-                FOVY, 1.0, // TODO
-                Z_NEAR, Z_FAR,
-            ),
+            // yaw: Rad(-3.0 * PI / 4.0),
+            yaw: Rad(0.0),
         }
     }
 
+    /// Calculate current view matrix based on camera position and orientation
     pub fn view(&self) -> Matrix4<f32> {
         Matrix4::look_at_dir(
             self.position,
             Vector3::new(
-                self.yaw.0.cos(),
-                self.pitch.0.sin(),
                 self.yaw.0.sin(),
+                self.pitch.0.sin(),
+                self.yaw.0.cos(),
             )
             .normalize(),
             Vector3::unit_y(),
         )
     }
 
-    pub fn projection(&self) -> Matrix4<f32> {
-        self.projection
+    /// Calculate the projection based on the current window width and height
+    pub fn projection(&self, width: u32, height: u32) -> Matrix4<f32> {
+        cgmath::perspective(FOVY, width as f32 / height as f32, Z_NEAR, Z_FAR)
     }
 
+    /// Apply a camera movement action
     pub fn apply_action(&mut self, action: CameraAction, magnitude: f32) {
         // Apply rotation actions
         let (pitch, yaw): (Rad<f32>, Rad<f32>) = match action {
             CameraAction::RotateUp => (Rad(1.0), Rad(0.0)),
             CameraAction::RotateDown => (Rad(-1.0), Rad(0.0)),
-            CameraAction::RotateLeft => (Rad(0.0), Rad(-1.0)),
-            CameraAction::RotateRight => (Rad(0.0), Rad(1.0)),
+            CameraAction::RotateLeft => (Rad(0.0), Rad(1.0)),
+            CameraAction::RotateRight => (Rad(0.0), Rad(-1.0)),
             _ => (Rad(0.0), Rad(0.0)),
         };
         let (pitch, yaw) = (pitch * magnitude, yaw * magnitude);
@@ -88,13 +87,7 @@ impl Camera {
         // backward line up with our orientation, not with the x/z axes
         let yaw_quot = Quaternion::from_angle_y(self.yaw);
         let translation = yaw_quot.rotate_vector(translation);
-        debug!("translation={:?}", translation);
 
         self.position += translation;
-
-        debug!(
-            "position={:?}; pitch={:?}; yaw={:?}",
-            self.position, self.pitch, self.yaw
-        );
     }
 }
