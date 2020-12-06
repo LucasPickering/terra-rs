@@ -1,6 +1,6 @@
 {
   "seed": 1292848,
-  "tile_radius": 50,
+  "tile_radius": 16,
   "elevation": {
     "octaves": 12,
     "frequency": 1.0,

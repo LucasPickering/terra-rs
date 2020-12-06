@@ -12,9 +12,9 @@ use std::{
 
 #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct HexPoint {
-    x: isize,
-    y: isize,
-    z: isize,
+    pub x: isize,
+    pub y: isize,
+    pub z: isize,
 }
 
 impl HexPoint {
@@ -22,6 +22,18 @@ impl HexPoint {
     /// points, we can derive z from x & y.
     pub fn new(x: isize, y: isize) -> Self {
         Self { x, y, z: -(x + y) }
+    }
+
+    pub fn x(&self) -> isize {
+        self.x
+    }
+
+    pub fn y(&self) -> isize {
+        self.y
+    }
+
+    pub fn z(&self) -> isize {
+        self.z
     }
 
     /// Convert this hexagonal coordinate into a 2d pixel coordinate. Useful

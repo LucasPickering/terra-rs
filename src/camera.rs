@@ -36,7 +36,7 @@ pub struct Camera {
 impl Camera {
     pub fn new() -> Self {
         Self {
-            position: Point3::new(0.0, 50.0, 0.0),
+            position: Point3::new(0.0, 25.0, 0.0),
             pitch: Rad(-PI / 4.0),
             yaw: Rad(0.0),
         }

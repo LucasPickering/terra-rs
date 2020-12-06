@@ -1,8 +1,10 @@
 use crate::{
     camera::Camera,
     input::InputHandler,
-    world::{HasHexPosition, World},
+    util::Color3,
+    world::{HasHexPosition, TileLens, World},
 };
+use log::debug;
 use luminance::{shader::Uniform, Semantics, UniformInterface, Vertex};
 use luminance_front::{
     context::GraphicsContext as _,
@@ -30,26 +32,15 @@ const TILE_WIDTH: f32 = TILE_SIDE_LENGTH * 2.0;
 // attributes.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Semantics)]
 pub enum VertexSemantics {
-    ///
-    /// - Reference vertex positions with the "position" variable in vertex
-    ///   shaders.
-    /// - The underlying representation is [f32; 3], which is a vec3 in GLSL.
-    /// - The wrapper type you can use to handle such a semantics is
-    ///   VertexPosition.
-    #[sem(name = "co", repr = "[f32; 3]", wrapper = "VertexPosition")]
+    #[sem(name = "position", repr = "[f32; 3]", wrapper = "VertexPosition")]
     Position,
 
-    ///
-    /// - Reference vertex colors with the "color" variable in vertex shaders.
-    /// - The underlying representation is [u8; 3], which is a uvec3 in GLSL.
-    /// - The wrapper type you can use to handle such a semantics is
-    ///   VertexColor.
-    #[sem(name = "color", repr = "[u8; 3]", wrapper = "VertexColor")]
+    #[sem(name = "color", repr = "[f32; 3]", wrapper = "VertexColor")]
     Color,
 
     // reference vertex instance’s position on screen
     #[sem(
-        name = "position",
+        name = "instance_position",
         repr = "[f32; 3]",
         wrapper = "VertexInstancePosition"
     )]
@@ -73,14 +64,6 @@ pub enum VertexSemantics {
 #[vertex(sem = "VertexSemantics")]
 struct Vertex {
     pos: VertexPosition,
-    // Here, we can use the special normalized = <bool> construct to state
-    // whether we want integral vertex attributes to be available as
-    // normalized floats in the shaders, when fetching them from the vertex
-    // buffers. If you set it to "false" or ignore it, you will get
-    // non-normalized integer values (i.e. value ranging from 0 to 255 for
-    // u8, for instance).
-    #[vertex(normalized = "true")]
-    rgb: VertexColor,
 }
 
 // definition of a single instance
@@ -88,8 +71,10 @@ struct Vertex {
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
 #[vertex(sem = "VertexSemantics", instanced = "true")]
 pub struct Instance {
-    pub pos: VertexInstancePosition,
-    pub scale: VertexScale,
+    #[vertex(normalized = "true")]
+    color: VertexColor,
+    pos: VertexInstancePosition,
+    scale: VertexScale,
 }
 
 #[derive(Debug, UniformInterface)]
@@ -100,68 +85,66 @@ struct ShaderInterface {
     view: Uniform<[[f32; 4]; 4]>,
 }
 
-const VERTEX_COLOR: VertexColor = VertexColor::new([0, 0, 255]);
+impl From<Color3> for VertexColor {
+    fn from(other: Color3) -> Self {
+        Self::new([other.red(), other.green(), other.blue()])
+        // Self::new([
+        //     (other.red() * 255.0) as u8,
+        //     (other.green() * 255.0) as u8,
+        //     (other.blue() * 255.0) as u8,
+        // ])
+    }
+}
+
 const HEX_VERTICES: &[Vertex] = &[
     // 7 vertices make up the bottom face (center plus 6 outer vertices)
-    Vertex::new(VertexPosition::new([0.0, 0.0, 0.0]), VERTEX_COLOR),
-    Vertex::new(
-        VertexPosition::new([TILE_SIDE_LENGTH / 2.0, 0.0, TILE_INSIDE_RADIUS]),
-        VERTEX_COLOR,
-    ),
-    Vertex::new(
-        VertexPosition::new([TILE_SIDE_LENGTH, 0.0, 0.0]),
-        VERTEX_COLOR,
-    ),
-    Vertex::new(
-        VertexPosition::new([TILE_SIDE_LENGTH / 2.0, 0.0, -TILE_INSIDE_RADIUS]),
-        VERTEX_COLOR,
-    ),
-    Vertex::new(
-        VertexPosition::new([
-            -TILE_SIDE_LENGTH / 2.0,
-            0.0,
-            -TILE_INSIDE_RADIUS,
-        ]),
-        VERTEX_COLOR,
-    ),
-    Vertex::new(
-        VertexPosition::new([-TILE_SIDE_LENGTH, 0.0, 0.0]),
-        VERTEX_COLOR,
-    ),
-    Vertex::new(
-        VertexPosition::new([-TILE_SIDE_LENGTH / 2.0, 0.0, TILE_INSIDE_RADIUS]),
-        VERTEX_COLOR,
-    ),
+    Vertex::new(VertexPosition::new([0.0, 0.0, 0.0])),
+    Vertex::new(VertexPosition::new([
+        TILE_SIDE_LENGTH / 2.0,
+        0.0,
+        TILE_INSIDE_RADIUS,
+    ])),
+    Vertex::new(VertexPosition::new([TILE_SIDE_LENGTH, 0.0, 0.0])),
+    Vertex::new(VertexPosition::new([
+        TILE_SIDE_LENGTH / 2.0,
+        0.0,
+        -TILE_INSIDE_RADIUS,
+    ])),
+    Vertex::new(VertexPosition::new([
+        -TILE_SIDE_LENGTH / 2.0,
+        0.0,
+        -TILE_INSIDE_RADIUS,
+    ])),
+    Vertex::new(VertexPosition::new([-TILE_SIDE_LENGTH, 0.0, 0.0])),
+    Vertex::new(VertexPosition::new([
+        -TILE_SIDE_LENGTH / 2.0,
+        0.0,
+        TILE_INSIDE_RADIUS,
+    ])),
     // 7 vertices make up the top face as well
-    Vertex::new(VertexPosition::new([0.0, 1.0, 0.0]), VERTEX_COLOR),
-    Vertex::new(
-        VertexPosition::new([TILE_SIDE_LENGTH / 2.0, 1.0, TILE_INSIDE_RADIUS]),
-        VERTEX_COLOR,
-    ),
-    Vertex::new(
-        VertexPosition::new([TILE_SIDE_LENGTH, 1.0, 0.0]),
-        VERTEX_COLOR,
-    ),
-    Vertex::new(
-        VertexPosition::new([TILE_SIDE_LENGTH / 2.0, 1.0, -TILE_INSIDE_RADIUS]),
-        VERTEX_COLOR,
-    ),
-    Vertex::new(
-        VertexPosition::new([
-            -TILE_SIDE_LENGTH / 2.0,
-            1.0,
-            -TILE_INSIDE_RADIUS,
-        ]),
-        VERTEX_COLOR,
-    ),
-    Vertex::new(
-        VertexPosition::new([-TILE_SIDE_LENGTH, 1.0, 0.0]),
-        VERTEX_COLOR,
-    ),
-    Vertex::new(
-        VertexPosition::new([-TILE_SIDE_LENGTH / 2.0, 1.0, TILE_INSIDE_RADIUS]),
-        VERTEX_COLOR,
-    ),
+    Vertex::new(VertexPosition::new([0.0, 1.0, 0.0])),
+    Vertex::new(VertexPosition::new([
+        TILE_SIDE_LENGTH / 2.0,
+        1.0,
+        TILE_INSIDE_RADIUS,
+    ])),
+    Vertex::new(VertexPosition::new([TILE_SIDE_LENGTH, 1.0, 0.0])),
+    Vertex::new(VertexPosition::new([
+        TILE_SIDE_LENGTH / 2.0,
+        1.0,
+        -TILE_INSIDE_RADIUS,
+    ])),
+    Vertex::new(VertexPosition::new([
+        -TILE_SIDE_LENGTH / 2.0,
+        1.0,
+        -TILE_INSIDE_RADIUS,
+    ])),
+    Vertex::new(VertexPosition::new([-TILE_SIDE_LENGTH, 1.0, 0.0])),
+    Vertex::new(VertexPosition::new([
+        -TILE_SIDE_LENGTH / 2.0,
+        1.0,
+        TILE_INSIDE_RADIUS,
+    ])),
 ];
 
 /// A list of indices into the above vertex array. In this order, these vertices
@@ -235,6 +218,13 @@ impl Scene {
                 let (x, z) = tile.position().pixel_pos(TILE_WIDTH);
                 Instance {
                     pos: VertexInstancePosition::new([x, 0.0, z]),
+                    // color: tile.color(TileLens::Composite).into(),
+                    color: VertexColor::new([
+                        // (tile.position().x() % 2 * 255).abs() as u8,
+                        1.0, 0.0,
+                        0.0,
+                        // (tile.position().z() % 2 * 255).abs() as u8,
+                    ]),
                     scale: VertexScale::new([
                         1.0,
                         tile.elevation() as f32,
@@ -247,7 +237,7 @@ impl Scene {
             .new_tess()
             .set_vertices(HEX_VERTICES)
             .set_indices(HEX_INDICES)
-            .set_mode(Mode::TriangleFan)
+            .set_mode(Mode::Triangle)
             .set_instances(tile_instances)
             .build()
             .unwrap();
