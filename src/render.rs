@@ -16,8 +16,8 @@ use luminance_front::{
 use luminance_web_sys::WebSysWebGL2Surface;
 
 // We get the shader at compile time from local files
-const VS: &str = include_str!("./shaders/simple-vs.glsl");
-const FS: &str = include_str!("./shaders/simple-fs.glsl");
+const VS: &str = include_str!("./shaders/vertex.glsl");
+const FS: &str = include_str!("./shaders/frag.glsl");
 
 const TILE_SIDE_LENGTH: f32 = 1.0;
 const TILE_INSIDE_RADIUS: f32 = TILE_SIDE_LENGTH * 0.866_025; // approx sqrt(3)/2
