@@ -1,10 +1,10 @@
 use crate::{
-    camera::{Camera, CameraAction},
+    camera::Camera,
     input::InputHandler,
     world::{HasHexPosition, HexPointMap, Tile, TileLens, World},
     WorldConfig,
 };
-use log::{debug, error};
+use log::debug;
 use luminance::{shader::Uniform, Semantics, UniformInterface, Vertex};
 use luminance_front::{
     context::GraphicsContext as _,
@@ -14,8 +14,7 @@ use luminance_front::{
     tess::{Interleaved, Mode, Tess},
 };
 use luminance_web_sys::WebSysWebGL2Surface;
-use wasm_bindgen::{prelude::*, JsCast};
-use web_sys::KeyboardEvent;
+use wasm_bindgen::prelude::*;
 
 // We get the shader at compile time from local files
 const VS: &str = include_str!("./shaders/simple-vs.glsl");
@@ -232,39 +231,12 @@ impl Scene {
         }
     }
 
-    /// Process all available input events
-    fn process_input(&mut self) {
-        // Process all available events
-        for event in self.input_handler.try_iter() {
-            match event.type_().as_str() {
-                "keydown" => {
-                    let event: &KeyboardEvent = event.dyn_ref().unwrap_throw();
-                    let cam_action = match event.key().as_str() {
-                        "w" | "W" => Some(CameraAction::MoveForward),
-                        "s" | "S" => Some(CameraAction::MoveBackward),
-                        "a" | "A" => Some(CameraAction::MoveLeft),
-                        "d" | "D" => Some(CameraAction::MoveRight),
-                        "ArrowUp" => Some(CameraAction::RotateUp),
-                        "ArrowDown" => Some(CameraAction::RotateDown),
-                        "ArrowLeft" => Some(CameraAction::RotateLeft),
-                        "ArrowRight" => Some(CameraAction::RotateRight),
-                        _ => None,
-                    };
-                    if let Some(cam_action) = cam_action {
-                        self.camera.apply_action(cam_action, 0.1);
-                    }
-                }
-                other => error!("Unhandled event type: {}", other),
-            }
-        }
-    }
-
     #[wasm_bindgen]
     pub fn render(&mut self) {
         let back_buffer = self.surface.back_buffer().unwrap();
 
         // Run through all available input events
-        self.process_input();
+        self.input_handler.process_events(&mut self.camera);
 
         // Make sure this comes AFTER process_input, so we have the latest data
         let view = self.camera.view();
