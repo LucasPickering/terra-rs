@@ -4,8 +4,9 @@ use serde::Deserialize;
 use wasm_bindgen::{prelude::*, JsCast};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
-use world::World;
 
+mod camera;
+mod input;
 mod render;
 mod util;
 mod world;

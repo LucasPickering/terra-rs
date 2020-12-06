@@ -1,9 +1,10 @@
 use crate::{
+    camera::{Camera, CameraAction},
+    input::InputHandler,
     world::{HasHexPosition, HexPointMap, Tile, TileLens, World},
     WorldConfig,
 };
-use cgmath::{EuclideanSpace, Matrix4, Point3, Rad, Vector3};
-use log::debug;
+use log::{debug, error};
 use luminance::{shader::Uniform, Semantics, UniformInterface, Vertex};
 use luminance_front::{
     context::GraphicsContext as _,
@@ -13,16 +14,12 @@ use luminance_front::{
     tess::{Interleaved, Mode, Tess},
 };
 use luminance_web_sys::WebSysWebGL2Surface;
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::KeyboardEvent;
 
 // We get the shader at compile time from local files
 const VS: &str = include_str!("./shaders/simple-vs.glsl");
 const FS: &str = include_str!("./shaders/simple-fs.glsl");
-
-const FOVY: Rad<f32> = Rad(std::f32::consts::FRAC_PI_2);
-const Z_NEAR: f32 = 0.1;
-const Z_FAR: f32 = 10.;
 
 const TILE_SIDE_LENGTH: f32 = 1.0;
 const TILE_INSIDE_RADIUS: f32 = TILE_SIDE_LENGTH * 0.866_025; // approx sqrt(3)/2
@@ -193,9 +190,9 @@ const HEX_INDICES: &[u8] = &[
 pub struct Scene {
     surface: WebSysWebGL2Surface,
     program: Program<VertexSemantics, (), ShaderInterface>,
-    projection: Matrix4<f32>,
-    view: Matrix4<f32>,
+    camera: Camera,
     hexagon: Tess<Vertex, u8, (), Interleaved>,
+    input_handler: InputHandler,
 }
 
 #[wasm_bindgen]
@@ -223,46 +220,63 @@ impl Scene {
             .build()
             .unwrap();
 
-        let projection = cgmath::perspective(FOVY, 4.89, Z_NEAR, Z_FAR);
-        let view = Matrix4::<f32>::look_at(
-            Point3::new(2., 2., 2.),
-            Point3::origin(),
-            Vector3::unit_y(),
-        );
+        let camera = Camera::new();
+        let input_handler = InputHandler::new(&surface.canvas);
 
         Scene {
             surface,
             program,
             hexagon,
-            projection,
-            view,
+            camera,
+            input_handler,
         }
     }
 
-    #[wasm_bindgen]
-    pub fn handle_keyboard_event(&mut self, event: KeyboardEvent) {
-        // let event: KeyboardEvent = event.into();
-        debug!(
-            "{:?}; char_code={}; key_code={}",
-            event,
-            event.char_code(),
-            event.key_code()
-        );
+    /// Process all available input events
+    fn process_input(&mut self) {
+        // Process all available events
+        for event in self.input_handler.try_iter() {
+            match event.type_().as_str() {
+                "keydown" => {
+                    let event: &KeyboardEvent = event.dyn_ref().unwrap_throw();
+                    let cam_action = match event.key().as_str() {
+                        "w" | "W" => Some(CameraAction::MoveForward),
+                        "s" | "S" => Some(CameraAction::MoveBackward),
+                        "a" | "A" => Some(CameraAction::MoveLeft),
+                        "d" | "D" => Some(CameraAction::MoveRight),
+                        "ArrowUp" => Some(CameraAction::RotateUp),
+                        "ArrowDown" => Some(CameraAction::RotateDown),
+                        "ArrowLeft" => Some(CameraAction::RotateLeft),
+                        "ArrowRight" => Some(CameraAction::RotateRight),
+                        _ => None,
+                    };
+                    if let Some(cam_action) = cam_action {
+                        self.camera.apply_action(cam_action, 0.1);
+                    }
+                }
+                other => error!("Unhandled event type: {}", other),
+            }
+        }
     }
 
     #[wasm_bindgen]
     pub fn render(&mut self) {
         let back_buffer = self.surface.back_buffer().unwrap();
-        let Self {
-            ref mut program,
-            ref hexagon,
-            ref projection,
-            ref view,
-            ..
-        } = self;
+
+        // Run through all available input events
+        self.process_input();
+
+        // Make sure this comes AFTER process_input, so we have the latest data
+        let view = self.camera.view();
+        let projection = self.camera.projection();
 
         // Create a new dynamic pipeline that will render to the back buffer and
         // must clear it with pitch black prior to do any render to it.
+        let Self {
+            ref mut program,
+            ref hexagon,
+            ..
+        } = self;
         self.surface
             .new_pipeline_gate()
             .pipeline(
@@ -270,8 +284,8 @@ impl Scene {
                 &PipelineState::default().set_clear_color([0.5, 0.5, 0.5, 1.0]),
                 |_, mut shd_gate| {
                     shd_gate.shade(program, |mut iface, uni, mut rdr_gate| {
-                        iface.set(&uni.projection, (*projection).into());
-                        iface.set(&uni.view, (*view).into());
+                        iface.set(&uni.projection, projection.into());
+                        iface.set(&uni.view, view.into());
 
                         rdr_gate
                             .render(&RenderState::default(), |mut tess_gate| {
