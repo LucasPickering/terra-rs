@@ -4,7 +4,7 @@ use crate::{
     util::Color3,
     world::{HasHexPosition, TileLens, World},
 };
-use log::debug;
+use anyhow::Context;
 use luminance::{shader::Uniform, Semantics, UniformInterface, Vertex};
 use luminance_front::{
     context::GraphicsContext as _,
@@ -184,7 +184,6 @@ const HEX_INDICES: &[u8] = &[
     7, 13, 8, //
 ];
 
-/// A convenient type to return as opaque to JS.
 pub struct Scene {
     surface: WebSysWebGL2Surface,
     program: Program<VertexSemantics, (), ShaderInterface>,
@@ -243,7 +242,7 @@ impl Scene {
             .unwrap();
 
         let camera = Camera::new();
-        let input_handler = InputHandler::new();
+        let input_handler = InputHandler::new(&surface.canvas);
 
         Scene {
             surface,
@@ -254,12 +253,16 @@ impl Scene {
         }
     }
 
-    pub fn render(&mut self) {
+    /// Render the latest frame and display it. This will also handle processing
+    /// inputs.
+    pub fn render(&mut self) -> anyhow::Result<()> {
+        // Run through all available input events
+        self.input_handler
+            .process_events(&mut self.camera)
+            .context("Error processing input events")?;
+
         let back_buffer = self.surface.back_buffer().unwrap();
         let [width, height] = back_buffer.size();
-
-        // Run through all available input events
-        self.input_handler.process_events(&mut self.camera);
 
         // Make sure this comes AFTER process_input, so we have the latest data
         let view = self.camera.view();
@@ -292,5 +295,6 @@ impl Scene {
             .assume()
             .into_result()
             .unwrap();
+        Ok(())
     }
 }

@@ -87,12 +87,6 @@ impl Terra {
     /// should be called once per frame.
     #[wasm_bindgen]
     pub fn render(&mut self) {
-        self.scene.render();
-    }
-
-    /// Forward any events from JS to the input handler
-    #[wasm_bindgen]
-    pub fn handle_event(&self, event: Event) {
-        self.scene.input_handler.handle_event(event);
+        self.scene.render().unwrap_throw();
     }
 }
