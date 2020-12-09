@@ -3,6 +3,7 @@ mod elevation;
 mod humidity;
 
 use crate::{
+    config::NoiseFnConfig,
     timed,
     util::FloatRange,
     world::{
@@ -12,7 +13,6 @@ use crate::{
         },
         Biome, HasHexPosition, HexPoint, HexPointMap, Tile, WorldConfig,
     },
-    NoiseFnConfig,
 };
 use log::{debug, info};
 use noise::{MultiFractal, NoiseFn, Seedable};

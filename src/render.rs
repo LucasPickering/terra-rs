@@ -1,10 +1,12 @@
 use crate::{
     camera::Camera,
+    config::InputConfig,
     input::InputHandler,
     util::Color3,
     world::{HasHexPosition, TileLens, World},
 };
 use anyhow::Context;
+use log::error;
 use luminance::{shader::Uniform, Semantics, UniformInterface, Vertex};
 use luminance_front::{
     context::GraphicsContext as _,
@@ -88,11 +90,6 @@ struct ShaderInterface {
 impl From<Color3> for VertexColor {
     fn from(other: Color3) -> Self {
         Self::new([other.red(), other.green(), other.blue()])
-        // Self::new([
-        //     (other.red() * 255.0) as u8,
-        //     (other.green() * 255.0) as u8,
-        //     (other.blue() * 255.0) as u8,
-        // ])
     }
 }
 
@@ -193,11 +190,14 @@ pub struct Scene {
 }
 
 impl Scene {
-    pub fn new(canvas_id: &str, world: &World) -> Scene {
-        // First thing first: we create a new surface to render to and get
-        // events from.
-        let mut surface =
-            WebSysWebGL2Surface::new(canvas_id).expect("web-sys surface");
+    pub fn new(
+        canvas_id: &str,
+        input_config: InputConfig,
+        world: &World,
+    ) -> anyhow::Result<Scene> {
+        // Bind a surface to our canvas. This is what we'll render to.
+        let mut surface = WebSysWebGL2Surface::new(canvas_id)
+            .context("Error creating surface")?;
 
         // We need a program to “shade” our triangles and to tell luminance
         // which is the input vertex type, and we’re not interested in
@@ -217,13 +217,13 @@ impl Scene {
                 let (x, z) = tile.position().pixel_pos(TILE_WIDTH);
                 Instance {
                     pos: VertexInstancePosition::new([x, 0.0, z]),
-                    // color: tile.color(TileLens::Composite).into(),
-                    color: VertexColor::new([
-                        // (tile.position().x() % 2 * 255).abs() as u8,
-                        1.0, 0.0,
-                        0.0,
-                        // (tile.position().z() % 2 * 255).abs() as u8,
-                    ]),
+                    color: tile.color(TileLens::Composite).into(),
+                    // color: VertexColor::new([
+                    //     // (tile.position().x() % 2 * 255).abs() as u8,
+                    //     1.0, 0.0,
+                    //     0.0,
+                    //     // (tile.position().z() % 2 * 255).abs() as u8,
+                    // ]),
                     scale: VertexScale::new([
                         1.0,
                         tile.elevation() as f32,
@@ -242,24 +242,24 @@ impl Scene {
             .unwrap();
 
         let camera = Camera::new();
-        let input_handler = InputHandler::new(&surface.canvas);
+        let input_handler = InputHandler::new(input_config, &surface.canvas);
 
-        Scene {
+        Ok(Scene {
             surface,
             program,
             tiles,
             camera,
             input_handler,
-        }
+        })
     }
 
     /// Render the latest frame and display it. This will also handle processing
     /// inputs.
     pub fn render(&mut self) -> anyhow::Result<()> {
         // Run through all available input events
-        self.input_handler
-            .process_events(&mut self.camera)
-            .context("Error processing input events")?;
+        if let Err(err) = self.input_handler.process_events(&mut self.camera) {
+            error!("Error processing input events: {}", err);
+        }
 
         let back_buffer = self.surface.back_buffer().unwrap();
         let [width, height] = back_buffer.size();

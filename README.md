@@ -15,14 +15,14 @@ And here's what the Java version looks like, for reference:
 ### Prerequisites
 
 - [rustup](https://rustup.rs/)
-- [cargo-make](https://github.com/sagiegurari/cargo-make)
-
-As you run commands, it will prompt you to install the other tools as necessary.
+- [npm](https://www.npmjs.com/get-npm)
 
 ### Starting the App
 
 ```sh
-cargo make start
+rustup target add wasm32-unknown-unknown
+npm install
+npm run start
 ```
 
-This will build the project and start an HTTP server on http://localhost:3000. If you are missing any other dependencies, they'll be installed at that time.
+This will build the project and start an HTTP server on http://localhost:3000.

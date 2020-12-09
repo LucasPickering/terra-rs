@@ -1,0 +1,31 @@
+{
+  "world": {
+    "tile_radius": 50,
+    "elevation": {
+      "octaves": 12,
+      "frequency": 1.0,
+      "lacunarity": 4.0,
+      "persistence": 0.5
+    },
+    "humidity": {
+      "octaves": 3,
+      "frequency": 2.0,
+      "lacunarity": 2.0,
+      "persistence": 0.25
+    }
+  },
+  "input": {
+    "bindings": {
+      "MoveForward": "W",
+      "MoveBackward": "S",
+      "MoveLeft": "A",
+      "MoveRight": "D",
+      "MoveUp": "Space",
+      "MoveDown": "LeftShift",
+      "RotateUp": "UpArrow",
+      "RotateDown": "DownArrow",
+      "RotateLeft": "LeftArrow",
+      "RotateRight": "RightArrow"
+    }
+  }
+}

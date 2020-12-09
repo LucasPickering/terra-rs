@@ -1,9 +1,9 @@
 mod generate;
 
 use crate::{
+    config::WorldConfig,
     util::{Color3, FloatRange},
     world::generate::WorldBuilder,
-    WorldConfig,
 };
 use std::{
     collections::BTreeMap,

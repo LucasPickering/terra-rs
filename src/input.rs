@@ -1,8 +1,13 @@
-use crate::camera::{Camera, CameraAction};
+use crate::{
+    camera::{Camera, CameraAction},
+    config::InputConfig,
+};
 use anyhow::{anyhow, Context};
 use gloo::events::EventListener;
+use log::debug;
+use serde::Deserialize;
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     convert::{TryFrom, TryInto},
     str::FromStr,
     sync::mpsc,
@@ -10,7 +15,37 @@ use std::{
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::{Event, EventTarget, KeyboardEvent};
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+const DEFAULT_BINDINGS: &[(InputAction, Key)] = &[
+    (InputAction::Camera(CameraAction::MoveForward), Key::W),
+    (InputAction::Camera(CameraAction::MoveBackward), Key::S),
+    (InputAction::Camera(CameraAction::MoveLeft), Key::A),
+    (InputAction::Camera(CameraAction::MoveRight), Key::D),
+    (InputAction::Camera(CameraAction::MoveUp), Key::Space),
+    (InputAction::Camera(CameraAction::MoveDown), Key::LeftShift),
+    (InputAction::Camera(CameraAction::RotateUp), Key::UpArrow),
+    (
+        InputAction::Camera(CameraAction::RotateDown),
+        Key::DownArrow,
+    ),
+    (
+        InputAction::Camera(CameraAction::RotateLeft),
+        Key::LeftArrow,
+    ),
+    (
+        InputAction::Camera(CameraAction::RotateRight),
+        Key::RightArrow,
+    ),
+];
+
+/// The different kinds of actions that a user can perform.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize)]
+#[serde(untagged)]
+pub enum InputAction {
+    Camera(CameraAction),
+}
+
+/// All the keys on the keyboard
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize)]
 pub enum Key {
     W,
     A,
@@ -22,6 +57,28 @@ pub enum Key {
     RightArrow,
     Space,
     LeftShift,
+    // TODO add more as needed
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct InputBindings(HashMap<Key, InputAction>);
+
+impl<'de> Deserialize<'de> for InputBindings {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        // Parse the input as a map of action:key
+        let map: HashMap<InputAction, Key> =
+            Deserialize::deserialize(deserializer)?;
+
+        // Flip the script (we need to do key->action lookups, not vice versa)
+        // Right now we don't support one key binding to multiple actions, but
+        // it wouldn't be that hard to add it here
+        Ok(InputBindings(
+            map.into_iter().map(|(k, v)| (v, k)).collect(),
+        ))
+    }
 }
 
 impl FromStr for Key {
@@ -44,6 +101,9 @@ impl FromStr for Key {
     }
 }
 
+/// A Rustic version of [web_sys::Event]. This covers all the types of input
+/// events that we may care about. This events should be produced by listeners
+/// on the canvas that we attach to.
 #[derive(Copy, Clone, Debug)]
 pub enum InputEvent {
     KeyDown { key: Key, repeat: bool },
@@ -79,6 +139,8 @@ impl TryFrom<Event> for InputEvent {
 /// listeners. Call [Self::process_events] on each frame to process events from
 /// the queue.
 pub struct InputHandler {
+    /// User's personal input configuration
+    config: InputConfig,
     /// Receiver for the channel where events are pushed
     receiver: mpsc::Receiver<Event>,
     /// Track which keys are currently held down. A key should be added to the
@@ -91,7 +153,7 @@ pub struct InputHandler {
 }
 
 impl InputHandler {
-    pub fn new(canvas: &EventTarget) -> Self {
+    pub fn new(config: InputConfig, canvas: &EventTarget) -> Self {
         let (sender, receiver) = mpsc::channel();
 
         // This closure only captures `sender` which is cheap to clone, so we
@@ -105,6 +167,7 @@ impl InputHandler {
         ];
 
         Self {
+            config,
             receiver,
             pressed_keys: HashSet::new(),
             _listeners: listeners,
@@ -136,6 +199,8 @@ impl InputHandler {
             }
         }
 
+        // Right now we only care about apply-while-held actions. At some point
+        // we can add on-down or on-up actions when we need them
         self.process_held_keys(camera);
 
         Ok(())
@@ -144,21 +209,23 @@ impl InputHandler {
     /// Apply actions according to which keys are currently being held
     fn process_held_keys(&self, camera: &mut Camera) {
         for key in &self.pressed_keys {
-            let cam_action = match key {
-                Key::W => Some(CameraAction::MoveForward),
-                Key::S => Some(CameraAction::MoveBackward),
-                Key::A => Some(CameraAction::MoveLeft),
-                Key::D => Some(CameraAction::MoveRight),
-                Key::UpArrow => Some(CameraAction::RotateUp),
-                Key::DownArrow => Some(CameraAction::RotateDown),
-                Key::LeftArrow => Some(CameraAction::RotateLeft),
-                Key::RightArrow => Some(CameraAction::RotateRight),
-                Key::Space => Some(CameraAction::MoveUp),
-                Key::LeftShift => Some(CameraAction::MoveDown),
-            };
-            if let Some(cam_action) = cam_action {
-                camera.apply_action(cam_action, 0.1);
+            if let Some(action) = self.config.bindings.0.get(key) {
+                match action {
+                    InputAction::Camera(cam_action) => {
+                        camera.apply_action(*cam_action, 0.1)
+                    }
+                }
             }
+            // Key::W => Some(CameraAction::MoveForward),
+            // Key::S => Some(CameraAction::MoveBackward),
+            // Key::A => Some(CameraAction::MoveLeft),
+            // Key::D => Some(CameraAction::MoveRight),
+            // Key::UpArrow => Some(CameraAction::RotateUp),
+            // Key::DownArrow => Some(CameraAction::RotateDown),
+            // Key::LeftArrow => Some(CameraAction::RotateLeft),
+            // Key::RightArrow => Some(CameraAction::RotateRight),
+            // Key::Space => Some(CameraAction::MoveUp),
+            // Key::LeftShift => Some(CameraAction::MoveDown),
         }
     }
 }
