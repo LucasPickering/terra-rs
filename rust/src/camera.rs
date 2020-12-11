@@ -1,7 +1,6 @@
 use cgmath::{
     InnerSpace, Matrix4, Point3, Quaternion, Rad, Rotation, Rotation3, Vector3,
 };
-use serde::Deserialize;
 use std::f32::consts::PI;
 
 const FOVY: Rad<f32> = Rad(std::f32::consts::FRAC_PI_2);
@@ -9,7 +8,7 @@ const Z_NEAR: f32 = 0.1;
 const Z_FAR: f32 = 1000.0;
 
 /// The different input actions that can be applied to the camera
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize)]
+#[derive(Copy, Clone, Debug)]
 pub enum CameraAction {
     MoveForward,
     MoveBackward,

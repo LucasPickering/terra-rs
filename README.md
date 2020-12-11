@@ -21,6 +21,7 @@ And here's what the Java version looks like, for reference:
 
 ```sh
 rustup target add wasm32-unknown-unknown
+cd typescript
 npm install
 npm run start
 ```

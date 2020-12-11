@@ -1,7 +1,4 @@
-use crate::{
-    camera::{Camera, CameraAction},
-    config::InputConfig,
-};
+use crate::{camera::Camera, config::InputConfig};
 use anyhow::{anyhow, Context};
 use gloo::events::EventListener;
 use log::warn;
@@ -12,14 +9,19 @@ use std::{
     str::FromStr,
     sync::mpsc,
 };
-use wasm_bindgen::{JsCast, UnwrapThrowExt};
+use wasm_bindgen::{prelude::*, JsCast, UnwrapThrowExt};
 use web_sys::{Event, EventTarget, KeyboardEvent};
 
 /// The different kinds of actions that a user can perform.
+#[wasm_bindgen]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize)]
 #[serde(untagged)]
 pub enum InputAction {
-    Camera(CameraAction),
+    CameraMoveUp,
+    CameraMoveDown,
+    CameraMoveLeft,
+    CameraMoveRight,
+    CameraPan,
 }
 
 /// All the keys on the keyboard
@@ -198,9 +200,10 @@ impl InputHandler {
         for key in &self.pressed_keys {
             if let Some(action) = self.config.bindings.0.get(key) {
                 match action {
-                    InputAction::Camera(cam_action) => {
-                        camera.apply_action(*cam_action, 0.1)
-                    }
+                    // InputAction::Camera(cam_action) => {
+                    //     camera.apply_action(*cam_action, 0.1)
+                    // }
+                    _ => todo!(),
                 }
             }
         }

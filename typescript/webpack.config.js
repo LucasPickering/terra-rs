@@ -4,9 +4,11 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 // const CopyPlugin = require("copy-webpack-plugin");
 const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 
+const wasmDir = path.resolve(__dirname, "../rust");
+
 module.exports = {
   mode: "development",
-  entry: "./dom/index.ts",
+  entry: "./src/index.ts",
   output: {
     path: path.resolve(__dirname, "dist"),
     filename: "index.js",
@@ -28,8 +30,8 @@ module.exports = {
     new HtmlWebpackPlugin({ template: "static/index.html" }),
     new WasmPackPlugin({
       outName: "terra",
-      crateDirectory: path.resolve(__dirname, "."),
-      outDir: path.resolve(__dirname, "pkg"),
+      crateDirectory: wasmDir,
+      outDir: path.resolve(wasmDir, "pkg"),
       forceMode: "profiling",
     }),
   ],
