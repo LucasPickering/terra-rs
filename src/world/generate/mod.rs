@@ -5,7 +5,7 @@ mod humidity;
 use crate::{
     config::NoiseFnConfig,
     timed,
-    util::FloatRange,
+    util::NumRange,
     world::{
         generate::{
             biome::BiomePainter, elevation::ElevationGenerator,
@@ -90,28 +90,28 @@ pub struct TileNoiseFn<F: NoiseFn<[f64; 3]>> {
     /// The noise generation function
     noise_fn: F,
     /// The range of tile position values. Used to map the input.
-    tile_pos_range: FloatRange<f64>,
-    output_range: FloatRange<f64>,
+    tile_pos_range: NumRange<f64>,
+    output_range: NumRange<f64>,
 }
 
 impl<F: NoiseFn<[f64; 3]>> TileNoiseFn<F> {
     /// The output range of the internal noise function. Used to map our
     /// input values to the noise function's input values.
-    const NOISE_FN_INPUT_RANGE: FloatRange<f64> = FloatRange::new(-1.0, 1.0);
+    const NOISE_FN_INPUT_RANGE: NumRange<f64> = NumRange::new(-1.0, 1.0);
     /// The output range of the internal noise function. Used to map the noise
     /// values to our own output range.
-    const NOISE_FN_OUTPUT_RANGE: FloatRange<f64> = FloatRange::new(-1.0, 1.0);
+    const NOISE_FN_OUTPUT_RANGE: NumRange<f64> = NumRange::new(-1.0, 1.0);
 
     /// Initialize a wrapper around the given function.
     fn from_fn(
         world_radius: usize,
         noise_fn: F,
-        output_range: FloatRange<f64>,
+        output_range: NumRange<f64>,
     ) -> Self {
         let radius_f = world_radius as f64;
         Self {
             noise_fn,
-            tile_pos_range: FloatRange::new(-radius_f, radius_f),
+            tile_pos_range: NumRange::new(-radius_f, radius_f),
             output_range,
         }
     }
@@ -135,7 +135,7 @@ impl<F: Default + Seedable + MultiFractal + NoiseFn<[f64; 3]>> TileNoiseFn<F> {
     pub fn new(
         world_config: &WorldConfig,
         fn_config: &NoiseFnConfig,
-        output_range: FloatRange<f64>,
+        output_range: NumRange<f64>,
     ) -> Self {
         // Configure the noise function
         let noise_fn = F::default()

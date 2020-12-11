@@ -67,44 +67,80 @@ impl Color3 {
     }
 }
 
+// Scale a color by a constant
 impl ops::Mul<f32> for Color3 {
     type Output = Self;
 
     fn mul(self, rhs: f32) -> Self {
-        let red = (self.red + rhs.red) / 2.0;
-        let green = (self.green + rhs.green) / 2.0;
-        let vlue = (self.vlue + rhs.vlue) / 2.0;
-        self
+        let range = <NumRange<f32>>::NORMAL;
+        let red = range.clamp(self.red * rhs);
+        let green = range.clamp(self.green * rhs);
+        let blue = range.clamp(self.blue * rhs);
+        Self::new(red, green, blue).unwrap()
     }
 }
 
-/// A range between two float values, inclusive on both ends.
+/// Any time that can be turned into a numeric range
+pub trait Rangeable = Copy
+    + Sized
+    + ops::Add<Self, Output = Self>
+    + ops::Sub<Self, Output = Self>
+    + ops::Mul<Self, Output = Self>
+    + ops::Div<Self, Output = Self>
+    + PartialOrd;
+
+/// A range between two numeric values, inclusive on both ends.
 #[derive(Copy, Clone, Debug)]
-pub struct FloatRange {
-    pub min: f64,
-    pub max: f64,
+pub struct NumRange<T: Rangeable> {
+    pub min: T,
+    pub max: T,
 }
 
-impl FloatRange {
-    /// The range [0.0, 1.0].
-    pub const NORMAL_RANGE: Self = Self::new(0.0, 1.0);
-
-    pub const fn new(min: f64, max: f64) -> Self {
+impl<T: Rangeable> NumRange<T> {
+    pub const fn new(min: T, max: T) -> Self {
         Self { min, max }
     }
 
-    pub fn span(&self) -> f64 {
+    pub fn span(&self) -> T {
         self.max - self.min
     }
 
-    /// Map a value from this range to the target range
-    pub fn map_to(&self, dest_range: &Self, value: f64) -> f64 {
+    /// Map a value from this range to the target range.
+    pub fn map_to(&self, dest_range: &Self, value: T) -> T {
         let normalized = (value - self.min) / self.span();
-        (normalized * dest_range.span()) + dest_range.min
+        dest_range.min + (normalized * dest_range.span())
     }
+
+    /// Force a value into this range. If it's already in the range, return
+    /// that value. If it's outside the range, return the bound (lower or upper)
+    /// that's closest to the value.
+    pub fn clamp(&self, value: T) -> T {
+        if value < self.min {
+            self.min
+        } else if value > self.max {
+            self.max
+        } else {
+            value
+        }
+    }
+}
+
+impl NumRange<f32> {
+    /// The range [0, 1]
+    pub const NORMAL: Self = Self::new(0.0, 1.0);
+
+    /// Map a value from this range to the range [0, 1]
+    pub fn normalize(&self, value: f32) -> f32 {
+        self.map_to(&Self::NORMAL, value)
+    }
+}
+
+impl NumRange<f64> {
+    /// The range [0, 1]
+    pub const NORMAL: Self = Self::new(0.0, 1.0);
 
     /// Map a value from this range to the range [0, 1]
     pub fn normalize(&self, value: f64) -> f64 {
-        self.map_to(Self::NORMAL_RANGE, value)
+        self.map_to(&Self::NORMAL, value)
     }
 }

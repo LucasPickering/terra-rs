@@ -4,7 +4,6 @@ use crate::{
 };
 use anyhow::{anyhow, Context};
 use gloo::events::EventListener;
-use log::debug;
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
@@ -14,28 +13,6 @@ use std::{
 };
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::{Event, EventTarget, KeyboardEvent};
-
-const DEFAULT_BINDINGS: &[(InputAction, Key)] = &[
-    (InputAction::Camera(CameraAction::MoveForward), Key::W),
-    (InputAction::Camera(CameraAction::MoveBackward), Key::S),
-    (InputAction::Camera(CameraAction::MoveLeft), Key::A),
-    (InputAction::Camera(CameraAction::MoveRight), Key::D),
-    (InputAction::Camera(CameraAction::MoveUp), Key::Space),
-    (InputAction::Camera(CameraAction::MoveDown), Key::LeftShift),
-    (InputAction::Camera(CameraAction::RotateUp), Key::UpArrow),
-    (
-        InputAction::Camera(CameraAction::RotateDown),
-        Key::DownArrow,
-    ),
-    (
-        InputAction::Camera(CameraAction::RotateLeft),
-        Key::LeftArrow,
-    ),
-    (
-        InputAction::Camera(CameraAction::RotateRight),
-        Key::RightArrow,
-    ),
-];
 
 /// The different kinds of actions that a user can perform.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize)]

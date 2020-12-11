@@ -1,3 +1,6 @@
+#![feature(const_fn)]
+#![feature(trait_alias)]
+
 use crate::{config::TerraConfig, render::Scene, world::World};
 use wasm_bindgen::prelude::*;
 
