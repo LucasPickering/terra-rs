@@ -6,10 +6,19 @@ const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 
 module.exports = {
   mode: "development",
-  entry: "./index.mjs",
+  entry: "./dom/index.ts",
   output: {
     path: path.resolve(__dirname, "dist"),
     filename: "index.js",
+  },
+  module: {
+    rules: [
+      {
+        test: /\.tsx?$/,
+        use: "ts-loader",
+        exclude: /node_modules/,
+      },
+    ],
   },
   experiments: {
     syncWebAssembly: true,
@@ -22,12 +31,11 @@ module.exports = {
       crateDirectory: path.resolve(__dirname, "."),
       outDir: path.resolve(__dirname, "pkg"),
       forceMode: "profiling",
-      // watchDirectories: [
-      //   path.resolve(__dirname, "Cargo.toml"),
-      //   path.resolve(__dirname, "src"),
-      // ],
     }),
   ],
+  resolve: {
+    extensions: [".tsx", ".ts", ".js"],
+  },
   devServer: {
     port: 3000,
     contentBase: path.join(__dirname, "static"),

@@ -1,9 +1,13 @@
 const CANVAS_ID = "canvas";
+const TARGET_FRAME_RATE = 60;
 
-const { Terra } = await import("./pkg/terra.js");
+const { Terra } = await import("../pkg/terra.js");
 const terra = await Terra.load(CANVAS_ID);
 
-const canvas = document.getElementById(CANVAS_ID);
+// type safety!
+const canvas: HTMLCanvasElement = document.getElementById(
+  CANVAS_ID
+)! as HTMLCanvasElement;
 
 const resizeCanvas = () => {
   // TODO debounce this event listener
@@ -19,4 +23,6 @@ window.addEventListener("resize", resizeCanvas);
 
 window.setInterval(() => {
   window.requestAnimationFrame(() => terra.render());
-}, 1000 / 60);
+}, 1000 / TARGET_FRAME_RATE);
+
+export {}; // #computerscience
