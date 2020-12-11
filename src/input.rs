@@ -4,6 +4,7 @@ use crate::{
 };
 use anyhow::{anyhow, Context};
 use gloo::events::EventListener;
+use log::warn;
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
@@ -35,6 +36,30 @@ pub enum Key {
     Space,
     LeftShift,
     // TODO add more as needed
+    Unknown,
+}
+
+impl FromStr for Key {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "w" | "W" => Ok(Self::W),
+            "s" | "S" => Ok(Self::S),
+            "a" | "A" => Ok(Self::A),
+            "d" | "D" => Ok(Self::D),
+            "ArrowUp" => Ok(Self::UpArrow),
+            "ArrowDown" => Ok(Self::DownArrow),
+            "ArrowLeft" => Ok(Self::LeftArrow),
+            "ArrowRight" => Ok(Self::RightArrow),
+            " " => Ok(Self::Space),
+            "Shift" => Ok(Self::LeftShift),
+            _ => {
+                warn!("Unknown key code: {}", s);
+                Ok(Self::Unknown)
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -58,26 +83,6 @@ impl<'de> Deserialize<'de> for InputBindings {
     }
 }
 
-impl FromStr for Key {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "w" | "W" => Ok(Self::W),
-            "s" | "S" => Ok(Self::S),
-            "a" | "A" => Ok(Self::A),
-            "d" | "D" => Ok(Self::D),
-            "ArrowUp" => Ok(Self::UpArrow),
-            "ArrowDown" => Ok(Self::DownArrow),
-            "ArrowLeft" => Ok(Self::LeftArrow),
-            "ArrowRight" => Ok(Self::RightArrow),
-            " " => Ok(Self::Space),
-            "Shift" => Ok(Self::LeftShift),
-            _ => Err(anyhow!("Unknown key code: {}", s)),
-        }
-    }
-}
-
 /// A Rustic version of [web_sys::Event]. This covers all the types of input
 /// events that we may care about. This events should be produced by listeners
 /// on the canvas that we attach to.
@@ -85,6 +90,7 @@ impl FromStr for Key {
 pub enum InputEvent {
     KeyDown { key: Key, repeat: bool },
     KeyUp { key: Key },
+    Blur,
 }
 
 // Convert a DOM event into a pure Rust type, to make handling logic much easier
@@ -106,6 +112,7 @@ impl TryFrom<Event> for InputEvent {
                     key: event.key().parse()?,
                 })
             }
+            "blur" => Ok(InputEvent::Blur),
             other => Err(anyhow!("Unknown event type: {}", other)),
         }
     }
@@ -126,7 +133,7 @@ pub struct InputHandler {
     pressed_keys: HashSet<Key>,
     /// We need to hold onto the event listeners, because they get unregistered
     /// when they're dropped
-    _listeners: [EventListener; 2],
+    _listeners: [EventListener; 3],
 }
 
 impl InputHandler {
@@ -140,7 +147,8 @@ impl InputHandler {
         };
         let listeners = [
             EventListener::new(&canvas, "keydown", callback.clone()),
-            EventListener::new(&canvas, "keyup", callback),
+            EventListener::new(&canvas, "keyup", callback.clone()),
+            EventListener::new(&canvas, "blur", callback),
         ];
 
         Self {
@@ -173,6 +181,8 @@ impl InputHandler {
                 InputEvent::KeyUp { key } => {
                     self.pressed_keys.remove(&key);
                 }
+                // When we lose focus, clear all key states
+                InputEvent::Blur => self.pressed_keys.clear(),
             }
         }
 
@@ -193,16 +203,6 @@ impl InputHandler {
                     }
                 }
             }
-            // Key::W => Some(CameraAction::MoveForward),
-            // Key::S => Some(CameraAction::MoveBackward),
-            // Key::A => Some(CameraAction::MoveLeft),
-            // Key::D => Some(CameraAction::MoveRight),
-            // Key::UpArrow => Some(CameraAction::RotateUp),
-            // Key::DownArrow => Some(CameraAction::RotateDown),
-            // Key::LeftArrow => Some(CameraAction::RotateLeft),
-            // Key::RightArrow => Some(CameraAction::RotateRight),
-            // Key::Space => Some(CameraAction::MoveUp),
-            // Key::LeftShift => Some(CameraAction::MoveDown),
         }
     }
 }
