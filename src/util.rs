@@ -1,3 +1,5 @@
+use std::ops;
+
 use anyhow::anyhow;
 
 /// A macro to measure the evaluation time of an expression. Wraps an
@@ -65,6 +67,17 @@ impl Color3 {
     }
 }
 
+impl ops::Mul<f32> for Color3 {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self {
+        let red = (self.red + rhs.red) / 2.0;
+        let green = (self.green + rhs.green) / 2.0;
+        let vlue = (self.vlue + rhs.vlue) / 2.0;
+        self
+    }
+}
+
 /// A range between two float values, inclusive on both ends.
 #[derive(Copy, Clone, Debug)]
 pub struct FloatRange {
@@ -84,8 +97,14 @@ impl FloatRange {
         self.max - self.min
     }
 
+    /// Map a value from this range to the target range
     pub fn map_to(&self, dest_range: &Self, value: f64) -> f64 {
         let normalized = (value - self.min) / self.span();
         (normalized * dest_range.span()) + dest_range.min
+    }
+
+    /// Map a value from this range to the range [0, 1]
+    pub fn normalize(&self, value: f64) -> f64 {
+        self.map_to(Self::NORMAL_RANGE, value)
     }
 }

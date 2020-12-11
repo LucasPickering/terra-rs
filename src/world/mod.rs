@@ -126,8 +126,8 @@ pub struct Tile {
 }
 
 impl Tile {
-    pub const ELEVATION_RANGE: FloatRange = FloatRange::new(-50.0, 50.0);
-    pub const HUMDITY_RANGE: FloatRange = FloatRange::NORMAL_RANGE;
+    pub const ELEVATION_RANGE: FloatRange<f64> = FloatRange::new(-50.0, 50.0);
+    pub const HUMDITY_RANGE: FloatRange<f64> = FloatRange::NORMAL;
 
     pub fn elevation(&self) -> f64 {
         self.elevation
@@ -145,20 +145,21 @@ impl Tile {
     /// controls what data the color is derived from.
     pub fn color(&self, lens: TileLens) -> Color3 {
         match lens {
-            // For now, composite is just biome. Later it will include more
-            // data.
-            TileLens::Composite | TileLens::Biome => Ok(self.biome.color()),
+            TileLens::Composite => {
+                let normal_elev =
+                    Self::ELEVATION_RANGE.normalize(self.elevation) as f32;
+                Ok(self.biome().color() * normal_elev)
+            }
+            TileLens::Biome => Ok(self.biome.color()),
             TileLens::Elevation => {
-                let normalized_elev = Self::ELEVATION_RANGE
-                    .map_to(&FloatRange::NORMAL_RANGE, self.elevation)
-                    as f32;
-                Color3::new(1.0, normalized_elev, normalized_elev)
+                let normal_elev =
+                    Self::ELEVATION_RANGE.normalize(self.elevation) as f32;
+                Color3::new(1.0, normal_elev, normal_elev)
             }
             TileLens::Humidity => {
-                let normalized_humidity = Self::HUMDITY_RANGE
-                    .map_to(&FloatRange::NORMAL_RANGE, self.humidity)
-                    as f32;
-                Color3::new(normalized_humidity, normalized_humidity, 1.0)
+                let normal_humidity =
+                    Self::HUMDITY_RANGE.normalize(self.humidity) as f32;
+                Color3::new(normal_humidity, normal_humidity, 1.0)
             }
         }
         .unwrap()

@@ -218,12 +218,6 @@ impl Scene {
                 Instance {
                     pos: VertexInstancePosition::new([x, 0.0, z]),
                     color: tile.color(TileLens::Composite).into(),
-                    // color: VertexColor::new([
-                    //     // (tile.position().x() % 2 * 255).abs() as u8,
-                    //     1.0, 0.0,
-                    //     0.0,
-                    //     // (tile.position().z() % 2 * 255).abs() as u8,
-                    // ]),
                     scale: VertexScale::new([
                         1.0,
                         tile.elevation() as f32,
