@@ -1,3 +1,5 @@
+import InputHandler from "./input";
+
 const CANVAS_ID = "canvas";
 const TARGET_FRAME_RATE = 60;
 
@@ -24,5 +26,8 @@ window.addEventListener("resize", resizeCanvas);
 window.setInterval(() => {
   window.requestAnimationFrame(() => terra.render());
 }, 1000 / TARGET_FRAME_RATE);
+
+// Set up all input event handlers
+new InputHandler(canvas, (e) => terra.handle_event(e));
 
 export {}; // #computerscience

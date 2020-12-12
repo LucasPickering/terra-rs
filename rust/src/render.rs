@@ -186,15 +186,10 @@ pub struct Scene {
     program: Program<VertexSemantics, (), ShaderInterface>,
     camera: Camera,
     tiles: Tess<Vertex, u8, Instance, Interleaved>,
-    pub input_handler: InputHandler,
 }
 
 impl Scene {
-    pub fn new(
-        canvas_id: &str,
-        input_config: InputConfig,
-        world: &World,
-    ) -> anyhow::Result<Scene> {
+    pub fn new(canvas_id: &str, world: &World) -> anyhow::Result<Scene> {
         // Bind a surface to our canvas. This is what we'll render to.
         let mut surface = WebSysWebGL2Surface::new(canvas_id)
             .context("Error creating surface")?;
@@ -236,22 +231,23 @@ impl Scene {
             .unwrap();
 
         let camera = Camera::new();
-        let input_handler = InputHandler::new(input_config, &surface.canvas);
 
         Ok(Scene {
             surface,
             program,
             tiles,
             camera,
-            input_handler,
         })
     }
 
     /// Render the latest frame and display it. This will also handle processing
     /// inputs.
-    pub fn render(&mut self) -> anyhow::Result<()> {
+    pub fn render(
+        &mut self,
+        input_handler: &mut InputHandler,
+    ) -> anyhow::Result<()> {
         // Run through all available input events
-        if let Err(err) = self.input_handler.process_events(&mut self.camera) {
+        if let Err(err) = input_handler.process_events(&mut self.camera) {
             error!("Error processing input events: {}", err);
         }
 

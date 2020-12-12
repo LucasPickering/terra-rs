@@ -1,5 +1,67 @@
-import { InputAction } from "terra-wasm";
+/**
+ * This type NEEDS to match the InputEvent in `input.rs`!
+ */
+type InputEvent =
+  | {
+      KeyDown: {
+        key: string;
+        repeat: boolean;
+      };
+    }
+  | { KeyUp: { key: string } }
+  | { Blur: undefined };
+
+/**
+ * Map JS key strings to a string that our Rust enum can parse
+ * @param key KeyboardEvent key string
+ * @return Rust key value
+ */
+function convertKey(key: string): string {
+  if (key.match(/^[a-zA-Z]$/)) {
+    return key.toUpperCase();
+  }
+
+  switch (key.toLowerCase()) {
+    case "arrowup":
+      return "UpArrow";
+    case "arrowdown":
+      return "DownArrow";
+    case "arrowleft":
+      return "LeftArrow";
+    case "arrowright":
+      return "RightArrow";
+    case "shift":
+      return "LeftShift";
+    case " ":
+      return "Space";
+    default:
+      return "Unknown";
+  }
+}
 
 class InputHandler {
-  constructor() {}
+  private canvas: HTMLCanvasElement;
+  private handleEvent: (event: InputEvent) => void;
+
+  constructor(
+    canvas: HTMLCanvasElement,
+    handleEvent: (event: InputEvent) => void
+  ) {
+    this.canvas = canvas;
+    this.handleEvent = handleEvent;
+
+    canvas.addEventListener("keydown", (e) =>
+      this.handleEvent({
+        KeyDown: { key: convertKey(e.key), repeat: e.repeat },
+      })
+    );
+    canvas.addEventListener("keyup", (e) =>
+      this.handleEvent({ KeyUp: { key: convertKey(e.key) } })
+    );
+    canvas.addEventListener("blur", (e) =>
+      this.handleEvent({ Blur: undefined })
+    );
+  }
 }
+
+export default InputHandler;

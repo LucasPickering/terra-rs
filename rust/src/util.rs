@@ -1,6 +1,5 @@
-use std::ops;
-
 use anyhow::anyhow;
+use std::ops;
 
 /// A macro to measure the evaluation time of an expression. Wraps an
 /// expression, and outputs a tuple of the value of the expression with the

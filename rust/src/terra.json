@@ -1,6 +1,6 @@
 {
   "world": {
-    "tile_radius": 500,
+    "tile_radius": 100,
     "elevation": {
       "octaves": 12,
       "frequency": 1.0,

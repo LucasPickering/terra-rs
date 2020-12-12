@@ -27,8 +27,9 @@ luminance-web-sys = "0.2"
 noise = "0.6"
 rand = "0.7"
 serde = {version = "1.0", features = ["derive"]}
+serde-wasm-bindgen = "0.1"
 serde_json = "1.0"
-wasm-bindgen = {version = "0.2", features = ["serde-serialize"]}
+wasm-bindgen = {version = "0.2"}
 wasm-bindgen-futures = "0.4"
 wasm-logger = "0.2"
 
