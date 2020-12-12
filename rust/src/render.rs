@@ -1,6 +1,5 @@
 use crate::{
     camera::Camera,
-    config::InputConfig,
     input::InputHandler,
     util::Color3,
     world::{HasHexPosition, TileLens, World},

@@ -13,11 +13,13 @@ use std::{
 /// meanings of the user's input, and is mapped to [InputEvent] via bindings in
 /// the config.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize)]
-#[serde(untagged)]
 pub enum InputAction {
-    /// Move the camera in space, along one of the 3 axes
-    CameraMovement(CameraMovement),
-    /// While enabled, this
+    CameraForward,
+    CameraBackward,
+    CameraLeft,
+    CameraRight,
+    CameraUp,
+    CameraDown,
     CameraPan,
 }
 
@@ -99,6 +101,9 @@ pub struct InputHandler {
     /// Current location of the mouse pointer, updated every time we receive a
     /// mouse event.
     mouse_pos: Point2<isize>,
+    /// The last mouse position that was used for camera panning. Updated only
+    /// while the camera is panning.
+    last_mouse_pan_pos: Point2<isize>,
 }
 
 impl InputHandler {
@@ -109,6 +114,7 @@ impl InputHandler {
             sender,
             receiver,
             pressed_keys: HashSet::new(),
+            last_mouse_pan_pos: Point2::new(0, 0),
             mouse_pos: Point2::new(0, 0),
         }
     }
@@ -142,15 +148,16 @@ impl InputHandler {
                     self.pressed_keys.remove(&key);
                 }
                 InputEvent::MouseDown { x, y } => {
+                    // Start panning the mouse
                     self.pressed_keys.insert(Key::Mouse1);
-                    self.move_mouse(camera, x, y);
+                    self.mouse_pos = Point2::new(x, y);
                 }
                 InputEvent::MouseUp { x, y } => {
                     self.pressed_keys.remove(&Key::Mouse1);
-                    self.move_mouse(camera, x, y);
+                    self.mouse_pos = Point2::new(x, y);
                 }
                 InputEvent::MouseMove { x, y } => {
-                    self.move_mouse(camera, x, y);
+                    self.mouse_pos = Point2::new(x, y);
                 }
                 // When we lose focus, clear all key states
                 InputEvent::Blur => self.pressed_keys.clear(),
@@ -160,31 +167,39 @@ impl InputHandler {
         // Right now we only care about apply-while-held actions. At some point
         // we can add on-down or on-up actions when we need them
         self.process_held_keys(camera);
+        self.last_mouse_pan_pos = self.mouse_pos;
 
         Ok(())
     }
 
-    fn move_mouse(&mut self, camera: &mut Camera, new_x: isize, new_y: isize) {
-        let new_pos = Point2::new(new_x, new_y);
-        let diff = new_pos - self.mouse_pos;
-
-        // TODO make this use the actual binding
-        if self.pressed_keys.contains(&Key::Mouse1) {
-            camera.pan_camera(diff.x, diff.y);
-        }
-
-        self.mouse_pos = new_pos;
-    }
-
     /// Apply actions according to which keys are currently being held
-    fn process_held_keys(&self, camera: &mut Camera) {
+    fn process_held_keys(&mut self, camera: &mut Camera) {
         for key in &self.pressed_keys {
             if let Some(action) = self.config.bindings.0.get(key) {
                 match action {
-                    InputAction::CameraMovement(movement) => {
-                        camera.move_camera(*movement, 0.1)
+                    InputAction::CameraForward => {
+                        camera.move_camera(CameraMovement::Forward, 0.1)
                     }
-                    InputAction::CameraPan => {}
+                    InputAction::CameraBackward => {
+                        camera.move_camera(CameraMovement::Backward, 0.1)
+                    }
+                    InputAction::CameraLeft => {
+                        camera.move_camera(CameraMovement::Left, 0.1)
+                    }
+                    InputAction::CameraRight => {
+                        camera.move_camera(CameraMovement::Right, 0.1)
+                    }
+                    InputAction::CameraUp => {
+                        camera.move_camera(CameraMovement::Up, 0.1)
+                    }
+                    InputAction::CameraDown => {
+                        camera.move_camera(CameraMovement::Down, 0.1)
+                    }
+                    InputAction::CameraPan => {
+                        let mouse_delta =
+                            self.mouse_pos - self.last_mouse_pan_pos;
+                        camera.pan_camera(mouse_delta);
+                    }
                 }
             }
         }

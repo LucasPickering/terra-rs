@@ -1,10 +1,8 @@
 use crate::util::NumRange;
 use cgmath::{
-    Angle, InnerSpace, Matrix4, Point3, Quaternion, Rad, Rotation, Rotation3,
+    Angle, Matrix4, Point3, Quaternion, Rad, Rotation, Rotation3, Vector2,
     Vector3,
 };
-use log::debug;
-use serde::Deserialize;
 use std::f32::consts::PI;
 
 const FOVY: Rad<f32> = Rad(std::f32::consts::FRAC_PI_2);
@@ -13,7 +11,7 @@ const Z_FAR: f32 = 1000.0;
 const PIXELS_TO_RADS: f32 = 0.005;
 
 /// The different input actions that can be applied to the camera
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize)]
+#[derive(Copy, Clone, Debug)]
 pub enum CameraMovement {
     Forward,
     Backward,
@@ -21,10 +19,6 @@ pub enum CameraMovement {
     Right,
     Up,
     Down,
-    /* RotateUp,
-     * RotateDown,
-     * RotateLeft,
-     * RotateRight, */
 }
 
 /// Handler for an arcball camera. The camera has a focal point that it pans
@@ -37,18 +31,12 @@ pub struct Camera {
     distance: f32,
     pitch: Rad<f32>,
     yaw: Rad<f32>,
-    /* /// Eye location, in 3D space
-     * position: Point3<f32>,
-     * /// Vertical angle. 0 is level (where the x/z plane is horizontal)
-     * pitch: Rad<f32>,
-     * /// Rotation about the y axis. 0 is looking parallel to the x axis
-     * yaw: Rad<f32>, */
 }
 
 impl Camera {
     const CAMERA_SPACE: NumRange<f32> = NumRange::new(-1.0, 1.0);
     const HORIZ_ANGLE_RANGE: NumRange<f32> = NumRange::new(0.0, PI * 2.0);
-    const VERT_ANGLE_RANGE: NumRange<f32> = NumRange::new(-PI / 2.0, PI / 2.0);
+    const VERT_ANGLE_RANGE: NumRange<f32> = NumRange::new(0.0, PI / 2.0);
 
     pub fn new() -> Self {
         Self {
@@ -58,9 +46,6 @@ impl Camera {
             distance: 25.0,
             pitch: Rad(PI / 4.0),
             yaw: Rad(0.0),
-            /* position: Point3::new(0.0, 25.0, 0.0),
-             * pitch: Rad(-PI / 4.0),
-             * yaw: Rad(0.0), */
         }
     }
 
@@ -72,7 +57,6 @@ impl Camera {
         let yd = self.distance * self.pitch.sin();
         let offset = Vector3::new(xd, yd, zd);
         let eye = self.target + offset;
-        debug!("eye = {:?}", eye);
 
         Matrix4::look_at(eye, self.target, Vector3::unit_y())
     }
@@ -95,18 +79,6 @@ impl Camera {
 
     /// Apply a camera movement action
     pub fn move_camera(&mut self, movement: CameraMovement, magnitude: f32) {
-        // // Apply rotation actions
-        // let (pitch, yaw): (Rad<f32>, Rad<f32>) = match action {
-        //     CameraMovement::RotateUp => (Rad(1.0), Rad(0.0)),
-        //     CameraMovement::RotateDown => (Rad(-1.0), Rad(0.0)),
-        //     CameraMovement::RotateLeft => (Rad(0.0), Rad(1.0)),
-        //     CameraMovement::RotateRight => (Rad(0.0), Rad(-1.0)),
-        //     _ => (Rad(0.0), Rad(0.0)),
-        // };
-        // let (pitch, yaw) = (pitch * magnitude, yaw * magnitude);
-        // self.pitch += pitch;
-        // self.yaw += yaw;
-
         // Apply movement actions
         let translation: Vector3<f32> = match movement {
             CameraMovement::Forward => -Vector3::unit_x(),
@@ -125,11 +97,14 @@ impl Camera {
     }
 
     /// Move the camera
-    pub fn pan_camera(&mut self, x: isize, y: isize) {
+    pub fn pan_camera(&mut self, mouse_delta: Vector2<isize>) {
+        // Map the pixel delta to the range of possible values. A full movement
+        // of the screen width will do a 360. Full height movement will do
+        // 0->90.
         let dyaw = NumRange::new(0.0, self.width as f32)
-            .map_to(&Self::HORIZ_ANGLE_RANGE.zeroed(), x as f32);
+            .map_to(&Self::HORIZ_ANGLE_RANGE.zeroed(), mouse_delta.x as f32);
         let dpitch = NumRange::new(0.0, self.height as f32)
-            .map_to(&Self::VERT_ANGLE_RANGE.zeroed(), y as f32);
+            .map_to(&Self::VERT_ANGLE_RANGE.zeroed(), mouse_delta.y as f32);
         self.yaw += Rad(dyaw);
         self.pitch += Rad(dpitch);
     }

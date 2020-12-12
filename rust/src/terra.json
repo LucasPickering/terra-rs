@@ -1,6 +1,6 @@
 {
   "world": {
-    "tile_radius": 100,
+    "tile_radius": 10,
     "elevation": {
       "octaves": 12,
       "frequency": 1.0,
@@ -16,12 +16,13 @@
   },
   "input": {
     "bindings": {
-      "Forward": "W",
-      "Backward": "S",
-      "Left": "A",
-      "Right": "D",
-      "Up": "Space",
-      "Down": "LeftShift"
+      "CameraForward": "W",
+      "CameraBackward": "S",
+      "CameraLeft": "A",
+      "CameraRight": "D",
+      "CameraUp": "Space",
+      "CameraDown": "LeftShift",
+      "CameraPan": "Mouse1"
     }
   }
 }
