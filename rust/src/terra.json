@@ -16,16 +16,12 @@
   },
   "input": {
     "bindings": {
-      "MoveForward": "W",
-      "MoveBackward": "S",
-      "MoveLeft": "A",
-      "MoveRight": "D",
-      "MoveUp": "Space",
-      "MoveDown": "LeftShift",
-      "RotateUp": "UpArrow",
-      "RotateDown": "DownArrow",
-      "RotateLeft": "LeftArrow",
-      "RotateRight": "RightArrow"
+      "Forward": "W",
+      "Backward": "S",
+      "Left": "A",
+      "Right": "D",
+      "Up": "Space",
+      "Down": "LeftShift"
     }
   }
 }

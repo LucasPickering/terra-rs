@@ -1,6 +1,7 @@
 use cgmath::{
     InnerSpace, Matrix4, Point3, Quaternion, Rad, Rotation, Rotation3, Vector3,
 };
+use log::debug;
 use serde::Deserialize;
 use std::f32::consts::PI;
 
@@ -10,17 +11,17 @@ const Z_FAR: f32 = 1000.0;
 
 /// The different input actions that can be applied to the camera
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize)]
-pub enum CameraAction {
-    MoveForward,
-    MoveBackward,
-    MoveLeft,
-    MoveRight,
-    MoveUp,
-    MoveDown,
-    RotateUp,
-    RotateDown,
-    RotateLeft,
-    RotateRight,
+pub enum CameraMovement {
+    Forward,
+    Backward,
+    Left,
+    Right,
+    Up,
+    Down,
+    /* RotateUp,
+     * RotateDown,
+     * RotateLeft,
+     * RotateRight, */
 }
 
 pub struct Camera {
@@ -61,27 +62,27 @@ impl Camera {
     }
 
     /// Apply a camera movement action
-    pub fn apply_action(&mut self, action: CameraAction, magnitude: f32) {
-        // Apply rotation actions
-        let (pitch, yaw): (Rad<f32>, Rad<f32>) = match action {
-            CameraAction::RotateUp => (Rad(1.0), Rad(0.0)),
-            CameraAction::RotateDown => (Rad(-1.0), Rad(0.0)),
-            CameraAction::RotateLeft => (Rad(0.0), Rad(1.0)),
-            CameraAction::RotateRight => (Rad(0.0), Rad(-1.0)),
-            _ => (Rad(0.0), Rad(0.0)),
-        };
-        let (pitch, yaw) = (pitch * magnitude, yaw * magnitude);
-        self.pitch += pitch;
-        self.yaw += yaw;
+    pub fn move_camera(&mut self, movement: CameraMovement, magnitude: f32) {
+        // // Apply rotation actions
+        // let (pitch, yaw): (Rad<f32>, Rad<f32>) = match action {
+        //     CameraMovement::RotateUp => (Rad(1.0), Rad(0.0)),
+        //     CameraMovement::RotateDown => (Rad(-1.0), Rad(0.0)),
+        //     CameraMovement::RotateLeft => (Rad(0.0), Rad(1.0)),
+        //     CameraMovement::RotateRight => (Rad(0.0), Rad(-1.0)),
+        //     _ => (Rad(0.0), Rad(0.0)),
+        // };
+        // let (pitch, yaw) = (pitch * magnitude, yaw * magnitude);
+        // self.pitch += pitch;
+        // self.yaw += yaw;
 
         // Apply movement actions
-        let translation: Vector3<f32> = match action {
-            CameraAction::MoveForward => Vector3::unit_z(),
-            CameraAction::MoveBackward => Vector3::unit_z() * -1.0,
-            CameraAction::MoveLeft => Vector3::unit_x(),
-            CameraAction::MoveRight => Vector3::unit_x() * -1.0,
-            CameraAction::MoveUp => Vector3::unit_y(),
-            CameraAction::MoveDown => Vector3::unit_y() * -1.0,
+        let translation: Vector3<f32> = match movement {
+            CameraMovement::Forward => Vector3::unit_z(),
+            CameraMovement::Backward => Vector3::unit_z() * -1.0,
+            CameraMovement::Left => Vector3::unit_x(),
+            CameraMovement::Right => Vector3::unit_x() * -1.0,
+            CameraMovement::Up => Vector3::unit_y(),
+            CameraMovement::Down => Vector3::unit_y() * -1.0,
             _ => Vector3::new(0.0, 0.0, 0.0),
         } * magnitude;
         // Rotate the translation by our current yaw, so that forward and
@@ -90,5 +91,10 @@ impl Camera {
         let translation = yaw_quot.rotate_vector(translation);
 
         self.position += translation;
+    }
+
+    /// Turn the camera according to a mouse movement
+    pub fn pan_camera(&mut self, dx: isize, dy: isize) {
+        debug!("({},{})", dx, dy);
     }
 }

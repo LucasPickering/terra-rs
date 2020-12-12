@@ -1,23 +1,30 @@
 use crate::{
-    camera::{Camera, CameraAction},
+    camera::{Camera, CameraMovement},
     config::InputConfig,
 };
+use cgmath::Point2;
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
     sync::mpsc,
 };
 
-/// The different kinds of actions that a user can perform.
+/// Actions that can be initiated by user input. This defines the semantic
+/// meanings of the user's input, and is mapped to [InputEvent] via bindings in
+/// the config.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize)]
 #[serde(untagged)]
 pub enum InputAction {
-    Camera(CameraAction),
+    /// Move the camera in space, along one of the 3 axes
+    CameraMovement(CameraMovement),
+    /// While enabled, this
+    CameraPan,
 }
 
 /// All the keys on the keyboard
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize)]
 pub enum Key {
+    // Keys
     W,
     A,
     S,
@@ -28,6 +35,10 @@ pub enum Key {
     RightArrow,
     Space,
     LeftShift,
+
+    // Mouse buttons
+    Mouse1,
+
     // TODO add more as needed
     Unknown,
 }
@@ -62,6 +73,9 @@ impl<'de> Deserialize<'de> for InputBindings {
 pub enum InputEvent {
     KeyDown { key: Key, repeat: bool },
     KeyUp { key: Key },
+    MouseDown { x: isize, y: isize },
+    MouseUp { x: isize, y: isize },
+    MouseMove { x: isize, y: isize },
     Blur,
 }
 
@@ -82,6 +96,9 @@ pub struct InputHandler {
     /// sent on key-down, and removed on key-up. The browser's logic for
     /// repeating keypresses sucks so we have to implement that ourselves.
     pressed_keys: HashSet<Key>,
+    /// Current location of the mouse pointer, updated every time we receive a
+    /// mouse event.
+    mouse_pos: Point2<isize>,
 }
 
 impl InputHandler {
@@ -92,6 +109,7 @@ impl InputHandler {
             sender,
             receiver,
             pressed_keys: HashSet::new(),
+            mouse_pos: Point2::new(0, 0),
         }
     }
 
@@ -107,9 +125,13 @@ impl InputHandler {
         &mut self,
         camera: &mut Camera,
     ) -> anyhow::Result<()> {
+        // This is a little shitty but we have to collect the iter so that
+        // we're not borrowing self during the for loop, which would prevent
+        // us from calling out to other &mut self methods
+        let events: Vec<InputEvent> = self.receiver.try_iter().collect();
         // Pull all events out of the queue, convert each one to a Rust event,
         // then process that event
-        for event in self.receiver.try_iter() {
+        for event in events {
             match event {
                 InputEvent::KeyDown { key, repeat } => {
                     if !repeat {
@@ -118,6 +140,17 @@ impl InputHandler {
                 }
                 InputEvent::KeyUp { key } => {
                     self.pressed_keys.remove(&key);
+                }
+                InputEvent::MouseDown { x, y } => {
+                    self.pressed_keys.insert(Key::Mouse1);
+                    self.move_mouse(Point2::new(x, y), camera);
+                }
+                InputEvent::MouseUp { x, y } => {
+                    self.pressed_keys.remove(&Key::Mouse1);
+                    self.move_mouse(Point2::new(x, y), camera);
+                }
+                InputEvent::MouseMove { x, y } => {
+                    self.move_mouse(Point2::new(x, y), camera);
                 }
                 // When we lose focus, clear all key states
                 InputEvent::Blur => self.pressed_keys.clear(),
@@ -131,14 +164,24 @@ impl InputHandler {
         Ok(())
     }
 
+    fn move_mouse(&mut self, new_pos: Point2<isize>, camera: &mut Camera) {
+        let diff = new_pos - self.mouse_pos;
+        // TODO actually look for binding here
+        if self.pressed_keys.contains(&Key::Mouse1) {
+            camera.pan_camera(diff.x, diff.y);
+        }
+        self.mouse_pos = new_pos;
+    }
+
     /// Apply actions according to which keys are currently being held
     fn process_held_keys(&self, camera: &mut Camera) {
         for key in &self.pressed_keys {
             if let Some(action) = self.config.bindings.0.get(key) {
                 match action {
-                    InputAction::Camera(cam_action) => {
-                        camera.apply_action(*cam_action, 0.1)
+                    InputAction::CameraMovement(movement) => {
+                        camera.move_camera(*movement, 0.1)
                     }
+                    InputAction::CameraPan => {}
                 }
             }
         }

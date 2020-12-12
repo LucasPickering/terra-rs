@@ -9,6 +9,9 @@ type InputEvent =
       };
     }
   | { KeyUp: { key: string } }
+  | { MouseDown: { x: number; y: number } }
+  | { MouseUp: { x: number; y: number } }
+  | { MouseMove: { x: number; y: number } }
   | { Blur: undefined };
 
 /**
@@ -58,6 +61,15 @@ class InputHandler {
     canvas.addEventListener("keyup", (e) =>
       this.handleEvent({ KeyUp: { key: convertKey(e.key) } })
     );
+    canvas.addEventListener("mousedown", (e) => {
+      this.handleEvent({ MouseDown: { x: e.clientX, y: e.clientY } });
+    });
+    canvas.addEventListener("mouseup", (e) => {
+      this.handleEvent({ MouseUp: { x: e.clientX, y: e.clientY } });
+    });
+    canvas.addEventListener("mousemove", (e) => {
+      this.handleEvent({ MouseMove: { x: e.clientX, y: e.clientY } });
+    });
     canvas.addEventListener("blur", (e) =>
       this.handleEvent({ Blur: undefined })
     );

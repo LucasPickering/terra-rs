@@ -5,6 +5,7 @@ use crate::{
     config::TerraConfig, input::InputEvent, render::Scene, world::World,
 };
 use input::InputHandler;
+use log::debug;
 use wasm_bindgen::prelude::*;
 
 mod camera;
