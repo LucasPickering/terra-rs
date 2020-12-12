@@ -1,5 +1,6 @@
 use anyhow::anyhow;
-use std::ops;
+use cgmath::BaseFloat;
+use std::{fmt::Display, ops};
 
 /// A macro to measure the evaluation time of an expression. Wraps an
 /// expression, and outputs a tuple of the value of the expression with the
@@ -7,24 +8,19 @@ use std::ops;
 #[macro_export]
 macro_rules! timed {
     ($ex:expr) => {{
-        use crate::util::now;
         use std::time::Duration;
 
-        let start = crate::util::now();
+        // https://developer.mozilla.org/en-US/docs/Web/API/Performance/now
+        let perf = web_sys::window()
+            .expect("should have a Window")
+            .performance()
+            .expect("should have a Performance");
+        let start = perf.now();
         let value = $ex;
-        let elapsed = now() - start;
+        let elapsed = perf.now() - start;
         let elapsed = Duration::from_secs_f64(elapsed / 1000.0);
         (value, elapsed)
     }};
-}
-
-/// Get a current timestamp from [performance.now()](https://developer.mozilla.org/en-US/docs/Web/API/Performance/now)
-pub fn now() -> f64 {
-    web_sys::window()
-        .expect("should have a Window")
-        .performance()
-        .expect("should have a Performance")
-        .now()
 }
 
 /// An RGB color. Values are stored as floats between 0 and 1 (inclusive).
@@ -37,6 +33,9 @@ pub struct Color3 {
 }
 
 impl Color3 {
+    /// The valid range of values for each component in RGB
+    const COMPONENT_RANGE: NumRange<f32> = NumRange::new(0.0, 1.0);
+
     /// Create a new RGB color. Return if any of the components are out of
     /// the range [0.0, 1.0].
     pub fn new(red: f32, green: f32, blue: f32) -> anyhow::Result<Self> {
@@ -44,12 +43,13 @@ impl Color3 {
             component_name: &str,
             value: f32,
         ) -> anyhow::Result<f32> {
-            if (0.0..=1.0).contains(&value) {
+            if Color3::COMPONENT_RANGE.contains(value) {
                 Ok(value)
             } else {
                 Err(anyhow!(
-                    "Color component {} must be in [0.0, 1.0], but was {}",
+                    "Color component {} must be in {}, but was {}",
                     component_name,
+                    Color3::COMPONENT_RANGE,
                     value
                 ))
             }
@@ -80,43 +80,51 @@ impl ops::Mul<f32> for Color3 {
     type Output = Self;
 
     fn mul(self, rhs: f32) -> Self {
-        let range = <NumRange<f32>>::NORMAL;
-        let red = range.clamp(self.red * rhs);
-        let green = range.clamp(self.green * rhs);
-        let blue = range.clamp(self.blue * rhs);
+        let red = Self::COMPONENT_RANGE.clamp(self.red * rhs);
+        let green = Self::COMPONENT_RANGE.clamp(self.green * rhs);
+        let blue = Self::COMPONENT_RANGE.clamp(self.blue * rhs);
         Self::new(red, green, blue).unwrap()
     }
 }
 
-/// Any time that can be turned into a numeric range
-pub trait Rangeable = Copy
-    + Sized
-    + ops::Add<Self, Output = Self>
-    + ops::Sub<Self, Output = Self>
-    + ops::Mul<Self, Output = Self>
-    + ops::Div<Self, Output = Self>
-    + PartialOrd;
-
 /// A range between two numeric values, inclusive on both ends.
 #[derive(Copy, Clone, Debug)]
-pub struct NumRange<T: Rangeable> {
+pub struct NumRange<T: BaseFloat> {
     pub min: T,
     pub max: T,
 }
 
-impl<T: Rangeable> NumRange<T> {
+impl<T: BaseFloat> NumRange<T> {
     pub const fn new(min: T, max: T) -> Self {
         Self { min, max }
     }
 
+    /// Max minus min
     pub fn span(&self) -> T {
         self.max - self.min
+    }
+
+    /// Create a new range that has the same span (max-min) as this range, but
+    /// the minimum value is zero.
+    pub fn zeroed(&self) -> Self {
+        Self::new(T::zero(), self.span())
+    }
+
+    /// Check if a value is in this range. Ranges are inclusive on both ends.
+    pub fn contains(&self, value: T) -> bool {
+        self.min <= value && value <= self.max
     }
 
     /// Map a value from this range to the target range.
     pub fn map_to(&self, dest_range: &Self, value: T) -> T {
         let normalized = (value - self.min) / self.span();
         dest_range.min + (normalized * dest_range.span())
+    }
+
+    /// Map a value from this range to the range [0, 1]
+    pub fn normalize(&self, value: T) -> T {
+        let normal_range = Self::new(T::zero(), T::one());
+        self.map_to(&normal_range, value)
     }
 
     /// Force a value into this range. If it's already in the range, return
@@ -133,22 +141,8 @@ impl<T: Rangeable> NumRange<T> {
     }
 }
 
-impl NumRange<f32> {
-    /// The range [0, 1]
-    pub const NORMAL: Self = Self::new(0.0, 1.0);
-
-    /// Map a value from this range to the range [0, 1]
-    pub fn normalize(&self, value: f32) -> f32 {
-        self.map_to(&Self::NORMAL, value)
-    }
-}
-
-impl NumRange<f64> {
-    /// The range [0, 1]
-    pub const NORMAL: Self = Self::new(0.0, 1.0);
-
-    /// Map a value from this range to the range [0, 1]
-    pub fn normalize(&self, value: f64) -> f64 {
-        self.map_to(&Self::NORMAL, value)
+impl<T: BaseFloat + Display> Display for NumRange<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}, {}]", self.min, self.max)
     }
 }

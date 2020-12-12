@@ -1,5 +1,4 @@
 #![feature(const_fn)]
-#![feature(trait_alias)]
 
 use crate::{
     config::TerraConfig, input::InputEvent, render::Scene, world::World,

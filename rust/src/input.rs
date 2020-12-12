@@ -125,9 +125,13 @@ impl InputHandler {
         &mut self,
         camera: &mut Camera,
     ) -> anyhow::Result<()> {
+        // Shitty but we have to pull the iter into a vec so that we can access
+        // &mut self from within the loop
+        let events: Vec<InputEvent> = self.receiver.try_iter().collect();
+
         // Pull all events out of the queue, convert each one to a Rust event,
         // then process that event
-        for event in self.receiver.try_iter() {
+        for event in events {
             match event {
                 InputEvent::KeyDown { key, repeat } => {
                     if !repeat {
@@ -139,14 +143,14 @@ impl InputHandler {
                 }
                 InputEvent::MouseDown { x, y } => {
                     self.pressed_keys.insert(Key::Mouse1);
-                    self.mouse_pos = Point2::new(x, y);
+                    self.move_mouse(camera, x, y);
                 }
                 InputEvent::MouseUp { x, y } => {
                     self.pressed_keys.remove(&Key::Mouse1);
-                    self.mouse_pos = Point2::new(x, y);
+                    self.move_mouse(camera, x, y);
                 }
                 InputEvent::MouseMove { x, y } => {
-                    self.mouse_pos = Point2::new(x, y);
+                    self.move_mouse(camera, x, y);
                 }
                 // When we lose focus, clear all key states
                 InputEvent::Blur => self.pressed_keys.clear(),
@@ -158,6 +162,18 @@ impl InputHandler {
         self.process_held_keys(camera);
 
         Ok(())
+    }
+
+    fn move_mouse(&mut self, camera: &mut Camera, new_x: isize, new_y: isize) {
+        let new_pos = Point2::new(new_x, new_y);
+        let diff = new_pos - self.mouse_pos;
+
+        // TODO make this use the actual binding
+        if self.pressed_keys.contains(&Key::Mouse1) {
+            camera.pan_camera(diff.x, diff.y);
+        }
+
+        self.mouse_pos = new_pos;
     }
 
     /// Apply actions according to which keys are currently being held
