@@ -2,9 +2,11 @@ mod generate;
 
 use crate::{
     config::WorldConfig,
+    timed,
     util::{Color3, NumRange},
     world::generate::WorldBuilder,
 };
+use log::info;
 use std::{
     collections::BTreeMap,
     fmt::{Display, Formatter},
@@ -193,7 +195,10 @@ impl World {
     }
 
     pub fn generate(config: WorldConfig) -> Self {
-        let tiles = WorldBuilder::new(config).generate_world();
+        info!("Generating world");
+        let (tiles, elapsed) =
+            timed!(WorldBuilder::new(config).generate_world());
+        info!("Generated world in {}ms", elapsed.as_millis());
         Self { config, tiles }
     }
 }

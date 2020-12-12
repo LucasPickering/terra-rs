@@ -7,15 +7,24 @@ use std::ops;
 #[macro_export]
 macro_rules! timed {
     ($ex:expr) => {{
-        // use std::time::Instant;
+        use crate::util::now;
         use std::time::Duration;
 
-        // let start = Instant::now();
+        let start = crate::util::now();
         let value = $ex;
-        // let elapsed = Instant::now() - start;
-        let elapsed = Duration::new(0, 0);
+        let elapsed = now() - start;
+        let elapsed = Duration::from_secs_f64(elapsed / 1000.0);
         (value, elapsed)
     }};
+}
+
+/// Get a current timestamp from [performance.now()](https://developer.mozilla.org/en-US/docs/Web/API/Performance/now)
+pub fn now() -> f64 {
+    web_sys::window()
+        .expect("should have a Window")
+        .performance()
+        .expect("should have a Performance")
+        .now()
 }
 
 /// An RGB color. Values are stored as floats between 0 and 1 (inclusive).

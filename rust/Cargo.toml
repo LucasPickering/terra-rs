@@ -35,13 +35,9 @@ wasm-logger = "0.2"
 
 [dependencies.web-sys]
 features = [
-  "Window",
-  "Headers",
-  "Request",
-  "RequestInit",
-  "RequestMode",
-  "Response",
   "EventListener",
   "KeyboardEvent",
+  "Performance",
+  "Window",
 ]
 version = "0.3.40"
