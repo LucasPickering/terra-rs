@@ -125,13 +125,9 @@ impl InputHandler {
         &mut self,
         camera: &mut Camera,
     ) -> anyhow::Result<()> {
-        // This is a little shitty but we have to collect the iter so that
-        // we're not borrowing self during the for loop, which would prevent
-        // us from calling out to other &mut self methods
-        let events: Vec<InputEvent> = self.receiver.try_iter().collect();
         // Pull all events out of the queue, convert each one to a Rust event,
         // then process that event
-        for event in events {
+        for event in self.receiver.try_iter() {
             match event {
                 InputEvent::KeyDown { key, repeat } => {
                     if !repeat {
@@ -143,14 +139,14 @@ impl InputHandler {
                 }
                 InputEvent::MouseDown { x, y } => {
                     self.pressed_keys.insert(Key::Mouse1);
-                    self.move_mouse(Point2::new(x, y), camera);
+                    self.mouse_pos = Point2::new(x, y);
                 }
                 InputEvent::MouseUp { x, y } => {
                     self.pressed_keys.remove(&Key::Mouse1);
-                    self.move_mouse(Point2::new(x, y), camera);
+                    self.mouse_pos = Point2::new(x, y);
                 }
                 InputEvent::MouseMove { x, y } => {
-                    self.move_mouse(Point2::new(x, y), camera);
+                    self.mouse_pos = Point2::new(x, y);
                 }
                 // When we lose focus, clear all key states
                 InputEvent::Blur => self.pressed_keys.clear(),
@@ -162,15 +158,6 @@ impl InputHandler {
         self.process_held_keys(camera);
 
         Ok(())
-    }
-
-    fn move_mouse(&mut self, new_pos: Point2<isize>, camera: &mut Camera) {
-        let diff = new_pos - self.mouse_pos;
-        // TODO actually look for binding here
-        if self.pressed_keys.contains(&Key::Mouse1) {
-            camera.pan_camera(diff.x, diff.y);
-        }
-        self.mouse_pos = new_pos;
     }
 
     /// Apply actions according to which keys are currently being held
