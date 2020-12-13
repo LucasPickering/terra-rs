@@ -34,6 +34,10 @@ pub struct WorldConfig {
 pub struct InputConfig {
     /// Configurable keybinds
     pub bindings: InputBindings,
+    /// Ratio between mouse movement and camera turn speed, in pixels/degree.
+    pub mouse_sensitivity: f32,
+    /// Vertical camera FOV
+    pub fov: f32,
 }
 
 /// Configuration for an instance of Terra. Defines world gen, input bindings,

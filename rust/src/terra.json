@@ -23,6 +23,8 @@
       "CameraUp": "Space",
       "CameraDown": "LeftShift",
       "CameraPan": "Mouse1"
-    }
+    },
+    "mouse_sensitivity": 0.75,
+    "fov": 90.0
   }
 }

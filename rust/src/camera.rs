@@ -1,13 +1,17 @@
-use crate::util::NumRange;
+use crate::{config::InputConfig, util::NumRange};
 use cgmath::{
-    Angle, Matrix4, Point3, Quaternion, Rad, Rotation, Rotation3, Vector2,
+    Angle, Deg, Matrix4, Point3, Quaternion, Rad, Rotation, Rotation3, Vector2,
     Vector3,
 };
 use std::f32::consts::PI;
 
-const FOVY: Rad<f32> = Rad(std::f32::consts::FRAC_PI_2);
+/// Camera near frustum plane
 const Z_NEAR: f32 = 0.1;
+/// Camera far frustum plane
 const Z_FAR: f32 = 1000.0;
+// We need to narrow this slight from PI/2 to prevent it flipping over
+// because of floating point errorSelf::VERT_ANGLE_RANGE
+const VERT_ANGLE_RANGE: NumRange<f32> = NumRange::new(0.0, PI / 2.0 - 0.01);
 
 /// The different input actions that can be applied to the camera
 #[derive(Copy, Clone, Debug)]
@@ -24,21 +28,30 @@ pub enum CameraMovement {
 /// around. Panning is controlled by the mouse, and the focal point can be moved
 /// via keys.
 pub struct Camera {
+    /// Screen width, in pixels. Updated via [Self::set_size]
     width: u32,
+    /// Screen height, in pixels. Updated via [Self::set_size]
     height: u32,
+    /// The location that the camera is looking at
     target: Point3<f32>,
+    /// The absolute distance between the target and the camera
     distance: f32,
+    /// Vertical angle between the target and the camera. 0 means they're on
+    /// the same horizontal plane. PI/2 means the camera is directly above the
+    /// target.
     pitch: Rad<f32>,
+    /// Horizontal angle between the target and the camera. 0&PI means they are
+    /// aligned parallel to the x axis. PI/2&3PI/2 means they're aligned
+    /// parallel to the z axis.
     yaw: Rad<f32>,
+    /// Mouse sensitivity, as a ratio of pixels moved to radians turned.
+    pixels_to_rads: Rad<f32>,
+    /// Vertical camera field of view
+    fov: Deg<f32>,
 }
 
 impl Camera {
-    const HORIZ_ANGLE_RANGE: NumRange<f32> = NumRange::new(0.0, PI * 2.0);
-    // We need to narrow this slight from PI/2 to prevent it flipping over
-    // because of floating point errorSelf::VERT_ANGLE_RANGE
-    const VERT_ANGLE_RANGE: NumRange<f32> = NumRange::new(0.0, PI / 2.0 - 0.01);
-
-    pub fn new() -> Self {
+    pub fn new(config: &InputConfig) -> Self {
         Self {
             width: 0,
             height: 0,
@@ -46,6 +59,8 @@ impl Camera {
             distance: 50.0,
             pitch: Rad(PI / 4.0),
             yaw: Rad(0.0),
+            pixels_to_rads: Deg(config.mouse_sensitivity).into(),
+            fov: Deg(config.fov),
         }
     }
 
@@ -64,7 +79,7 @@ impl Camera {
     /// Calculate the projection based on the current window width and height
     pub fn projection(&self) -> Matrix4<f32> {
         cgmath::perspective(
-            FOVY,
+            self.fov,
             self.width as f32 / self.height as f32,
             Z_NEAR,
             Z_FAR,
@@ -98,15 +113,9 @@ impl Camera {
 
     /// Pan the camera around the focal point
     pub fn pan_camera(&mut self, mouse_delta: Vector2<isize>) {
-        // Map the pixel delta to the range of possible values. A full movement
-        // of the screen width will do a 360. Full height movement will do
-        // 0->90.
-        let dyaw = -NumRange::new(0.0, self.width as f32)
-            .map_to(&Self::HORIZ_ANGLE_RANGE.zeroed(), mouse_delta.x as f32);
-        let dpitch = NumRange::new(0.0, self.height as f32)
-            .map_to(&Self::VERT_ANGLE_RANGE.zeroed(), mouse_delta.y as f32);
-        self.yaw = (self.yaw + Rad(dyaw)).normalize();
-        self.pitch =
-            Rad(Self::VERT_ANGLE_RANGE.clamp((self.pitch + Rad(dpitch)).0));
+        let dyaw = self.pixels_to_rads * -mouse_delta.x as f32;
+        let dpitch = self.pixels_to_rads * mouse_delta.y as f32;
+        self.yaw = (self.yaw + dyaw).normalize();
+        self.pitch = Rad(VERT_ANGLE_RANGE.clamp((self.pitch + dpitch).0));
     }
 }

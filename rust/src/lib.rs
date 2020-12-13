@@ -35,8 +35,8 @@ impl Terra {
 
             let config = TerraConfig::load().await?;
             let world = World::generate(config.world);
+            let scene = Scene::new(&canvas_id, &config, &world)?;
             let input_handler = InputHandler::new(config.input);
-            let scene = Scene::new(&canvas_id, &world)?;
 
             Ok(Terra {
                 world,

@@ -1,5 +1,6 @@
 use crate::{
     camera::Camera,
+    config::TerraConfig,
     input::InputHandler,
     util::Color3,
     world::{HasHexPosition, Tile, TileLens, World},
@@ -188,7 +189,11 @@ pub struct Scene {
 }
 
 impl Scene {
-    pub fn new(canvas_id: &str, world: &World) -> anyhow::Result<Scene> {
+    pub fn new(
+        canvas_id: &str,
+        config: &TerraConfig,
+        world: &World,
+    ) -> anyhow::Result<Scene> {
         // Bind a surface to our canvas. This is what we'll render to.
         let mut surface = WebSysWebGL2Surface::new(canvas_id)
             .context("Error creating surface")?;
@@ -229,7 +234,7 @@ impl Scene {
             .build()
             .unwrap();
 
-        let camera = Camera::new();
+        let camera = Camera::new(&config.input);
 
         Ok(Scene {
             surface,
