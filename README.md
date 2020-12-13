@@ -27,3 +27,14 @@ npm run start
 ```
 
 This will build the project and start an HTTP server on http://localhost:3000.
+
+## Deployment
+
+Deployed through [Keskne](https://github.com/LucasPickering/keskne). A Docker image is built here with the static assets, then deployed via Keskne. To build/push new assets:
+
+```sh
+docker-compose -f docker-compose.build.yml build
+docker-compose -f docker-compose.build.yml push
+```
+
+Then that latest image can be deployed via Keskne.

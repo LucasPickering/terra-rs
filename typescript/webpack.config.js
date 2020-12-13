@@ -27,7 +27,10 @@ module.exports = {
     topLevelAwait: true,
   },
   plugins: [
-    new HtmlWebpackPlugin({ template: "static/index.html" }),
+    new HtmlWebpackPlugin({
+      template: "static/index.html",
+      favicon: "static/favicon.ico",
+    }),
     new WasmPackPlugin({
       outName: "terra",
       crateDirectory: wasmDir,

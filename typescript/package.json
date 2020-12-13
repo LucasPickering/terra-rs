@@ -27,7 +27,7 @@
     "terra-wasm": "../rust/pkg"
   },
   "scripts": {
-    "build": "webpack build",
+    "build": "webpack",
     "start": "webpack serve"
   }
 }
