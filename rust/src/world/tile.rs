@@ -87,16 +87,16 @@ impl TileBuilder {
 
     pub fn build(self) -> Tile {
         Tile {
-            position: self.position(),
-            elevation: self.elevation(),
-            humidity: self.humidity(),
-            biome: self.biome(),
+            position: self.position,
+            elevation: self.elevation.unwrap(),
+            humidity: self.humidity.unwrap(),
+            biome: self.biome.unwrap(),
         }
     }
 
     /// Get this tile's elevation. Panics if elevation has not been set yet.
-    pub fn elevation(&self) -> f64 {
-        self.elevation.unwrap()
+    pub fn elevation(&self) -> Option<f64> {
+        self.elevation
     }
 
     /// Set the elevation for this tile.
@@ -105,8 +105,8 @@ impl TileBuilder {
     }
 
     /// Get this tile's humidity. Panics if humidity has not been set yet.
-    pub fn humidity(&self) -> f64 {
-        self.humidity.unwrap()
+    pub fn humidity(&self) -> Option<f64> {
+        self.humidity
     }
 
     /// Set the humidity for this tile.
@@ -115,8 +115,8 @@ impl TileBuilder {
     }
 
     /// Get this tile's biome. Panics if biome has not been set yet.
-    pub fn biome(&self) -> Biome {
-        self.biome.unwrap()
+    pub fn biome(&self) -> Option<Biome> {
+        self.biome
     }
 
     /// Set the biome for this tile.

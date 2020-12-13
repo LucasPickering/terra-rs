@@ -59,6 +59,19 @@ impl<T> HexPointMap<T> {
         }
     }
 
+    /// Find all the items adjacent to the given position. This can return up to
+    /// 6 items, but will return less if there are gaps in the map or the
+    /// position is at the edge.
+    pub fn adjacents(
+        &self,
+        pos: HexPoint,
+    ) -> impl Iterator<Item = (HexPoint, &T)> {
+        HexDirection::iter().filter_map(move |dir| {
+            let adj_pos = pos + dir.offset();
+            Some((adj_pos, self.map.get(&adj_pos)?))
+        })
+    }
+
     /// Find all the items adjacent to the given position, remove them from the
     /// map, and return them. This can return up to 6 items, but will return
     /// less if there are gaps in the map or the position is at the edge.
@@ -129,6 +142,7 @@ impl<T> HexPointMap<T> {
     }
 }
 
+// For iterators of pairs
 impl<T> FromIterator<(HexPoint, T)> for HexPointMap<T> {
     fn from_iter<I: IntoIterator<Item = (HexPoint, T)>>(iter: I) -> Self {
         Self {
@@ -137,11 +151,19 @@ impl<T> FromIterator<(HexPoint, T)> for HexPointMap<T> {
     }
 }
 
+// Shortcut for iterators of items that hold a position internally
 impl<T: HasHexPosition> FromIterator<T> for HexPointMap<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         iter.into_iter()
             .map(|item| (item.position(), item))
             .collect()
+    }
+}
+
+// Shortcut for a map of unit types, which is just a set of points
+impl FromIterator<HexPoint> for HexPointMap<()> {
+    fn from_iter<I: IntoIterator<Item = HexPoint>>(iter: I) -> Self {
+        iter.into_iter().map(|pos| (pos, ())).collect()
     }
 }
 

@@ -20,8 +20,9 @@ pub struct OceanGenerator;
 impl Generate for OceanGenerator {
     fn generate(&self, tiles: &mut HexPointMap<TileBuilder>, rng: &mut Pcg64) {
         // Find all clusters of tiles that are entirely below sea level
-        let clusters = tiles
-            .clusters_predicate(|tile| tile.elevation() <= World::SEA_LEVEL);
+        let clusters = tiles.clusters_predicate(|tile| {
+            tile.elevation().unwrap() <= World::SEA_LEVEL
+        });
 
         for cluster in clusters {
             // The odds of this cluster becoming an ocean are proportional to
@@ -36,7 +37,8 @@ impl Generate for OceanGenerator {
             if r < ocean_chance {
                 // Update every tile in this cluster to be coast/ocean
                 for (_, tile) in cluster.0 {
-                    let biome = if tile.elevation() >= MIN_COAST_DEPTH {
+                    let biome = if tile.elevation().unwrap() >= MIN_COAST_DEPTH
+                    {
                         Biome::Coast
                     } else {
                         Biome::Ocean

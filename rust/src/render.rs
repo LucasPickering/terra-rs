@@ -29,13 +29,13 @@ const TILE_SIDE_LENGTH: f32 = 1.0;
 const TILE_INSIDE_RADIUS: f32 = TILE_SIDE_LENGTH * 0.866_025; // approx sqrt(3)/2
 const TILE_WIDTH: f32 = TILE_SIDE_LENGTH * 2.0;
 
-// Vertex semantics. Those are needed to instruct the GPU how to select vertex’s
-// attributes from the memory we fill at render time, in shaders. You don’t have
-// to worry about them; just keep in mind they’re mandatory and act as
-// “protocol” between GPU’s memory regions and shaders.
-//
-// We derive Semantics automatically and provide the mapping as field
-// attributes.
+/// Vertex semantics. Those are needed to instruct the GPU how to select
+/// vertex’s attributes from the memory we fill at render time, in shaders. You
+/// don’t have to worry about them; just keep in mind they’re mandatory and act
+/// as “protocol” between GPU’s memory regions and shaders.
+///
+/// We derive Semantics automatically and provide the mapping as field
+/// attributes.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Semantics)]
 pub enum VertexSemantics {
     #[sem(name = "position", repr = "[f32; 3]", wrapper = "VertexPosition")]

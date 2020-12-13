@@ -1,3 +1,4 @@
+mod beach;
 mod biome;
 mod elevation;
 mod humidity;
@@ -9,8 +10,9 @@ use crate::{
     util::NumRange,
     world::{
         generate::{
-            biome::BiomePainter, elevation::ElevationGenerator,
-            humidity::HumidityGenerator, ocean::OceanGenerator,
+            beach::BeachGenerator, biome::BiomePainter,
+            elevation::ElevationGenerator, humidity::HumidityGenerator,
+            ocean::OceanGenerator,
         },
         hex::{HexPoint, HexPointMap},
         tile::{TileBuilder, TileMap},
@@ -64,8 +66,9 @@ impl WorldBuilder {
         // Run each generation step. The order is very important!
         self.apply_generator(ElevationGenerator::new(&config));
         self.apply_generator(HumidityGenerator::new(&config));
-        self.apply_generator(BiomePainter);
         self.apply_generator(OceanGenerator);
+        self.apply_generator(BeachGenerator);
+        self.apply_generator(BiomePainter);
 
         // Build each tile into its final value
         self.tiles

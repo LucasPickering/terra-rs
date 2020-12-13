@@ -18,10 +18,12 @@ pub enum BiomeType {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Biome {
+    // Water
     Ocean,
     Coast,
     Lake,
 
+    // Land
     Snow,
     Desert,
     Alpine,
@@ -29,10 +31,11 @@ pub enum Biome {
     Forest,
     Plains,
     Beach,
+    Cliff,
 }
 
 impl Biome {
-    fn biome_type(self) -> BiomeType {
+    pub fn biome_type(self) -> BiomeType {
         match self {
             Self::Ocean | Self::Coast | Self::Lake => BiomeType::Water,
             Self::Snow
@@ -41,11 +44,12 @@ impl Biome {
             | Self::Jungle
             | Self::Forest
             | Self::Plains
-            | Self::Beach => BiomeType::Land,
+            | Self::Beach
+            | Self::Cliff => BiomeType::Land,
         }
     }
 
-    fn color(self) -> Color3 {
+    pub fn color(self) -> Color3 {
         match self {
             Self::Ocean => Color3::new(0.08, 0.30, 0.64),
             Self::Coast => Color3::new(0.22, 0.55, 0.78),
@@ -58,6 +62,7 @@ impl Biome {
             Self::Forest => Color3::new(0.09, 0.48, 0.0),
             Self::Plains => Color3::new(0.68, 0.79, 0.45),
             Self::Beach => Color3::new(0.95, 0.94, 0.35),
+            Self::Cliff => Color3::new(0.4, 0.4, 0.4),
         }
         .unwrap()
     }
