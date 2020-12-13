@@ -22,7 +22,7 @@ pub struct WorldConfig {
     // this causes a crash rn
     // #[serde(default = "rand::random")]
     #[serde(default)]
-    pub seed: u32,
+    pub seed: u64,
     pub tile_radius: usize,
     pub elevation: NoiseFnConfig,
     pub humidity: NoiseFnConfig,

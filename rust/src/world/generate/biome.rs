@@ -1,12 +1,13 @@
 use crate::world::{
-    generate::{Generate, TileBuilder},
-    Biome, HexPointMap,
+    generate::Generate, hex::HexPointMap, tile::TileBuilder, Biome,
 };
-use std::fmt::{self, Display, Formatter};
+use derive_more::Display;
+use rand_pcg::Pcg64;
 
 /// A generator to apply a biome for each tile. The biome is calculated based
 /// on elevation and humidity.
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default, Display)]
+#[display(fmt = "Biome Painter")]
 pub struct BiomePainter;
 
 /// Calculate the biome for a single tile.
@@ -33,15 +34,8 @@ fn calculate_biome(tile: &TileBuilder) -> Biome {
     }
 }
 
-impl Display for BiomePainter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "BiomePainter")?;
-        Ok(())
-    }
-}
-
 impl Generate for BiomePainter {
-    fn generate(&self, tiles: &mut HexPointMap<TileBuilder>) {
+    fn generate(&self, tiles: &mut HexPointMap<TileBuilder>, _: &mut Pcg64) {
         for tile in tiles.values_mut() {
             tile.set_biome(calculate_biome(tile));
         }

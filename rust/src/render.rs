@@ -3,7 +3,11 @@ use crate::{
     config::TerraConfig,
     input::InputHandler,
     util::Color3,
-    world::{HasHexPosition, Tile, TileLens, World},
+    world::{
+        hex::HasHexPosition,
+        tile::{Tile, TileLens},
+        World,
+    },
 };
 use anyhow::Context;
 use log::error;

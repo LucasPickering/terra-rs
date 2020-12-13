@@ -1,6 +1,7 @@
 mod biome;
 mod elevation;
 mod humidity;
+mod ocean;
 
 use crate::{
     config::NoiseFnConfig,
@@ -9,17 +10,22 @@ use crate::{
     world::{
         generate::{
             biome::BiomePainter, elevation::ElevationGenerator,
-            humidity::HumidityGenerator,
+            humidity::HumidityGenerator, ocean::OceanGenerator,
         },
-        Biome, HasHexPosition, HexPoint, HexPointMap, Tile, WorldConfig,
+        hex::{HexPoint, HexPointMap},
+        tile::{TileBuilder, TileMap},
+        WorldConfig,
     },
 };
 use log::{debug, info};
 use noise::{MultiFractal, NoiseFn, Seedable};
-use std::fmt::Display;
+use rand::SeedableRng;
+use rand_pcg::Pcg64;
+use std::fmt::{Debug, Display};
 
 pub struct WorldBuilder {
     config: WorldConfig,
+    rng: Pcg64,
     tiles: HexPointMap<TileBuilder>,
 }
 
@@ -43,18 +49,23 @@ impl WorldBuilder {
 
         // The final count should always be `4r^2 + 2r + 1`, where r is radius
         info!("Initialized world with {} tiles", tiles.len());
-        Self { config, tiles }
+        Self {
+            config,
+            rng: Pcg64::seed_from_u64(config.seed),
+            tiles,
+        }
     }
 
     /// Generate a world by running a series of generation steps sequentially.
     /// Must be run from a blank slate. Outputs the finalized set of tiles.
-    pub fn generate_world(mut self) -> HexPointMap<Tile> {
+    pub fn generate_world(mut self) -> TileMap {
         let config = self.config;
 
         // Run each generation step. The order is very important!
         self.apply_generator(ElevationGenerator::new(&config));
         self.apply_generator(HumidityGenerator::new(&config));
         self.apply_generator(BiomePainter);
+        self.apply_generator(OceanGenerator);
 
         // Build each tile into its final value
         self.tiles
@@ -65,7 +76,8 @@ impl WorldBuilder {
 
     /// A helper to run a generation step on this builder.
     fn apply_generator(&mut self, generator: impl Generate) {
-        let ((), elapsed) = timed!(generator.generate(&mut self.tiles));
+        let ((), elapsed) =
+            timed!(generator.generate(&mut self.tiles, &mut self.rng));
         debug!("{} took {}ms", generator, elapsed.as_millis());
     }
 }
@@ -78,7 +90,7 @@ trait Generate: Display {
     /// Add new data to the existing tiles. The given map should never be
     /// inserted into or removed from, and the keys should never be changed.
     /// Only the values (tiles) should be mutated!
-    fn generate(&self, tiles: &mut HexPointMap<TileBuilder>);
+    fn generate(&self, tiles: &mut HexPointMap<TileBuilder>, rng: &mut Pcg64);
 }
 
 /// A wrapper around a noise function that makes it easy to use for generating
@@ -136,7 +148,8 @@ impl<F: Default + Seedable + MultiFractal + NoiseFn<[f64; 3]>> TileNoiseFn<F> {
     ) -> Self {
         // Configure the noise function
         let noise_fn = F::default()
-            .set_seed(world_config.seed)
+            // Mask off the top 32 bits
+            .set_seed((world_config.seed & 0xffffffff) as u32)
             .set_octaves(fn_config.octaves)
             .set_frequency(fn_config.frequency)
             .set_lacunarity(fn_config.lacunarity)
@@ -157,75 +170,5 @@ impl<F: NoiseFn<[f64; 3]>> NoiseFn<HexPoint> for TileNoiseFn<F> {
         let normalized_output = self.noise_fn.get(normalized_input);
         Self::NOISE_FN_OUTPUT_RANGE
             .map_to(&self.output_range, normalized_output)
-    }
-}
-
-/// A partially built [Tile]. This should only be used while the world is being
-/// generated. After generation is complete, only [Tile] should be used. All the
-/// fields on this type, other than `position`, have a getter and a setter.
-/// Since the fields may not be defined, the getters all panic if the field
-/// has not be set. This makes it easy to catch bugs where we're trying to use
-/// world values that haven't been generated yet.
-#[derive(Copy, Clone, Debug)]
-struct TileBuilder {
-    position: HexPoint,
-    elevation: Option<f64>,
-    humidity: Option<f64>,
-    biome: Option<Biome>,
-}
-
-impl TileBuilder {
-    pub fn new(position: HexPoint) -> Self {
-        Self {
-            position,
-            elevation: None,
-            humidity: None,
-            biome: None,
-        }
-    }
-
-    pub fn build(self) -> Tile {
-        Tile {
-            position: self.position(),
-            elevation: self.elevation(),
-            humidity: self.humidity(),
-            biome: self.biome(),
-        }
-    }
-
-    /// Get this tile's elevation. Panics if elevation has not been set yet.
-    pub fn elevation(&self) -> f64 {
-        self.elevation.unwrap()
-    }
-
-    /// Set the elevation for this tile.
-    pub fn set_elevation(&mut self, elevation: f64) {
-        self.elevation = Some(elevation);
-    }
-
-    /// Get this tile's humidity. Panics if humidity has not been set yet.
-    pub fn humidity(&self) -> f64 {
-        self.humidity.unwrap()
-    }
-
-    /// Set the humidity for this tile.
-    pub fn set_humidity(&mut self, humidity: f64) {
-        self.humidity = Some(humidity);
-    }
-
-    /// Get this tile's biome. Panics if biome has not been set yet.
-    pub fn biome(&self) -> Biome {
-        self.biome.unwrap()
-    }
-
-    /// Set the biome for this tile.
-    pub fn set_biome(&mut self, biome: Biome) {
-        self.biome = Some(biome);
-    }
-}
-
-impl HasHexPosition for TileBuilder {
-    fn position(&self) -> HexPoint {
-        self.position
     }
 }

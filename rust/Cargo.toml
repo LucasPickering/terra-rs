@@ -18,17 +18,18 @@ crate-type = ["cdylib"]
 anyhow = "1.0"
 cgmath = "0.17"
 console_error_panic_hook = "0.1"
-gloo = "0.2"
-js-sys = "0.3"
+derive_more = "0.99"
 log = "0.4"
 luminance = "0.43"
 luminance-front = "0.3"
 luminance-web-sys = "0.2"
 noise = "0.6"
 rand = "0.7"
+rand_pcg = "0.2"
 serde = {version = "1.0", features = ["derive"]}
 serde-wasm-bindgen = "0.1"
 serde_json = "1.0"
+strum = {version = "0.20", features = ["derive"]}
 wasm-bindgen = {version = "0.2"}
 wasm-bindgen-futures = "0.4"
 wasm-logger = "0.2"
