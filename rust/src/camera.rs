@@ -8,7 +8,6 @@ use std::f32::consts::PI;
 const FOVY: Rad<f32> = Rad(std::f32::consts::FRAC_PI_2);
 const Z_NEAR: f32 = 0.1;
 const Z_FAR: f32 = 1000.0;
-const PIXELS_TO_RADS: f32 = 0.005;
 
 /// The different input actions that can be applied to the camera
 #[derive(Copy, Clone, Debug)]
@@ -34,16 +33,17 @@ pub struct Camera {
 }
 
 impl Camera {
-    const CAMERA_SPACE: NumRange<f32> = NumRange::new(-1.0, 1.0);
     const HORIZ_ANGLE_RANGE: NumRange<f32> = NumRange::new(0.0, PI * 2.0);
-    const VERT_ANGLE_RANGE: NumRange<f32> = NumRange::new(0.0, PI / 2.0);
+    // We need to narrow this slight from PI/2 to prevent it flipping over
+    // because of floating point errorSelf::VERT_ANGLE_RANGE
+    const VERT_ANGLE_RANGE: NumRange<f32> = NumRange::new(0.0, PI / 2.0 - 0.01);
 
     pub fn new() -> Self {
         Self {
             width: 0,
             height: 0,
-            target: Point3::new(0.0, 0.0, 0.0),
-            distance: 25.0,
+            target: Point3::new(0.0, 50.0, 0.0),
+            distance: 50.0,
             pitch: Rad(PI / 4.0),
             yaw: Rad(0.0),
         }
@@ -52,8 +52,8 @@ impl Camera {
     /// Calculate current view matrix based on camera position and orientation
     pub fn view(&self) -> Matrix4<f32> {
         // Find the x/z offset from the camera, based on distance and angle
-        let xd = self.distance * self.yaw.cos();
-        let zd = self.distance * self.yaw.sin();
+        let xd = self.distance * self.yaw.sin() * self.pitch.cos();
+        let zd = self.distance * self.yaw.cos() * self.pitch.cos();
         let yd = self.distance * self.pitch.sin();
         let offset = Vector3::new(xd, yd, zd);
         let eye = self.target + offset;
@@ -81,10 +81,10 @@ impl Camera {
     pub fn move_camera(&mut self, movement: CameraMovement, magnitude: f32) {
         // Apply movement actions
         let translation: Vector3<f32> = match movement {
-            CameraMovement::Forward => -Vector3::unit_x(),
-            CameraMovement::Backward => Vector3::unit_x(),
-            CameraMovement::Left => Vector3::unit_z(),
-            CameraMovement::Right => -Vector3::unit_z(),
+            CameraMovement::Forward => -Vector3::unit_z(),
+            CameraMovement::Backward => Vector3::unit_z(),
+            CameraMovement::Left => -Vector3::unit_x(),
+            CameraMovement::Right => Vector3::unit_x(),
             CameraMovement::Up => Vector3::unit_y(),
             CameraMovement::Down => -Vector3::unit_y(),
         } * magnitude;
@@ -96,16 +96,17 @@ impl Camera {
         self.target += translation;
     }
 
-    /// Move the camera
+    /// Pan the camera around the focal point
     pub fn pan_camera(&mut self, mouse_delta: Vector2<isize>) {
         // Map the pixel delta to the range of possible values. A full movement
         // of the screen width will do a 360. Full height movement will do
         // 0->90.
-        let dyaw = NumRange::new(0.0, self.width as f32)
+        let dyaw = -NumRange::new(0.0, self.width as f32)
             .map_to(&Self::HORIZ_ANGLE_RANGE.zeroed(), mouse_delta.x as f32);
         let dpitch = NumRange::new(0.0, self.height as f32)
             .map_to(&Self::VERT_ANGLE_RANGE.zeroed(), mouse_delta.y as f32);
-        self.yaw += Rad(dyaw);
-        self.pitch += Rad(dpitch);
+        self.yaw = (self.yaw + Rad(dyaw)).normalize();
+        self.pitch =
+            Rad(Self::VERT_ANGLE_RANGE.clamp((self.pitch + Rad(dpitch)).0));
     }
 }

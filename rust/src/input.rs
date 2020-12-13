@@ -174,26 +174,27 @@ impl InputHandler {
 
     /// Apply actions according to which keys are currently being held
     fn process_held_keys(&mut self, camera: &mut Camera) {
+        let move_speed = 1.0;
         for key in &self.pressed_keys {
             if let Some(action) = self.config.bindings.0.get(key) {
                 match action {
                     InputAction::CameraForward => {
-                        camera.move_camera(CameraMovement::Forward, 0.1)
+                        camera.move_camera(CameraMovement::Forward, move_speed)
                     }
                     InputAction::CameraBackward => {
-                        camera.move_camera(CameraMovement::Backward, 0.1)
+                        camera.move_camera(CameraMovement::Backward, move_speed)
                     }
                     InputAction::CameraLeft => {
-                        camera.move_camera(CameraMovement::Left, 0.1)
+                        camera.move_camera(CameraMovement::Left, move_speed)
                     }
                     InputAction::CameraRight => {
-                        camera.move_camera(CameraMovement::Right, 0.1)
+                        camera.move_camera(CameraMovement::Right, move_speed)
                     }
                     InputAction::CameraUp => {
-                        camera.move_camera(CameraMovement::Up, 0.1)
+                        camera.move_camera(CameraMovement::Up, move_speed)
                     }
                     InputAction::CameraDown => {
-                        camera.move_camera(CameraMovement::Down, 0.1)
+                        camera.move_camera(CameraMovement::Down, move_speed)
                     }
                     InputAction::CameraPan => {
                         let mouse_delta =

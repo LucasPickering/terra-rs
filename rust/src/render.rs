@@ -2,7 +2,7 @@ use crate::{
     camera::Camera,
     input::InputHandler,
     util::Color3,
-    world::{HasHexPosition, TileLens, World},
+    world::{HasHexPosition, Tile, TileLens, World},
 };
 use anyhow::Context;
 use log::error;
@@ -209,14 +209,14 @@ impl Scene {
             .values()
             .map(|tile| {
                 let (x, z) = tile.position().pixel_pos(TILE_WIDTH);
+                // Map the elevation to a range that's based at 0
+                let elev = Tile::ELEVATION_RANGE
+                    .map_to(&Tile::ELEVATION_RANGE.zeroed(), tile.elevation())
+                    as f32;
                 Instance {
                     pos: VertexInstancePosition::new([x, 0.0, z]),
                     color: tile.color(TileLens::Composite).into(),
-                    scale: VertexScale::new([
-                        1.0,
-                        tile.elevation() as f32,
-                        1.0,
-                    ]),
+                    scale: VertexScale::new([1.0, elev, 1.0]),
                 }
             })
             .collect();
