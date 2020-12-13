@@ -98,14 +98,15 @@ impl<T> HexPointMap<T> {
         // This loop runs once per generated cluster, plus once per each failed
         // attempt at a cluster (where the first item fails the predicate)
         while let Some(first_entry) = remaining.pop_first() {
-            // Start our BFS. We'll use a queue of the next items to check, and
-            // seed it with our first item.
-            // Potential optimization - move this queue outside the while loop
-            // so we can re-use its memory
-            let mut bfs_queue: VecDeque<(HexPoint, &mut T)> =
-                VecDeque::with_capacity(remaining.len());
-            bfs_queue.push_back(first_entry);
             let mut cluster = HexPointMap::new();
+            // Start our BFS. We'll use a queue of the next items to check, and
+            // seed it with our first item. It doesn't seem to matter if we
+            // allocate this on each loop or do it outside, so it's probably
+            // getting optimized to the same thing
+            let mut bfs_queue: VecDeque<(HexPoint, &mut T)> = VecDeque::new();
+            // Start with this tile - if it fails the predicate it'll be the
+            // only one we check for this cluster
+            bfs_queue.push_back(first_entry);
 
             // Grab the next item off the queue and check it
             while let Some((pos, item)) = bfs_queue.pop_front() {

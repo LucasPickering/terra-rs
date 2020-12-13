@@ -35,7 +35,6 @@ module.exports = {
       outName: "terra",
       crateDirectory: wasmDir,
       outDir: path.resolve(wasmDir, "pkg"),
-      forceMode: "profiling",
     }),
   ],
   resolve: {

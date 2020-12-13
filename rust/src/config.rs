@@ -50,7 +50,7 @@ pub struct TerraConfig {
 
 impl TerraConfig {
     /// Load config from a static file on the server
-    pub async fn load() -> anyhow::Result<Self> {
+    pub fn load() -> anyhow::Result<Self> {
         info!("Loading config");
         let config: TerraConfig = serde_json::from_str(CONFIG_JSON_STR)?;
         info!("Loaded config: {:#?}", &config);

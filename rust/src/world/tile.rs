@@ -16,7 +16,7 @@ pub struct Tile {
 
 impl Tile {
     pub const ELEVATION_RANGE: NumRange<f64> = NumRange::new(-50.0, 50.0);
-    pub const HUMDITY_RANGE: NumRange<f64> = NumRange::new(0.0, 1.0);
+    pub const HUMIDITY_RANGE: NumRange<f64> = NumRange::new(0.0, 1.0);
 
     pub fn elevation(&self) -> f64 {
         self.elevation
@@ -47,7 +47,7 @@ impl Tile {
             }
             TileLens::Humidity => {
                 let normal_humidity =
-                    Self::HUMDITY_RANGE.normalize(self.humidity()) as f32;
+                    Self::HUMIDITY_RANGE.normalize(self.humidity()) as f32;
                 Color3::new(normal_humidity, normal_humidity, 1.0)
             }
         }

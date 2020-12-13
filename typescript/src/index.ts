@@ -4,7 +4,7 @@ const CANVAS_ID = "canvas";
 const TARGET_FRAME_RATE = 60;
 
 const { Terra } = await import("terra-wasm");
-const terra = await Terra.load(CANVAS_ID);
+const terra = Terra.load(CANVAS_ID);
 
 // type safety!
 const canvas: HTMLCanvasElement = document.getElementById(

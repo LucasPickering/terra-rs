@@ -21,7 +21,7 @@ impl HumidityGenerator {
             noise_fn: TileNoiseFn::new(
                 config,
                 &config.humidity,
-                Tile::HUMDITY_RANGE,
+                Tile::HUMIDITY_RANGE,
             ),
         }
     }

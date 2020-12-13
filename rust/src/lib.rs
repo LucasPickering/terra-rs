@@ -28,12 +28,12 @@ pub struct Terra {
 impl Terra {
     /// Initialize a Terra instance
     #[wasm_bindgen]
-    pub async fn load(canvas_id: String) -> Result<Terra, JsValue> {
-        async fn helper(canvas_id: String) -> anyhow::Result<Terra> {
+    pub fn load(canvas_id: String) -> Result<Terra, JsValue> {
+        fn helper(canvas_id: String) -> anyhow::Result<Terra> {
             std::panic::set_hook(Box::new(console_error_panic_hook::hook));
             wasm_logger::init(wasm_logger::Config::default());
 
-            let config = TerraConfig::load().await?;
+            let config = TerraConfig::load()?;
             let world = World::generate(config.world);
             let scene = Scene::new(&canvas_id, &config, &world)?;
             let input_handler = InputHandler::new(config.input);
@@ -45,9 +45,7 @@ impl Terra {
             })
         }
 
-        helper(canvas_id)
-            .await
-            .map_err(|err| err.to_string().into())
+        helper(canvas_id).map_err(|err| err.to_string().into())
     }
 
     /// Register a single input event. This should be called directly by any
