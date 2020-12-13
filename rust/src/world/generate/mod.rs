@@ -103,15 +103,12 @@ impl<F: NoiseFn<[f64; 3]>> TileNoiseFn<F> {
     const NOISE_FN_OUTPUT_RANGE: NumRange<f64> = NumRange::new(-1.0, 1.0);
 
     /// Initialize a wrapper around the given function.
-    fn from_fn(
-        world_radius: usize,
-        noise_fn: F,
-        output_range: NumRange<f64>,
-    ) -> Self {
-        let radius_f = world_radius as f64;
+    fn from_fn(noise_fn: F, output_range: NumRange<f64>) -> Self {
         Self {
             noise_fn,
-            tile_pos_range: NumRange::new(-radius_f, radius_f),
+            // The noise function doesn't give interesting output for whole
+            // number inputs, so we need to map this down to decimal numbers
+            tile_pos_range: NumRange::new(-100.0, 100.0),
             output_range,
         }
     }
@@ -145,7 +142,7 @@ impl<F: Default + Seedable + MultiFractal + NoiseFn<[f64; 3]>> TileNoiseFn<F> {
             .set_lacunarity(fn_config.lacunarity)
             .set_persistence(fn_config.persistence);
 
-        Self::from_fn(world_config.tile_radius, noise_fn, output_range)
+        Self::from_fn(noise_fn, output_range)
     }
 }
 
