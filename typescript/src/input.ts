@@ -23,6 +23,9 @@ function convertKey(key: string): string {
   if (key.match(/^[a-zA-Z]$/)) {
     return key.toUpperCase();
   }
+  if (key.match(/^[0-9]$/)) {
+    return `Num${key}`;
+  }
 
   switch (key.toLowerCase()) {
     case "arrowup":
