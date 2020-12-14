@@ -16,8 +16,7 @@ RUN curl -sSLf https://sh.rustup.rs | sh -s -- -y --default-toolchain none && \
 # Copy in sources and build the project
 COPY . /app
 WORKDIR /app/typescript
-ENV NODE_ENV="production"
-RUN npm run build
+RUN npm run build --mode=production
 
 # Copy the built assets into another image
 FROM alpine:latest
