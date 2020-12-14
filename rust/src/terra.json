@@ -1,9 +1,9 @@
 {
   "world": {
-    "tile_radius": 100,
+    "tile_radius": 200,
     "elevation": {
       "octaves": 12,
-      "frequency": 1.0,
+      "frequency": 3.0,
       "lacunarity": 4.0,
       "persistence": 0.5
     },

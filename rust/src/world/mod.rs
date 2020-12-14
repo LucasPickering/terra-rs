@@ -62,7 +62,7 @@ impl Biome {
             Self::Forest => Color3::new(0.09, 0.48, 0.0),
             Self::Plains => Color3::new(0.68, 0.79, 0.45),
             Self::Beach => Color3::new(0.95, 0.94, 0.35),
-            Self::Cliff => Color3::new(0.4, 0.4, 0.4),
+            Self::Cliff => Color3::new(0.21, 0.20, 0.17),
         }
         .unwrap()
     }
