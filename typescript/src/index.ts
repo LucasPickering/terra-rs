@@ -4,7 +4,7 @@ import config from "./terra.json";
 const CANVAS_ID = "canvas";
 const TARGET_FRAME_RATE = 60;
 
-const { Terra } = await import("terra-wasm");
+const { Terra } = await import("./wasm");
 const terra = new Terra(config, CANVAS_ID);
 
 // type safety!
