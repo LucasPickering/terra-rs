@@ -5,6 +5,7 @@ use crate::{
     config::TerraConfig, input::InputEvent, render::Scene, world::World,
 };
 use input::InputHandler;
+use log::info;
 use wasm_bindgen::prelude::*;
 
 mod camera;
@@ -27,25 +28,25 @@ pub struct Terra {
 #[wasm_bindgen]
 impl Terra {
     /// Initialize a Terra instance
-    #[wasm_bindgen]
-    pub fn load(canvas_id: String) -> Result<Terra, JsValue> {
-        fn helper(canvas_id: String) -> anyhow::Result<Terra> {
-            std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-            wasm_logger::init(wasm_logger::Config::default());
+    #[wasm_bindgen(constructor)]
+    pub fn new(config: JsValue, canvas_id: String) -> Result<Terra, JsValue> {
+        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+        wasm_logger::init(wasm_logger::Config::default());
 
-            let config = TerraConfig::load()?;
-            let world = World::generate(config.world);
-            let scene = Scene::new(&canvas_id, &config, &world)?;
-            let input_handler = InputHandler::new(config.input);
+        info!("Loading config");
+        let config: TerraConfig = serde_wasm_bindgen::from_value(config)?;
+        info!("Loaded config: {:#?}", &config);
 
-            Ok(Terra {
-                world,
-                input_handler,
-                scene,
-            })
-        }
+        let world = World::generate(config.world);
+        let scene = Scene::new(&canvas_id, &config, &world)
+            .map_err(|err| JsValue::from(err.to_string()))?;
+        let input_handler = InputHandler::new(config.input);
 
-        helper(canvas_id).map_err(|err| err.to_string().into())
+        Ok(Terra {
+            world,
+            input_handler,
+            scene,
+        })
     }
 
     /// Register a single input event. This should be called directly by any

@@ -152,7 +152,7 @@ impl<F: Default + Seedable + MultiFractal + NoiseFn<[f64; 3]>> TileNoiseFn<F> {
         // Configure the noise function
         let noise_fn = F::default()
             // Mask off the top 32 bits
-            .set_seed((world_config.seed & 0xffffffff) as u32)
+            .set_seed(world_config.seed_u32())
             .set_octaves(fn_config.octaves)
             .set_frequency(fn_config.frequency)
             .set_lacunarity(fn_config.lacunarity)

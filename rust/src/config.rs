@@ -1,10 +1,5 @@
 use crate::input::InputBindings;
-use log::info;
 use serde::Deserialize;
-
-// hack for loading config. At some point we probably will want to pull it from
-// local storage or smth but this works for now
-const CONFIG_JSON_STR: &str = include_str!("./terra.json");
 
 /// Config for a particular noise generation function
 #[derive(Copy, Clone, Debug, Deserialize)]
@@ -21,11 +16,18 @@ pub struct NoiseFnConfig {
 pub struct WorldConfig {
     // this causes a crash rn
     // #[serde(default = "rand::random")]
-    #[serde(default)]
     pub seed: u64,
     pub tile_radius: usize,
     pub elevation: NoiseFnConfig,
     pub humidity: NoiseFnConfig,
+}
+
+impl WorldConfig {
+    /// Get the seed as a u32 value, which is needed for noise functions. This
+    /// will take just the lower 32 bits of our seed.
+    pub fn seed_u32(&self) -> u32 {
+        (self.seed & 0xffffffff) as u32
+    }
 }
 
 /// Configuration for an instance of Terra. Defines world gen, input bindings,
@@ -46,14 +48,4 @@ pub struct InputConfig {
 pub struct TerraConfig {
     pub world: WorldConfig,
     pub input: InputConfig,
-}
-
-impl TerraConfig {
-    /// Load config from a static file on the server
-    pub fn load() -> anyhow::Result<Self> {
-        info!("Loading config");
-        let config: TerraConfig = serde_json::from_str(CONFIG_JSON_STR)?;
-        info!("Loaded config: {:#?}", &config);
-        Ok(config)
-    }
 }

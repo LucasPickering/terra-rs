@@ -1,11 +1,12 @@
 {
   "world": {
+    "seed": 42069,
     "tile_radius": 200,
     "elevation": {
-      "octaves": 12,
-      "frequency": 3.0,
-      "lacunarity": 4.0,
-      "persistence": 0.5
+      "octaves": 3,
+      "frequency": 0.75,
+      "lacunarity": 4.5,
+      "persistence": 0.4
     },
     "humidity": {
       "octaves": 3,
