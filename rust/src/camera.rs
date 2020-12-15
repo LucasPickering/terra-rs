@@ -11,7 +11,8 @@ const Z_NEAR: f32 = 0.1;
 const Z_FAR: f32 = 1000.0;
 // We need to narrow this slight from PI/2 to prevent it flipping over
 // because of floating point errorSelf::VERT_ANGLE_RANGE
-const VERT_ANGLE_RANGE: NumRange<f32> = NumRange::new(0.0, PI / 2.0 - 0.01);
+const PITCH_RANGE: NumRange<f32> = NumRange::new(0.0, PI / 2.0 - 0.01);
+const DISTANCE_RANGE: NumRange<f32> = NumRange::new(5.0, 500.0);
 
 /// The different input actions that can be applied to the camera
 #[derive(Copy, Clone, Debug)]
@@ -34,11 +35,12 @@ pub struct Camera {
     height: u32,
     /// The location that the camera is looking at
     target: Point3<f32>,
-    /// The absolute distance between the target and the camera
+    /// The absolute distance between the target and the camera. Must be in the
+    /// range [DISTANCE_RANGE].
     distance: f32,
     /// Vertical angle between the target and the camera. 0 means they're on
     /// the same horizontal plane. PI/2 means the camera is directly above the
-    /// target.
+    /// target. Must be in the range [PITCH_RANGE].
     pitch: Rad<f32>,
     /// Horizontal angle between the target and the camera. 0&PI means they are
     /// aligned parallel to the x axis. PI/2&3PI/2 means they're aligned
@@ -116,6 +118,17 @@ impl Camera {
         let dyaw = self.pixels_to_rads * -mouse_delta.x as f32;
         let dpitch = self.pixels_to_rads * mouse_delta.y as f32;
         self.yaw = (self.yaw + dyaw).normalize();
-        self.pitch = Rad(VERT_ANGLE_RANGE.clamp((self.pitch + dpitch).0));
+        self.pitch = Rad(PITCH_RANGE.clamp((self.pitch + dpitch).0));
+    }
+
+    /// Zoom in or out, i.e. move closer to or further from the target.
+    /// `zoom_in` is true to zoom in (get closer), false to zoom out.
+    pub fn zoom_camera(&mut self, zoom_in: bool, magnitude: f32) {
+        let next = if zoom_in {
+            self.distance - magnitude
+        } else {
+            self.distance + magnitude
+        };
+        self.distance = DISTANCE_RANGE.clamp(next);
     }
 }

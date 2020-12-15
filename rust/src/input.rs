@@ -110,6 +110,7 @@ pub enum InputEvent {
     MouseDown { x: isize, y: isize },
     MouseUp { x: isize, y: isize },
     MouseMove { x: isize, y: isize },
+    Scroll { up: bool },
     Blur,
 }
 
@@ -190,6 +191,9 @@ impl InputHandler {
                 }
                 InputEvent::MouseMove { x, y } => {
                     self.mouse_pos = Point2::new(x, y);
+                }
+                InputEvent::Scroll { up } => {
+                    camera.zoom_camera(up, 5.0);
                 }
                 // When we lose focus, clear all key states
                 InputEvent::Blur => self.pressed_keys.clear(),

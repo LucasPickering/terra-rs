@@ -12,6 +12,7 @@ type InputEvent =
   | { MouseDown: { x: number; y: number } }
   | { MouseUp: { x: number; y: number } }
   | { MouseMove: { x: number; y: number } }
+  | { Scroll: { up: boolean } }
   | { Blur: undefined };
 
 /**
@@ -73,6 +74,9 @@ class InputHandler {
     canvas.addEventListener("mousemove", (e) => {
       this.handleEvent({ MouseMove: { x: e.clientX, y: e.clientY } });
     });
+    canvas.addEventListener("wheel", (e) =>
+      this.handleEvent({ Scroll: { up: e.deltaY < 0 } })
+    );
     canvas.addEventListener("blur", (e) =>
       this.handleEvent({ Blur: undefined })
     );
