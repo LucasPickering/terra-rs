@@ -15,7 +15,7 @@ pub struct Tile {
 }
 
 impl Tile {
-    pub const ELEVATION_RANGE: NumRange<f64> = NumRange::new(-40.0, 40.0);
+    pub const ELEVATION_RANGE: NumRange<f64> = NumRange::new(-100.0, 100.0);
     pub const HUMIDITY_RANGE: NumRange<f64> = NumRange::new(0.0, 1.0);
 
     pub fn elevation(&self) -> f64 {

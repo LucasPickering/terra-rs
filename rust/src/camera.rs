@@ -1,4 +1,4 @@
-use crate::{config::InputConfig, util::NumRange};
+use crate::{config::InputConfig, util::NumRange, world::tile::Tile};
 use cgmath::{
     Angle, Deg, Matrix4, Point3, Quaternion, Rad, Rotation, Rotation3, Vector2,
     Vector3,
@@ -57,7 +57,7 @@ impl Camera {
         Self {
             width: 0,
             height: 0,
-            target: Point3::new(0.0, 50.0, 0.0),
+            target: Point3::new(0.0, Tile::ELEVATION_RANGE.max as f32, 0.0),
             distance: 50.0,
             pitch: Rad(PI / 4.0),
             yaw: Rad(0.0),

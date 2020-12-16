@@ -6,6 +6,7 @@ use cgmath::Point2;
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
+    iter,
     sync::mpsc,
 };
 
@@ -21,6 +22,22 @@ pub enum InputAction {
     CameraUp,
     CameraDown,
     CameraPan,
+}
+
+impl InputAction {
+    /// Should this action be applied repeatedly while its bound key is being
+    /// held, or should it only apply on initial key-down?
+    fn apply_on_repeat(&self) -> bool {
+        match self {
+            Self::CameraForward
+            | Self::CameraBackward
+            | Self::CameraLeft
+            | Self::CameraRight
+            | Self::CameraUp
+            | Self::CameraDown
+            | Self::CameraPan => true,
+        }
+    }
 }
 
 /// All the keys on the keyboard
@@ -114,6 +131,12 @@ pub enum InputEvent {
     Blur,
 }
 
+#[derive(Copy, Clone, Debug)]
+struct KeyPress {
+    key: Key,
+    repeat: bool,
+}
+
 /// A handler for all input events. Input listeners are registered in the
 /// constructor, and we use an MPSC channel to collect events from all
 /// listeners. Call [Self::process_events] on each frame to process events from
@@ -130,7 +153,7 @@ pub struct InputHandler {
     /// Track which keys are currently held down. A key should be added to the
     /// sent on key-down, and removed on key-up. The browser's logic for
     /// repeating keypresses sucks so we have to implement that ourselves.
-    pressed_keys: HashSet<Key>,
+    held_keys: HashSet<Key>,
     /// Current location of the mouse pointer, updated every time we receive a
     /// mouse event.
     mouse_pos: Point2<isize>,
@@ -146,7 +169,7 @@ impl InputHandler {
             config,
             sender,
             receiver,
-            pressed_keys: HashSet::new(),
+            held_keys: HashSet::new(),
             last_mouse_pan_pos: Point2::new(0, 0),
             mouse_pos: Point2::new(0, 0),
         }
@@ -164,29 +187,28 @@ impl InputHandler {
         &mut self,
         camera: &mut Camera,
     ) -> anyhow::Result<()> {
-        // Shitty but we have to pull the iter into a vec so that we can access
-        // &mut self from within the loop
-        let events: Vec<InputEvent> = self.receiver.try_iter().collect();
-
         // Pull all events out of the queue, convert each one to a Rust event,
         // then process that event
-        for event in events {
+        let mut pressed_keys: Vec<Key> = Vec::new();
+        for event in self.receiver.try_iter() {
             match event {
                 InputEvent::KeyDown { key, repeat } => {
+                    // Browser's logic for key repeats is trash so we ignore
+                    // those and implement our own repeating
                     if !repeat {
-                        self.pressed_keys.insert(key);
+                        pressed_keys.push(key);
                     }
                 }
                 InputEvent::KeyUp { key } => {
-                    self.pressed_keys.remove(&key);
+                    self.held_keys.remove(&key);
                 }
                 InputEvent::MouseDown { x, y } => {
                     // Start panning the mouse
-                    self.pressed_keys.insert(Key::Mouse1);
+                    pressed_keys.push(Key::Mouse1);
                     self.mouse_pos = Point2::new(x, y);
                 }
                 InputEvent::MouseUp { x, y } => {
-                    self.pressed_keys.remove(&Key::Mouse1);
+                    self.held_keys.remove(&Key::Mouse1);
                     self.mouse_pos = Point2::new(x, y);
                 }
                 InputEvent::MouseMove { x, y } => {
@@ -196,48 +218,64 @@ impl InputHandler {
                     camera.zoom_camera(up, 5.0);
                 }
                 // When we lose focus, clear all key states
-                InputEvent::Blur => self.pressed_keys.clear(),
+                InputEvent::Blur => self.held_keys.clear(),
             }
         }
 
-        // Right now we only care about apply-while-held actions. At some point
-        // we can add on-down or on-up actions when we need them
-        self.process_held_keys(camera);
+        // For each keypress, look up the bound action and apply it
+        let actions = iter::empty() // symmetry!
+            .chain(
+                pressed_keys
+                    .iter()
+                    .filter_map(|key| self.get_bound_action(key)),
+            )
+            .chain(
+                // For keys that are being held down, only apply actions that
+                // are designated as "apply_on_repeat"
+                self.held_keys
+                    .iter()
+                    .filter_map(|key| self.get_bound_action(key))
+                    .filter(|action| action.apply_on_repeat()),
+            );
+        for action in actions {
+            self.process_key_press(camera, action);
+        }
+
+        // After applying all actions, update internal state
+        self.held_keys.extend(pressed_keys);
         self.last_mouse_pan_pos = self.mouse_pos;
 
         Ok(())
     }
 
-    /// Apply actions according to which keys are currently being held
-    fn process_held_keys(&mut self, camera: &mut Camera) {
+    fn get_bound_action(&self, key: &Key) -> Option<InputAction> {
+        self.config.bindings.0.get(&key).copied()
+    }
+
+    fn process_key_press(&self, camera: &mut Camera, action: InputAction) {
         let move_speed = 1.0;
-        for key in &self.pressed_keys {
-            if let Some(action) = self.config.bindings.0.get(key) {
-                match action {
-                    InputAction::CameraForward => {
-                        camera.move_camera(CameraMovement::Forward, move_speed)
-                    }
-                    InputAction::CameraBackward => {
-                        camera.move_camera(CameraMovement::Backward, move_speed)
-                    }
-                    InputAction::CameraLeft => {
-                        camera.move_camera(CameraMovement::Left, move_speed)
-                    }
-                    InputAction::CameraRight => {
-                        camera.move_camera(CameraMovement::Right, move_speed)
-                    }
-                    InputAction::CameraUp => {
-                        camera.move_camera(CameraMovement::Up, move_speed)
-                    }
-                    InputAction::CameraDown => {
-                        camera.move_camera(CameraMovement::Down, move_speed)
-                    }
-                    InputAction::CameraPan => {
-                        let mouse_delta =
-                            self.mouse_pos - self.last_mouse_pan_pos;
-                        camera.pan_camera(mouse_delta);
-                    }
-                }
+        match action {
+            InputAction::CameraForward => {
+                camera.move_camera(CameraMovement::Forward, move_speed)
+            }
+            InputAction::CameraBackward => {
+                camera.move_camera(CameraMovement::Backward, move_speed)
+            }
+            InputAction::CameraLeft => {
+                camera.move_camera(CameraMovement::Left, move_speed)
+            }
+            InputAction::CameraRight => {
+                camera.move_camera(CameraMovement::Right, move_speed)
+            }
+            InputAction::CameraUp => {
+                camera.move_camera(CameraMovement::Up, move_speed)
+            }
+            InputAction::CameraDown => {
+                camera.move_camera(CameraMovement::Down, move_speed)
+            }
+            InputAction::CameraPan => {
+                let mouse_delta = self.mouse_pos - self.last_mouse_pan_pos;
+                camera.pan_camera(mouse_delta);
             }
         }
     }
