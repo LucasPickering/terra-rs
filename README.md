@@ -1,12 +1,10 @@
 # terra-rs
 
-Hexagon tile-based terrain generation system. I originally wrote this in Java ([here](https://github.com/LucasPickering/terra)), but decided to re-write it in Rust here. This version is very primitive. Some basic terrain algorithms are implemented, but I've put this on hold for now until the Rust 3D graphics ecosystem matures more. I'll pick this back up at some point.
+**Try it out! [terra.lucaspickering.me](https://terra.lucaspickering.me)**
 
-In the mean time, here's a screenshot of what this version can do so far:
+Hexagon tile-based terrain generation system. I originally wrote this in Java ([here](https://github.com/LucasPickering/terra)), but decided to re-write it in Rust here. This version isn't as advanced as the Java one, but I'm working on it.
 
-![Terra screenshot](/screenshots/rust.png?raw=true "Terra")
-
-And here's what the Java version looks like, for reference:
+For reference, here's what the Java version looks like:
 
 ![Terra screenshot](/screenshots/java.jpg?raw=true "Terra Java")
 
@@ -15,6 +13,7 @@ And here's what the Java version looks like, for reference:
 ### Prerequisites
 
 - [rustup](https://rustup.rs/)
+- [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
 - [npm](https://www.npmjs.com/get-npm)
 
 ### Starting the App
@@ -30,11 +29,4 @@ This will build the project and start an HTTP server on http://localhost:3000.
 
 ## Deployment
 
-Deployed through [Keskne](https://github.com/LucasPickering/keskne). A Docker image is built here with the static assets, then deployed via Keskne. To build/push new assets:
-
-```sh
-docker-compose -f docker-compose.build.yml build
-docker-compose -f docker-compose.build.yml push
-```
-
-Then that latest image can be deployed via Keskne.
+Deployed through GitHub pages. Any push to master will trigger the CI to rebuild, which will updated the deployment.

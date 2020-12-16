@@ -1,6 +1,0 @@
-version: "3"
-
-services:
-  static:
-    build: .
-    image: gcr.io/keskne-283621/terra-static:latest
