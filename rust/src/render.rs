@@ -11,7 +11,11 @@ use crate::{
 };
 use anyhow::Context;
 use log::error;
-use luminance::{shader::Uniform, Semantics, UniformInterface, Vertex};
+use luminance::{
+    face_culling::{FaceCulling, FaceCullingMode, FaceCullingOrder},
+    shader::Uniform,
+    Semantics, UniformInterface, Vertex,
+};
 use luminance_front::{
     context::GraphicsContext as _,
     pipeline::PipelineState,
@@ -151,13 +155,7 @@ const HEX_VERTICES: &[Vertex] = &[
 /// A list of indices into the above vertex array. In this order, these vertices
 /// define a hexagonal prism.
 const HEX_INDICES: &[u8] = &[
-    // top face
-    2, 1, 0, //
-    3, 2, 0, //
-    4, 3, 0, //
-    5, 4, 0, //
-    6, 5, 0, //
-    1, 6, 0, //
+    // No bottom face #optimization
     // Side 1
     1, 2, 8, //
     2, 9, 8, //
@@ -275,6 +273,11 @@ impl Scene {
             ref tiles,
             ..
         } = self;
+        let render_state =
+            RenderState::default().set_face_culling(Some(FaceCulling {
+                order: FaceCullingOrder::CCW,
+                mode: FaceCullingMode::Back,
+            }));
         self.surface
             .new_pipeline_gate()
             .pipeline(
@@ -285,10 +288,9 @@ impl Scene {
                         iface.set(&uni.projection, projection.into());
                         iface.set(&uni.view, view.into());
 
-                        rdr_gate
-                            .render(&RenderState::default(), |mut tess_gate| {
-                                tess_gate.render(tiles)
-                            })
+                        rdr_gate.render(&render_state, |mut tess_gate| {
+                            tess_gate.render(tiles)
+                        })
                     })
                 },
             )
