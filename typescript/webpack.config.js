@@ -32,7 +32,7 @@ module.exports = {
       favicon: "static/favicon.ico",
     }),
     new WasmPackPlugin({
-      outName: "terra",
+      outName: "terra-wasm",
       crateDirectory: wasmDir,
       outDir: path.resolve(wasmDir, "pkg"),
     }),
