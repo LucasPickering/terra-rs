@@ -218,7 +218,7 @@ impl Scene {
                 let (x, z) = tile.position().pixel_pos(TILE_WIDTH);
                 // Map the elevation to a range that's based at 0
                 let elev = Tile::ELEVATION_RANGE
-                    .map_to(&Tile::ELEVATION_RANGE.zeroed(), tile.elevation())
+                    .map(&Tile::ELEVATION_RANGE.zeroed(), tile.elevation())
                     as f32;
                 Instance {
                     pos: VertexInstancePosition::new([x, 0.0, z]),

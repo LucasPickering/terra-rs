@@ -13,7 +13,6 @@ const canvas: HTMLCanvasElement = document.getElementById(
 )! as HTMLCanvasElement;
 
 const resizeCanvas = () => {
-  // TODO debounce this event listener
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 

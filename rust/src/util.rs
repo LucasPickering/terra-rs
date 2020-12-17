@@ -116,7 +116,7 @@ impl<T: BaseFloat> NumRange<T> {
     }
 
     /// Map a value from this range to the target range.
-    pub fn map_to(&self, dest_range: &Self, value: T) -> T {
+    pub fn map(&self, dest_range: &Self, value: T) -> T {
         let normalized = (value - self.min) / self.span();
         dest_range.min + (normalized * dest_range.span())
     }
@@ -124,7 +124,7 @@ impl<T: BaseFloat> NumRange<T> {
     /// Map a value from this range to the range [0, 1]
     pub fn normalize(&self, value: T) -> T {
         let normal_range = Self::new(T::zero(), T::one());
-        self.map_to(&normal_range, value)
+        self.map(&normal_range, value)
     }
 
     /// Force a value into this range. If it's already in the range, return

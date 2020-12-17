@@ -131,12 +131,6 @@ pub enum InputEvent {
     Blur,
 }
 
-#[derive(Copy, Clone, Debug)]
-struct KeyPress {
-    key: Key,
-    repeat: bool,
-}
-
 /// A handler for all input events. Input listeners are registered in the
 /// constructor, and we use an MPSC channel to collect events from all
 /// listeners. Call [Self::process_events] on each frame to process events from
@@ -175,7 +169,9 @@ impl InputHandler {
         }
     }
 
-    /// TODO get a better handle and standardize it
+    /// Given an event, add it to the queue of events to be processed. This
+    /// can be called outside the game loop, as it doesn't do any actual
+    /// processing itself.
     pub fn ingest(&self, event: InputEvent) -> anyhow::Result<()> {
         self.sender.send(event)?;
         Ok(())
