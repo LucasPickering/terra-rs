@@ -47,7 +47,7 @@ impl ops::Add<HexPoint> for HexPoint {
 }
 
 /// A map of hex-positioned items, keyed by their position.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct HexPointMap<T> {
     map: BTreeMap<HexPoint, T>,
 }

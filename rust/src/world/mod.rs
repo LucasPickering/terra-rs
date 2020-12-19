@@ -3,12 +3,18 @@ pub mod hex;
 pub mod tile;
 
 use crate::{
-    config::WorldConfig,
     timed,
     util::Color3,
-    world::{generate::WorldBuilder, tile::TileMap},
+    world::{
+        generate::WorldBuilder,
+        hex::HasHexPosition,
+        tile::{Tile, TileLens, TileMap},
+    },
+    WorldConfig,
 };
 use log::info;
+use serde::Serialize;
+use wasm_bindgen::{prelude::*, JsCast};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum BiomeType {
@@ -68,6 +74,7 @@ impl Biome {
     }
 }
 
+#[wasm_bindgen]
 #[derive(Clone, Debug)]
 pub struct World {
     config: WorldConfig,
@@ -91,4 +98,49 @@ impl World {
         info!("Generated world in {}ms", elapsed.as_millis());
         Self { config, tiles }
     }
+}
+
+#[wasm_bindgen]
+impl World {
+    #[wasm_bindgen]
+    pub fn tiles_array(&self) -> TileArray {
+        let tiles: Vec<TileRenderInfo> = self
+            .tiles
+            .values()
+            .map(|tile| {
+                let pos = tile.position();
+                TileRenderInfo {
+                    x: pos.x,
+                    y: pos.y,
+                    z: pos.z,
+                    height: Tile::ELEVATION_RANGE
+                        .map(&Tile::ELEVATION_RANGE.zeroed(), tile.elevation()),
+                    color: tile.color(TileLens::Composite),
+                }
+            })
+            .collect();
+        serde_wasm_bindgen::to_value(&tiles)
+            .unwrap()
+            .unchecked_into::<TileArray>()
+    }
+}
+
+// Types that we can't natively return. These are assigned TS types, but
+// these types aren't actually verified by the compiler. Be careful
+// here!
+#[wasm_bindgen]
+extern "C" {
+
+    #[wasm_bindgen(typescript_type = "TileRenderInfo[]")]
+    pub type TileArray;
+}
+
+#[wasm_bindgen]
+#[derive(Copy, Clone, Debug, Serialize)]
+pub struct TileRenderInfo {
+    pub x: isize,
+    pub y: isize,
+    pub z: isize,
+    pub height: f64,
+    pub color: Color3,
 }

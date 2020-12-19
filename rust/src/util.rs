@@ -1,6 +1,8 @@
 use anyhow::anyhow;
 use cgmath::BaseFloat;
+use serde::Serialize;
 use std::{fmt::Display, ops};
+use wasm_bindgen::prelude::*;
 
 /// A macro to measure the evaluation time of an expression. Wraps an
 /// expression, and outputs a tuple of the value of the expression with the
@@ -25,11 +27,12 @@ macro_rules! timed {
 
 /// An RGB color. Values are stored as floats between 0 and 1 (inclusive).
 /// This uses f32 because the extra precision from f64 is pointless.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[wasm_bindgen]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize)]
 pub struct Color3 {
-    red: f32,
-    green: f32,
-    blue: f32,
+    pub red: f32,
+    pub green: f32,
+    pub blue: f32,
 }
 
 impl Color3 {
@@ -60,18 +63,6 @@ impl Color3 {
             green: check_component("green", green)?,
             blue: check_component("blue", blue)?,
         })
-    }
-
-    pub fn red(&self) -> f32 {
-        self.red
-    }
-
-    pub fn green(&self) -> f32 {
-        self.green
-    }
-
-    pub fn blue(&self) -> f32 {
-        self.blue
     }
 }
 

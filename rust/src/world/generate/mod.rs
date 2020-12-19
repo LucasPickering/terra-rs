@@ -5,7 +5,6 @@ mod humidity;
 mod ocean;
 
 use crate::{
-    config::NoiseFnConfig,
     timed,
     util::NumRange,
     world::{
@@ -18,6 +17,7 @@ use crate::{
         tile::{TileBuilder, TileMap},
         WorldConfig,
     },
+    NoiseFnConfig,
 };
 use log::{debug, info};
 use noise::{MultiFractal, NoiseFn, Seedable};

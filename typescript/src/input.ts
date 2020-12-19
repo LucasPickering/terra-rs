@@ -77,7 +77,7 @@ class InputHandler {
     canvas.addEventListener("wheel", (e) =>
       this.handleEvent({ Scroll: { up: e.deltaY < 0 } })
     );
-    canvas.addEventListener("blur", (e) =>
+    canvas.addEventListener("blur", () =>
       this.handleEvent({ Blur: undefined })
     );
   }

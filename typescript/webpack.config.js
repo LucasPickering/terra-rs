@@ -11,8 +11,9 @@ module.exports = {
   entry: "./src/index.ts",
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: "index.js",
+    filename: "[name].bundle.js",
   },
+
   module: {
     rules: [
       {
@@ -22,10 +23,12 @@ module.exports = {
       },
     ],
   },
+
   experiments: {
     syncWebAssembly: true,
     topLevelAwait: true,
   },
+
   plugins: [
     new HtmlWebpackPlugin({
       template: "static/index.html",
@@ -37,9 +40,24 @@ module.exports = {
       outDir: path.resolve(wasmDir, "pkg"),
     }),
   ],
+
   resolve: {
     extensions: [".tsx", ".ts", ".js"],
   },
+
+  optimization: {
+    splitChunks: {
+      cacheGroups: {
+        commons: {
+          test: /[\\/]node_modules[\\/]/,
+          name: "vendors",
+          chunks: "all",
+          filename: "[name].app.bundle.js",
+        },
+      },
+    },
+  },
+
   devServer: {
     port: 3000,
     contentBase: path.join(__dirname, "static"),
