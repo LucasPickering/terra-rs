@@ -47,7 +47,7 @@ function makeTileMeshes(
     instance.position.x = tile.x * 0.75 * TILE_SIZE;
     instance.position.z =
       (tile.x / 2 + tile.y) * -(Math.sqrt(3) / 2) * TILE_SIZE;
-    // TODO adjust y position here
+    instance.position.y = tile.height;
     instance.scaling.y = tile.height;
 
     // Set color
@@ -91,7 +91,7 @@ class App {
       Math.PI / 2,
       Math.PI / 2,
       2.0,
-      new Vector3(0.0, 105.0, 0.0),
+      new Vector3(0.0, 210.0, 0.0),
       scene
     );
     camera.lowerRadiusLimit = 1.0;
