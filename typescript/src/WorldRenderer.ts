@@ -64,10 +64,6 @@ class WorldRenderer {
       );
     });
   }
-
-  toggleColor(): void {
-    this.updateTileColors(TileLens.Biome);
-  }
 }
 
 export default WorldRenderer;

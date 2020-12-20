@@ -10,6 +10,7 @@ import {
 } from "@babylonjs/core";
 import config from "./terra.json";
 import WorldRenderer from "./WorldRenderer";
+import InputHandler from "./InputHandler";
 
 const { Terra } = await import("./wasm");
 
@@ -61,21 +62,11 @@ class App {
     scene.freezeActiveMeshes();
     scene.freezeMaterials();
 
-    // hide/show the Inspector
-    window.addEventListener("keydown", (ev) => {
-      // Shift+Ctrl+Alt+I
-      if (ev.shiftKey && ev.ctrlKey && ev.altKey && ev.keyCode === 73) {
-        if (scene.debugLayer.isVisible()) {
-          scene.debugLayer.hide();
-        } else {
-          scene.debugLayer.show();
-        }
-      }
+    const inputHandler = new InputHandler(config.input, scene, worldRenderer);
 
-      if (ev.key === " ") {
-        worldRenderer.toggleColor();
-      }
-    });
+    scene.onKeyboardObservable.add((kbInfo) =>
+      inputHandler.handleKeyEvent(kbInfo)
+    );
 
     // run the main render loop
     engine.runRenderLoop(() => {
@@ -83,4 +74,5 @@ class App {
     });
   }
 }
+
 new App();

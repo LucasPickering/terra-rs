@@ -160,8 +160,8 @@ pub type TileMap = HexPointMap<Tile>;
 #[wasm_bindgen]
 #[derive(Copy, Clone, Debug)]
 pub enum TileLens {
-    Composite = 0,
-    Elevation = 1,
-    Humidity = 2,
-    Biome = 3,
+    Composite,
+    Elevation,
+    Humidity,
+    Biome,
 }

@@ -16,16 +16,6 @@
     }
   },
   "input": {
-    "bindings": {
-      "CameraForward": "W",
-      "CameraBackward": "S",
-      "CameraLeft": "A",
-      "CameraRight": "D",
-      "CameraUp": "Space",
-      "CameraDown": "LeftShift",
-      "CameraPan": "Mouse1"
-    },
-    "mouse_sensitivity": 0.75,
-    "fov": 90.0
+    "bindings": {}
   }
 }
