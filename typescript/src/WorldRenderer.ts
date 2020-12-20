@@ -5,13 +5,14 @@ import {
   MeshBuilder,
   Scene,
 } from "@babylonjs/core";
-import type { World } from "./wasm";
+import type { TileLens as TileLensType, Tile, World } from "./wasm";
 const { TileLens } = await import("./wasm");
 
 const TILE_SIZE = 1.0; // vertex-to-vertex tile diameter
 
 class WorldRenderer {
-  private instances: InstancedMesh[];
+  private tiles: Array<[Tile, InstancedMesh]>;
+  private tileLens: TileLensType;
 
   constructor(scene: Scene, world: World) {
     const mesh = MeshBuilder.CreateCylinder(
@@ -26,37 +27,46 @@ class WorldRenderer {
     mesh.convertToUnIndexedMesh();
     mesh.registerInstancedBuffer("color", 4);
 
-    const tiles = world.tiles_render_info(TileLens.Composite);
-    console.log("tiles", tiles);
-    this.instances = tiles.map((tile) => {
-      const name = `tile(${tile.x},${tile.y},${tile.z})`;
+    // This call allocates a whole new array, so we store the array instead of
+    // the full world object.
+    const tiles = world.tiles_array();
+
+    this.tiles = tiles.map((tile) => {
+      const pos = tile.pos;
+      const name = `tile(${pos.x},${pos.y},${pos.z})`;
       const instance = mesh.createInstance(name);
 
       // Convert hex coords to pixel coords
       // https://www.redblobgames.com/grids/hexagons/#coordinates-cube
-      instance.position.x = tile.x * 0.75 * TILE_SIZE;
+      instance.position.x = pos.x * 0.75 * TILE_SIZE;
       instance.position.z =
-        (tile.x / 2 + tile.y) * -(Math.sqrt(3) / 2) * TILE_SIZE;
+        (pos.x / 2 + pos.y) * -(Math.sqrt(3) / 2) * TILE_SIZE;
       instance.position.y = tile.height;
       instance.scaling.y = tile.height;
 
-      // Set color
+      instance.freezeWorldMatrix();
+      return [tile, instance];
+    });
+
+    this.tileLens = TileLens.Composite;
+    this.updateTileColors(TileLens.Composite);
+  }
+
+  updateTileColors(lens: TileLensType): void {
+    this.tileLens = lens;
+    this.tiles.forEach(([tile, instance]) => {
+      const color = tile.color(this.tileLens);
       instance.instancedBuffers.color = new Color4(
-        tile.color.red,
-        tile.color.green,
-        tile.color.blue,
+        color.red,
+        color.green,
+        color.blue,
         1.0
       );
-
-      instance.freezeWorldMatrix();
-      return instance;
     });
   }
 
   toggleColor(): void {
-    this.instances.forEach((instance) => {
-      instance.instancedBuffers.color = new Color4(1.0, 1.0, 1.0, 1.0);
-    });
+    this.updateTileColors(TileLens.Biome);
   }
 }
 

@@ -5,7 +5,9 @@ use std::{
     ops::{self, Deref, DerefMut},
 };
 use strum::{EnumIter, IntoEnumIterator};
+use wasm_bindgen::prelude::*;
 
+#[wasm_bindgen]
 #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Display)]
 #[display(fmt = "({}, {}, {})", x, y, z)]
 pub struct HexPoint {

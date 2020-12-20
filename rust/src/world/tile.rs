@@ -7,7 +7,8 @@ use crate::{
 };
 use wasm_bindgen::prelude::*;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[wasm_bindgen]
+#[derive(Copy, Clone, Debug)]
 pub struct Tile {
     position: HexPoint,
     elevation: f64,
@@ -18,21 +19,42 @@ pub struct Tile {
 impl Tile {
     pub const ELEVATION_RANGE: NumRange<f64> = NumRange::new(-100.0, 100.0);
     pub const HUMIDITY_RANGE: NumRange<f64> = NumRange::new(0.0, 1.0);
+}
 
+#[wasm_bindgen]
+impl Tile {
+    #[wasm_bindgen(getter)]
+    pub fn pos(&self) -> HexPoint {
+        self.position
+    }
+
+    #[wasm_bindgen(getter)]
     pub fn elevation(&self) -> f64 {
         self.elevation
     }
 
+    /// Tile elevation, but mapped to a zero-based range so the value is
+    /// guaranteed to be non-negative. This makes it safe to use for vertical
+    /// scaling during rendering.
+    #[wasm_bindgen(getter)]
+    pub fn height(&self) -> f64 {
+        Self::ELEVATION_RANGE
+            .map(&Self::ELEVATION_RANGE.zeroed(), self.elevation)
+    }
+
+    #[wasm_bindgen(getter)]
     pub fn humidity(&self) -> f64 {
         self.humidity
     }
 
+    #[wasm_bindgen(getter)]
     pub fn biome(&self) -> Biome {
         self.biome
     }
 
     /// Compute the color of a tile based on the lens being viewed. The lens
     /// controls what data the color is derived from.
+    #[wasm_bindgen]
     pub fn color(&self, lens: TileLens) -> Color3 {
         match lens {
             TileLens::Composite => {
@@ -138,8 +160,8 @@ pub type TileMap = HexPointMap<Tile>;
 #[wasm_bindgen]
 #[derive(Copy, Clone, Debug)]
 pub enum TileLens {
-    Composite,
-    Elevation,
-    Humidity,
-    Biome,
+    Composite = 0,
+    Elevation = 1,
+    Humidity = 2,
+    Biome = 3,
 }

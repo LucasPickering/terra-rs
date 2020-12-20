@@ -5,11 +5,7 @@ pub mod tile;
 use crate::{
     timed,
     util::Color3,
-    world::{
-        generate::WorldBuilder,
-        hex::HasHexPosition,
-        tile::{Tile, TileLens, TileMap},
-    },
+    world::{generate::WorldBuilder, tile::TileMap},
     WorldConfig,
 };
 use js_sys::Array;
@@ -22,6 +18,7 @@ pub enum BiomeType {
     Land,
 }
 
+#[wasm_bindgen]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Biome {
     // Water
@@ -102,44 +99,17 @@ impl World {
 
 #[wasm_bindgen]
 impl World {
+    /// A type-hacked accessor to get all tiles in the world for Wasm. This
+    /// typing can be cleaned up after https://github.com/rustwasm/wasm-bindgen/issues/111
     #[wasm_bindgen]
-    pub fn tiles_render_info(&self, lens: TileLens) -> TileArray {
-        let tiles: Vec<TileRenderInfo> = self
-            .tiles
+    pub fn tiles_array(&self) -> TileArray {
+        self.tiles
             .values()
-            .map(|tile| {
-                let pos = tile.position();
-                TileRenderInfo {
-                    x: pos.x,
-                    y: pos.y,
-                    z: pos.z,
-                    // Map the elevation to a zero-base range, so we can use it
-                    // for scaling
-                    height: Tile::ELEVATION_RANGE
-                        .map(&Tile::ELEVATION_RANGE.zeroed(), tile.elevation()),
-                    color: tile.color(lens),
-                }
-            })
-            .collect();
-        tiles
-            .into_iter()
+            .copied()
             .map(JsValue::from)
             .collect::<Array>()
             .unchecked_into()
     }
-}
-
-/// A simplified version of a tile, to be sent over the WASM boundary
-#[wasm_bindgen]
-#[derive(Copy, Clone, Debug)]
-pub struct TileRenderInfo {
-    pub x: isize,
-    pub y: isize,
-    pub z: isize,
-    pub height: f64,
-    /// Color for a particular lens. The lens is pre-determined when this
-    /// struct is created, so it should be passed from TS.
-    pub color: Color3,
 }
 
 // Types that we can't natively return. These are assigned TS types, but
@@ -149,6 +119,6 @@ pub struct TileRenderInfo {
 extern "C" {
 
     /// Type hack needed until https://github.com/rustwasm/wasm-bindgen/issues/111
-    #[wasm_bindgen(typescript_type = "TileRenderInfo[]")]
+    #[wasm_bindgen(typescript_type = "Tile[]")]
     pub type TileArray;
 }
