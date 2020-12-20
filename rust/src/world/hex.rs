@@ -20,18 +20,6 @@ impl HexPoint {
     pub fn new(x: isize, y: isize) -> Self {
         Self { x, y, z: -(x + y) }
     }
-
-    /// Convert this hexagonal coordinate into a 2d pixel coordinate. Useful
-    /// for figuring out where to position a tile on the screen. Tiles are
-    /// rendered flat-top, meaning the x axis in hex coords aligns with the x
-    /// axis in 3D. That means all tiles on the 3D-z axis have a hex-x value of
-    /// 0. https://www.redblobgames.com/grids/hexagons/#coordinates-cube
-    pub fn pixel_pos(&self, scale: f32) -> (f32, f32) {
-        let pixel_x: f32 = self.x as f32 * 0.75;
-        let pixel_z: f32 =
-            (self.x as f32 / 2.0 + self.y as f32) * -(3.0_f32.sqrt() / 2.0);
-        (pixel_x * scale, pixel_z * scale)
-    }
 }
 
 impl ops::Add<HexPoint> for HexPoint {
@@ -197,12 +185,6 @@ pub struct Cluster<T>(pub HexPointMap<T>);
 
 pub trait HasHexPosition: Sized {
     fn position(&self) -> HexPoint;
-
-    /// Convert this value into a tuple with the position. Useful when mapping
-    /// an iterator then collecting into a [HexPointMap].
-    fn into_tuple(self) -> (HexPoint, Self) {
-        (self.position(), self)
-    }
 }
 
 /// The 6 directions on the hex axes. Left/right is aligned with the x axis
