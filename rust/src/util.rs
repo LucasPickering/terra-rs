@@ -1,7 +1,9 @@
 use anyhow::anyhow;
-use cgmath::BaseFloat;
 use serde::Serialize;
-use std::{fmt::Display, ops};
+use std::{
+    fmt::{Debug, Display},
+    ops,
+};
 use wasm_bindgen::prelude::*;
 
 /// A macro to measure the evaluation time of an expression. Wraps an
@@ -78,14 +80,47 @@ impl ops::Mul<f32> for Color3 {
     }
 }
 
+pub trait Rangeable:
+    Copy
+    + Debug
+    + PartialOrd
+    + ops::Add<Self, Output = Self>
+    + ops::Sub<Self, Output = Self>
+    + ops::Mul<Self, Output = Self>
+    + ops::Div<Self, Output = Self>
+{
+    fn zero() -> Self;
+    fn one() -> Self;
+}
+
+impl Rangeable for f32 {
+    fn zero() -> Self {
+        0.0
+    }
+
+    fn one() -> Self {
+        1.0
+    }
+}
+
+impl Rangeable for f64 {
+    fn zero() -> Self {
+        0.0
+    }
+
+    fn one() -> Self {
+        1.0
+    }
+}
+
 /// A range between two numeric values, inclusive on both ends.
 #[derive(Copy, Clone, Debug)]
-pub struct NumRange<T: BaseFloat> {
+pub struct NumRange<T: Rangeable> {
     pub min: T,
     pub max: T,
 }
 
-impl<T: BaseFloat> NumRange<T> {
+impl<T: Rangeable> NumRange<T> {
     pub const fn new(min: T, max: T) -> Self {
         Self { min, max }
     }
@@ -132,7 +167,7 @@ impl<T: BaseFloat> NumRange<T> {
     }
 }
 
-impl<T: BaseFloat + Display> Display for NumRange<T> {
+impl<T: Rangeable + Display> Display for NumRange<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[{}, {}]", self.min, self.max)
     }

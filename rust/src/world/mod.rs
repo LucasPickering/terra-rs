@@ -14,7 +14,6 @@ use crate::{
 };
 use js_sys::Array;
 use log::info;
-use serde::Serialize;
 use wasm_bindgen::{prelude::*, JsCast};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -114,6 +113,8 @@ impl World {
                     x: pos.x,
                     y: pos.y,
                     z: pos.z,
+                    // Map the elevation to a zero-base range, so we can use it
+                    // for scaling
                     height: Tile::ELEVATION_RANGE
                         .map(&Tile::ELEVATION_RANGE.zeroed(), tile.elevation()),
                     color: tile.color(lens),
@@ -147,6 +148,7 @@ pub struct TileRenderInfo {
 #[wasm_bindgen]
 extern "C" {
 
+    /// Type hack needed until https://github.com/rustwasm/wasm-bindgen/issues/111
     #[wasm_bindgen(typescript_type = "TileRenderInfo[]")]
     pub type TileArray;
 }
