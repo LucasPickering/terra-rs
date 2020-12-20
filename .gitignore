@@ -3,3 +3,4 @@ node_modules/
 .vscode/
 pkg/
 dist/
+typescript/src/wasm/*

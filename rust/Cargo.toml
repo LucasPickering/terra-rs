@@ -6,14 +6,14 @@ license = "MIT"
 name = "terra"
 repository = "https://github.com/LucasPickering/terra-rs"
 version = "0.1.0"
+[package.metadata.wasm-pack.profile.dev]
+wasm-opt = ['-O4', '-g']
 
 # wasm-pack-plugin doesn't allow us to set the mode to 'profiling', so we have
 # to turn dev into profiling (optimized, but with debug symbols)
 # https://github.com/wasm-tool/wasm-pack-plugin/issues/86
 [profile.dev]
 opt-level = 3
-[package.metadata.wasm-pack.profile.dev]
-wasm-opt = ['-O4', '-g']
 
 [lib]
 crate-type = ["cdylib"]
@@ -23,6 +23,7 @@ anyhow = "1.0"
 cgmath = "0.17"
 console_error_panic_hook = "0.1"
 derive_more = "0.99"
+js-sys = "0.3"
 log = "0.4"
 luminance = "0.43"
 luminance-front = "0.3"

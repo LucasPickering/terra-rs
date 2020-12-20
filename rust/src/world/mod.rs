@@ -12,6 +12,7 @@ use crate::{
     },
     WorldConfig,
 };
+use js_sys::Array;
 use log::info;
 use serde::Serialize;
 use wasm_bindgen::{prelude::*, JsCast};
@@ -103,7 +104,7 @@ impl World {
 #[wasm_bindgen]
 impl World {
     #[wasm_bindgen]
-    pub fn tiles_array(&self) -> TileArray {
+    pub fn tiles_render_info(&self, lens: TileLens) -> TileArray {
         let tiles: Vec<TileRenderInfo> = self
             .tiles
             .values()
@@ -115,14 +116,29 @@ impl World {
                     z: pos.z,
                     height: Tile::ELEVATION_RANGE
                         .map(&Tile::ELEVATION_RANGE.zeroed(), tile.elevation()),
-                    color: tile.color(TileLens::Composite),
+                    color: tile.color(lens),
                 }
             })
             .collect();
-        serde_wasm_bindgen::to_value(&tiles)
-            .unwrap()
-            .unchecked_into::<TileArray>()
+        tiles
+            .into_iter()
+            .map(JsValue::from)
+            .collect::<Array>()
+            .unchecked_into()
     }
+}
+
+/// A simplified version of a tile, to be sent over the WASM boundary
+#[wasm_bindgen]
+#[derive(Copy, Clone, Debug)]
+pub struct TileRenderInfo {
+    pub x: isize,
+    pub y: isize,
+    pub z: isize,
+    pub height: f64,
+    /// Color for a particular lens. The lens is pre-determined when this
+    /// struct is created, so it should be passed from TS.
+    pub color: Color3,
 }
 
 // Types that we can't natively return. These are assigned TS types, but
@@ -133,14 +149,4 @@ extern "C" {
 
     #[wasm_bindgen(typescript_type = "TileRenderInfo[]")]
     pub type TileArray;
-}
-
-#[wasm_bindgen]
-#[derive(Copy, Clone, Debug, Serialize)]
-pub struct TileRenderInfo {
-    pub x: isize,
-    pub y: isize,
-    pub z: isize,
-    pub height: f64,
-    pub color: Color3,
 }

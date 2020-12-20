@@ -5,6 +5,7 @@ use crate::{
         Biome,
     },
 };
+use wasm_bindgen::prelude::*;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Tile {
@@ -134,6 +135,7 @@ impl HasHexPosition for TileBuilder {
 pub type TileMap = HexPointMap<Tile>;
 
 /// A definition of what data is used to compute a tile's color.
+#[wasm_bindgen]
 #[derive(Copy, Clone, Debug)]
 pub enum TileLens {
     Composite,

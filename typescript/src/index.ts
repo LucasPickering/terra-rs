@@ -6,61 +6,14 @@ import {
   Engine,
   ArcRotateCamera,
   HemisphericLight,
-  MeshBuilder,
   Vector3,
-  Mesh,
-  Color4,
 } from "@babylonjs/core";
 import config from "./terra.json";
-import type { TileRenderInfo } from "./wasm";
+import WorldRenderer from "./WorldRenderer";
 
 const { Terra } = await import("./wasm");
 
 const CANVAS_ID = "game-canvas";
-const TILE_SIZE = 1.0; // vertex-to-vertex tile diameter
-
-function makeTileMeshes(
-  engine: Engine,
-  scene: Scene,
-  tiles: TileRenderInfo[]
-): void {
-  const color = new Color4(1.0, 0.0, 0.0, 1.0);
-  const mesh = MeshBuilder.CreateCylinder(
-    "tile",
-    {
-      diameter: TILE_SIZE,
-      tessellation: 6,
-      cap: Mesh.CAP_END,
-      faceColors: [color, color, color, color, color, color, color],
-    },
-    scene
-  );
-  mesh.convertToUnIndexedMesh();
-  mesh.registerInstancedBuffer("color", 4);
-
-  tiles.forEach((tile) => {
-    const name = `tile(${tile.x},${tile.y},${tile.z})`;
-    const instance = mesh.createInstance(name);
-
-    // Convert hex coords to pixel coords
-    // https://www.redblobgames.com/grids/hexagons/#coordinates-cube
-    instance.position.x = tile.x * 0.75 * TILE_SIZE;
-    instance.position.z =
-      (tile.x / 2 + tile.y) * -(Math.sqrt(3) / 2) * TILE_SIZE;
-    instance.position.y = tile.height;
-    instance.scaling.y = tile.height;
-
-    // Set color
-    instance.instancedBuffers.color = new Color4(
-      tile.color.red,
-      tile.color.green,
-      tile.color.blue,
-      1.0
-    );
-
-    instance.freezeWorldMatrix();
-  });
-}
 
 class App {
   constructor() {
@@ -103,8 +56,8 @@ class App {
     new HemisphericLight("lightSun", new Vector3(0, 1, 0), scene);
 
     const world = Terra.new_world(config.world);
-    const tiles = world.tiles_array();
-    makeTileMeshes(engine, scene, tiles);
+    const worldRenderer = new WorldRenderer(scene, world);
+
     scene.freezeActiveMeshes();
     scene.freezeMaterials();
 
@@ -117,6 +70,10 @@ class App {
         } else {
           scene.debugLayer.show();
         }
+      }
+
+      if (ev.key === " ") {
+        worldRenderer.toggleColor();
       }
     });
 

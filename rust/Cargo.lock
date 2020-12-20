@@ -837,6 +837,7 @@ dependencies = [
  "cgmath",
  "console_error_panic_hook",
  "derive_more",
+ "js-sys",
  "log",
  "luminance",
  "luminance-front",
