@@ -96,6 +96,7 @@ class App {
     );
     camera.lowerRadiusLimit = 1.0;
     camera.upperRadiusLimit = 100.0;
+    camera.panningSensibility = 100;
     camera.attachControl(canvas, true);
 
     // Init world lighting
