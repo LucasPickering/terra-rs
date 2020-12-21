@@ -1,7 +1,7 @@
 {
   "world": {
     "seed": 42069,
-    "tile_radius": 20,
+    "tile_radius": 300,
     "elevation": {
       "octaves": 3,
       "frequency": 0.75,

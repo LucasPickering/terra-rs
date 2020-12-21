@@ -45,11 +45,11 @@ class App {
       Math.PI / 2,
       Math.PI / 2,
       2.0,
-      new Vector3(0.0, 210.0, 0.0),
+      new Vector3(0.0, 200.0, 0.0),
       scene
     );
     camera.lowerRadiusLimit = 1.0;
-    camera.upperRadiusLimit = 100.0;
+    camera.upperRadiusLimit = 500.0;
     camera.panningSensibility = 100;
     camera.attachControl(canvas, true);
 
