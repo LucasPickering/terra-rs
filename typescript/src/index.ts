@@ -42,9 +42,9 @@ class App {
     // Init the camera
     const camera = new ArcRotateCamera(
       "Camera",
-      Math.PI / 2,
-      Math.PI / 2,
-      2.0,
+      0,
+      Math.PI / 4,
+      500.0,
       new Vector3(0.0, 200.0, 0.0),
       scene
     );
