@@ -1,7 +1,17 @@
-import { KeyboardEventTypes, KeyboardInfo, Scene } from "@babylonjs/core";
-import { RecursivePartial } from "./util";
+import { KeyboardEventTypes, KeyboardInfo } from "@babylonjs/core";
+import { assertUnreachable, RecursivePartial } from "../util";
 import WorldRenderer from "./WorldRenderer";
-const { TileLens } = await import("./wasm");
+import WorldScene from "./WorldScene";
+const { TileLens } = await import("../wasm");
+
+const INPUT_ACTIONS = [
+  "pause",
+  "toggleDebugOverlay",
+  "lensBiome",
+  "lensElevation",
+  "lensHumidity",
+] as const;
+type InputAction = typeof INPUT_ACTIONS[number];
 
 export interface InputConfig {
   /**
@@ -9,22 +19,16 @@ export interface InputConfig {
    * the KeyboardEvent.key field.
    * https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent
    */
-  bindings: {
-    toggleDebugOverlay: string;
-    lensBiome: string;
-    lensElevation: string;
-    lensHumidity: string;
-  };
+  bindings: Record<InputAction, string>;
 }
 
-type InputAction = keyof InputConfig["bindings"];
-
 function isInputAction(s: string): s is InputAction {
-  return true; // TODO
+  return (INPUT_ACTIONS as readonly string[]).includes(s);
 }
 
 const DEFAULT_INPUT_CONFIG: InputConfig = {
   bindings: {
+    pause: "ESCAPE",
     toggleDebugOverlay: "`",
     lensBiome: "1",
     lensElevation: "2",
@@ -35,12 +39,12 @@ const DEFAULT_INPUT_CONFIG: InputConfig = {
 class InputHandler {
   private config: InputConfig;
   private keyToEvent: Map<string, InputAction>;
-  private scene: Scene;
+  private scene: WorldScene;
   private worldRenderer: WorldRenderer;
 
   constructor(
     config: RecursivePartial<InputConfig> | undefined,
-    scene: Scene,
+    scene: WorldScene,
     worldRenderer: WorldRenderer
   ) {
     this.config = {
@@ -79,12 +83,11 @@ class InputHandler {
 
   private handleAction(action: InputAction): void {
     switch (action) {
+      case "pause":
+        this.scene.setPause(true);
+        break;
       case "toggleDebugOverlay":
-        if (this.scene.debugLayer.isVisible()) {
-          this.scene.debugLayer.hide();
-        } else {
-          this.scene.debugLayer.show();
-        }
+        this.scene.toggleDebugOverlay();
         break;
       case "lensBiome":
         this.worldRenderer.updateTileColors(TileLens.Biome);
@@ -94,6 +97,10 @@ class InputHandler {
         break;
       case "lensHumidity":
         this.worldRenderer.updateTileColors(TileLens.Humidity);
+        break;
+      // Make sure this switch is exhaustive
+      default:
+        assertUnreachable(action);
         break;
     }
   }

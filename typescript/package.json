@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@babylonjs/core": "^4.2.0",
+    "@babylonjs/gui": "^4.2.0",
     "@babylonjs/inspector": "^4.2.0"
   }
 }

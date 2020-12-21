@@ -25,8 +25,6 @@ use rand::SeedableRng;
 use rand_pcg::Pcg64;
 use std::fmt::{Debug, Display};
 
-use super::World;
-
 pub struct WorldBuilder {
     config: WorldConfig,
     rng: Pcg64,
@@ -35,24 +33,31 @@ pub struct WorldBuilder {
 
 impl WorldBuilder {
     pub fn new(config: WorldConfig) -> Self {
-        // Initialize a set of tiles with no data
-        let mut tiles = HexPointMap::new();
-        let radius: isize = config.tile_radius as isize;
-
         // Initialize each tile
-        for x in -radius..=radius {
-            for y in -radius..=radius {
-                // x+y+z == 0 always, so we can derive z from x & y.
-                let pos = HexPoint::new(x, y);
+        let (tiles, elapsed) = timed!({
+            // Initialize a set of tiles with no data
+            let mut tiles = HexPointMap::new();
+            let radius: isize = config.tile_radius as isize;
 
-                // There will be duplicate positions, when `x == y`. Avoid an
-                // insert for those.
-                tiles.entry(pos).or_insert_with(|| TileBuilder::new(pos));
+            for x in -radius..=radius {
+                for y in -radius..=radius {
+                    // x+y+z == 0 always, so we can derive z from x & y.
+                    let pos = HexPoint::new(x, y);
+
+                    // There will be duplicate positions, when `x == y`. Avoid
+                    // an insert for those.
+                    tiles.entry(pos).or_insert_with(|| TileBuilder::new(pos));
+                }
             }
-        }
+            tiles
+        });
 
         // The final count should always be `4r^2 + 2r + 1`, where r is radius
-        info!("Initialized world with {} tiles", tiles.len());
+        info!(
+            "Initialized world with {} tiles in {}ms",
+            tiles.len(),
+            elapsed.as_millis()
+        );
         Self {
             config,
             rng: Pcg64::seed_from_u64(config.seed),

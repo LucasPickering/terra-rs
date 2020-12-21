@@ -1,6 +1,6 @@
 import { Matrix, Mesh, MeshBuilder, Scene } from "@babylonjs/core";
-import type { TileLens as TileLensType, Tile, World } from "./wasm";
-const { TileLens } = await import("./wasm");
+import type { TileLens as TileLensType, Tile, World } from "../wasm";
+const { TileLens } = await import("../wasm");
 
 /**
  * The length of one side of each tile. This is also the center-to-vertex
@@ -12,6 +12,9 @@ const TILE_SIDE_LENGTH = 1.0;
  */
 const TILE_VERTEX_DIAM = TILE_SIDE_LENGTH * 2;
 
+/**
+ * Util class for rendering a world of tiles
+ */
 class WorldRenderer {
   private mesh: Mesh;
   /**
