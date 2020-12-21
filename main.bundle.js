@@ -1,0 +1,657 @@
+/*
+ * ATTENTION: The "eval" devtool has been used (maybe by default in mode: "development").
+ * This devtool is not neither made for production nor for readable output files.
+ * It uses "eval()" calls to create a separate source file in the browser devtools.
+ * If you are trying to read the output file, select a different devtool (https://webpack.js.org/configuration/devtool/)
+ * or disable the default devtool with "devtool: false".
+ * If you are looking for production-ready output files, see mode: "production" (https://webpack.js.org/configuration/mode/).
+ */
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	var __webpack_modules__ = ({
+
+/***/ "./src/InputHandler.ts":
+/*!*****************************!*
+  !*** ./src/InputHandler.ts ***!
+  \*****************************/
+/***/ ((module, __webpack_exports__, __webpack_require__) => {
+
+eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => __WEBPACK_DEFAULT_EXPORT__\n/* harmony export */ });\n/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ \"./node_modules/@babylonjs/core/index.js\");\n\nconst { TileLens } = await __webpack_require__.e(/*! import() */ \"rust_pkg_terra-wasm_js\").then(__webpack_require__.bind(__webpack_require__, /*! ./wasm */ \"../rust/pkg/terra-wasm.js\"));\nfunction isInputAction(s) {\n    return true; // TODO\n}\nconst DEFAULT_INPUT_CONFIG = {\n    bindings: {\n        toggleDebugOverlay: \"`\",\n        lensComposite: \"1\",\n        lensElevation: \"2\",\n        lensHumidity: \"3\",\n        lensBiome: \"4\",\n    },\n};\nclass InputHandler {\n    constructor(config, scene, worldRenderer) {\n        this.config = Object.assign(Object.assign(Object.assign({}, DEFAULT_INPUT_CONFIG), config), { bindings: Object.assign(Object.assign({}, DEFAULT_INPUT_CONFIG.bindings), config === null || config === void 0 ? void 0 : config.bindings) });\n        this.scene = scene;\n        this.worldRenderer = worldRenderer;\n        this.keyToEvent = new Map();\n        Object.entries(this.config.bindings).forEach(([key, value]) => {\n            // We could potentially get garbage actions from the user's config, so\n            // validate each action here\n            if (isInputAction(key)) {\n                this.keyToEvent.set(value.toUpperCase(), key);\n            }\n            else {\n                // eslint-disable-next-line no-console\n                console.warn(\"Unknown input action:\", key);\n            }\n        });\n    }\n    handleKeyEvent(kbInfo) {\n        if (kbInfo.type === _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.KeyboardEventTypes.KEYDOWN) {\n            // Map the keyboard key to a known action\n            const action = this.keyToEvent.get(kbInfo.event.key.toUpperCase());\n            if (action) {\n                this.handleAction(action);\n            }\n        }\n    }\n    handleAction(action) {\n        switch (action) {\n            case \"toggleDebugOverlay\":\n                if (this.scene.debugLayer.isVisible()) {\n                    this.scene.debugLayer.hide();\n                }\n                else {\n                    this.scene.debugLayer.show();\n                }\n                break;\n            case \"lensComposite\":\n                this.worldRenderer.updateTileColors(TileLens.Composite);\n                break;\n            case \"lensElevation\":\n                this.worldRenderer.updateTileColors(TileLens.Elevation);\n                break;\n            case \"lensHumidity\":\n                this.worldRenderer.updateTileColors(TileLens.Humidity);\n                break;\n            case \"lensBiome\":\n                this.worldRenderer.updateTileColors(TileLens.Biome);\n                break;\n        }\n    }\n}\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (InputHandler);\n\nreturn __webpack_exports__;\n})();\n\n//# sourceURL=webpack://terra/./src/InputHandler.ts?");
+
+/***/ }),
+
+/***/ "./src/WorldRenderer.ts":
+/*!******************************!*
+  !*** ./src/WorldRenderer.ts ***!
+  \******************************/
+/***/ ((module, __webpack_exports__, __webpack_require__) => {
+
+eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => __WEBPACK_DEFAULT_EXPORT__\n/* harmony export */ });\n/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ \"./node_modules/@babylonjs/core/index.js\");\n\nconst { TileLens } = await __webpack_require__.e(/*! import() */ \"rust_pkg_terra-wasm_js\").then(__webpack_require__.bind(__webpack_require__, /*! ./wasm */ \"../rust/pkg/terra-wasm.js\"));\nconst TILE_SIZE = 1.0; // vertex-to-vertex tile diameter\nclass WorldRenderer {\n    constructor(scene, world) {\n        const mesh = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder(\"tile\", {\n            diameter: TILE_SIZE,\n            tessellation: 6,\n            cap: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.CAP_END,\n        }, scene);\n        mesh.convertToUnIndexedMesh();\n        mesh.registerInstancedBuffer(\"color\", 4);\n        // This call allocates a whole new array, so we store the array instead of\n        // the full world object.\n        const tiles = world.tiles_array();\n        this.tiles = tiles.map((tile) => {\n            const pos = tile.pos;\n            const name = `tile(${pos.x},${pos.y},${pos.z})`;\n            const instance = mesh.createInstance(name);\n            // Convert hex coords to pixel coords\n            // https://www.redblobgames.com/grids/hexagons/#coordinates-cube\n            instance.position.x = pos.x * 0.75 * TILE_SIZE;\n            instance.position.z =\n                (pos.x / 2 + pos.y) * -(Math.sqrt(3) / 2) * TILE_SIZE;\n            instance.position.y = tile.height;\n            instance.scaling.y = tile.height;\n            instance.freezeWorldMatrix();\n            return [tile, instance];\n        });\n        this.tileLens = TileLens.Composite;\n        this.updateTileColors(TileLens.Composite);\n    }\n    updateTileColors(lens) {\n        this.tileLens = lens;\n        this.tiles.forEach(([tile, instance]) => {\n            const color = tile.color(this.tileLens);\n            instance.instancedBuffers.color = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color4(color.red, color.green, color.blue, 1.0);\n        });\n    }\n}\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (WorldRenderer);\n\nreturn __webpack_exports__;\n})();\n\n//# sourceURL=webpack://terra/./src/WorldRenderer.ts?");
+
+/***/ }),
+
+/***/ "./src/index.ts":
+/*!**********************!*
+  !*** ./src/index.ts ***!
+  \**********************/
+/***/ ((module, __webpack_exports__, __webpack_require__) => {
+
+eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _babylonjs_core_Debug_debugLayer__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core/Debug/debugLayer */ \"./node_modules/@babylonjs/core/Debug/debugLayer.js\");\n/* harmony import */ var _babylonjs_inspector__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @babylonjs/inspector */ \"./node_modules/@babylonjs/inspector/babylon.inspector.bundle.max.js\");\n/* harmony import */ var _babylonjs_inspector__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_babylonjs_inspector__WEBPACK_IMPORTED_MODULE_1__);\n/* harmony import */ var _babylonjs_loaders_glTF__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @babylonjs/loaders/glTF */ \"./node_modules/@babylonjs/loaders/glTF/index.js\");\n/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @babylonjs/core */ \"./node_modules/@babylonjs/core/index.js\");\n/* harmony import */ var _terra_json__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./terra.json */ \"./src/terra.json\");\n/* harmony import */ var _WorldRenderer__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./WorldRenderer */ \"./src/WorldRenderer.ts\");\n/* harmony import */ var _InputHandler__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./InputHandler */ \"./src/InputHandler.ts\");\n([_InputHandler__WEBPACK_IMPORTED_MODULE_6__, _WorldRenderer__WEBPACK_IMPORTED_MODULE_5__] = await Promise.all([_InputHandler__WEBPACK_IMPORTED_MODULE_6__, _WorldRenderer__WEBPACK_IMPORTED_MODULE_5__]));\n\n\n\n\n\n\n\nconst { Terra } = await __webpack_require__.e(/*! import() */ \"rust_pkg_terra-wasm_js\").then(__webpack_require__.bind(__webpack_require__, /*! ./wasm */ \"../rust/pkg/terra-wasm.js\"));\nconst CANVAS_ID = \"game-canvas\";\nclass App {\n    constructor() {\n        const canvas = document.getElementById(CANVAS_ID);\n        if (!canvas) {\n            throw new Error(`Could not find canvas by ID: ${CANVAS_ID}`);\n        }\n        // initialize babylon scene and engine\n        const engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.Engine(canvas, false, { audioEngine: false }, true);\n        const scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.Scene(engine);\n        // do a bunch of shit to make it go zoomer fast\n        scene.animationsEnabled = false;\n        scene.texturesEnabled = false;\n        scene.proceduralTexturesEnabled = false;\n        scene.collisionsEnabled = false;\n        scene.physicsEnabled = false;\n        scene.fogEnabled = false;\n        scene.particlesEnabled = false;\n        scene.blockMaterialDirtyMechanism = true;\n        // Init the camera\n        const camera = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.ArcRotateCamera(\"Camera\", Math.PI / 2, Math.PI / 2, 2.0, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.Vector3(0.0, 210.0, 0.0), scene);\n        camera.lowerRadiusLimit = 1.0;\n        camera.upperRadiusLimit = 100.0;\n        camera.panningSensibility = 100;\n        camera.attachControl(canvas, true);\n        // Init world lighting\n        new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.HemisphericLight(\"lightSun\", new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.Vector3(0, 1, 0), scene);\n        const world = Terra.new_world(_terra_json__WEBPACK_IMPORTED_MODULE_4__.world);\n        const worldRenderer = new _WorldRenderer__WEBPACK_IMPORTED_MODULE_5__.default(scene, world);\n        scene.freezeActiveMeshes();\n        scene.freezeMaterials();\n        const inputHandler = new _InputHandler__WEBPACK_IMPORTED_MODULE_6__.default(_terra_json__WEBPACK_IMPORTED_MODULE_4__.input, scene, worldRenderer);\n        scene.onKeyboardObservable.add((kbInfo) => inputHandler.handleKeyEvent(kbInfo));\n        // run the main render loop\n        engine.runRenderLoop(() => {\n            scene.render();\n        });\n    }\n}\nnew App();\n\nreturn __webpack_exports__;\n})();\n\n//# sourceURL=webpack://terra/./src/index.ts?");
+
+/***/ }),
+
+/***/ "./src/terra.json":
+/*!************************!*
+  !*** ./src/terra.json ***!
+  \************************/
+/***/ ((module) => {
+
+eval("module.exports = JSON.parse(\"{\\\"world\\\":{\\\"seed\\\":42069,\\\"tile_radius\\\":20,\\\"elevation\\\":{\\\"octaves\\\":3,\\\"frequency\\\":0.75,\\\"lacunarity\\\":4.5,\\\"persistence\\\":0.4},\\\"humidity\\\":{\\\"octaves\\\":3,\\\"frequency\\\":2,\\\"lacunarity\\\":2,\\\"persistence\\\":0.25}},\\\"input\\\":{\\\"bindings\\\":{}}}\");\n\n//# sourceURL=webpack://terra/./src/terra.json?");
+
+/***/ })
+
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		if(__webpack_module_cache__[moduleId]) {
+/******/ 			return __webpack_module_cache__[moduleId].exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			id: moduleId,
+/******/ 			loaded: false,
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Flag the module as loaded
+/******/ 		module.loaded = true;
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/******/ 	// expose the modules object (__webpack_modules__)
+/******/ 	__webpack_require__.m = __webpack_modules__;
+/******/ 	
+/******/ 	// expose the module cache
+/******/ 	__webpack_require__.c = __webpack_module_cache__;
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/compat get default export */
+/******/ 	(() => {
+/******/ 		// getDefaultExport function for compatibility with non-harmony modules
+/******/ 		__webpack_require__.n = (module) => {
+/******/ 			var getter = module && module.__esModule ?
+/******/ 				() => module['default'] :
+/******/ 				() => module;
+/******/ 			__webpack_require__.d(getter, { a: getter });
+/******/ 			return getter;
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/ensure chunk */
+/******/ 	(() => {
+/******/ 		__webpack_require__.f = {};
+/******/ 		// This file contains only the entry chunk.
+/******/ 		// The chunk loading function for additional chunks
+/******/ 		__webpack_require__.e = (chunkId) => {
+/******/ 			return Promise.all(Object.keys(__webpack_require__.f).reduce((promises, key) => {
+/******/ 				__webpack_require__.f[key](chunkId, promises);
+/******/ 				return promises;
+/******/ 			}, []));
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/get javascript chunk filename */
+/******/ 	(() => {
+/******/ 		// This function allow to reference async chunks
+/******/ 		__webpack_require__.u = (chunkId) => {
+/******/ 			// return url for filenames based on template
+/******/ 			return "" + chunkId + ".bundle.js";
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/global */
+/******/ 	(() => {
+/******/ 		__webpack_require__.g = (function() {
+/******/ 			if (typeof globalThis === 'object') return globalThis;
+/******/ 			try {
+/******/ 				return this || new Function('return this')();
+/******/ 			} catch (e) {
+/******/ 				if (typeof window === 'object') return window;
+/******/ 			}
+/******/ 		})();
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/harmony module decorator */
+/******/ 	(() => {
+/******/ 		__webpack_require__.hmd = (module) => {
+/******/ 			module = Object.create(module);
+/******/ 			if (!module.children) module.children = [];
+/******/ 			Object.defineProperty(module, 'exports', {
+/******/ 				enumerable: true,
+/******/ 				set: () => {
+/******/ 					throw new Error('ES Modules may not assign module.exports or exports.*, Use ESM export syntax, instead: ' + module.id);
+/******/ 				}
+/******/ 			});
+/******/ 			return module;
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop)
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/load script */
+/******/ 	(() => {
+/******/ 		var inProgress = {};
+/******/ 		var dataWebpackPrefix = "terra:";
+/******/ 		// loadScript function to load a script via script tag
+/******/ 		__webpack_require__.l = (url, done, key) => {
+/******/ 			if(inProgress[url]) { inProgress[url].push(done); return; }
+/******/ 			var script, needAttach;
+/******/ 			if(key !== undefined) {
+/******/ 				var scripts = document.getElementsByTagName("script");
+/******/ 				for(var i = 0; i < scripts.length; i++) {
+/******/ 					var s = scripts[i];
+/******/ 					if(s.getAttribute("src") == url || s.getAttribute("data-webpack") == dataWebpackPrefix + key) { script = s; break; }
+/******/ 				}
+/******/ 			}
+/******/ 			if(!script) {
+/******/ 				needAttach = true;
+/******/ 				script = document.createElement('script');
+/******/ 		
+/******/ 				script.charset = 'utf-8';
+/******/ 				script.timeout = 120;
+/******/ 				if (__webpack_require__.nc) {
+/******/ 					script.setAttribute("nonce", __webpack_require__.nc);
+/******/ 				}
+/******/ 				script.setAttribute("data-webpack", dataWebpackPrefix + key);
+/******/ 				script.src = url;
+/******/ 			}
+/******/ 			inProgress[url] = [done];
+/******/ 			var onScriptComplete = (prev, event) => {
+/******/ 				// avoid mem leaks in IE.
+/******/ 				script.onerror = script.onload = null;
+/******/ 				clearTimeout(timeout);
+/******/ 				var doneFns = inProgress[url];
+/******/ 				delete inProgress[url];
+/******/ 				script.parentNode && script.parentNode.removeChild(script);
+/******/ 				doneFns && doneFns.forEach((fn) => fn(event));
+/******/ 				if(prev) return prev(event);
+/******/ 			}
+/******/ 			;
+/******/ 			var timeout = setTimeout(onScriptComplete.bind(null, undefined, { type: 'timeout', target: script }), 120000);
+/******/ 			script.onerror = onScriptComplete.bind(null, script.onerror);
+/******/ 			script.onload = onScriptComplete.bind(null, script.onload);
+/******/ 			needAttach && document.head.appendChild(script);
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/publicPath */
+/******/ 	(() => {
+/******/ 		var scriptUrl;
+/******/ 		if (__webpack_require__.g.importScripts) scriptUrl = __webpack_require__.g.location + "";
+/******/ 		var document = __webpack_require__.g.document;
+/******/ 		if (!scriptUrl && document) {
+/******/ 			if (document.currentScript)
+/******/ 				scriptUrl = document.currentScript.src
+/******/ 			if (!scriptUrl) {
+/******/ 				var scripts = document.getElementsByTagName("script");
+/******/ 				if(scripts.length) scriptUrl = scripts[scripts.length - 1].src
+/******/ 			}
+/******/ 		}
+/******/ 		// When supporting browsers where an automatic publicPath is not supported you must specify an output.publicPath manually via configuration
+/******/ 		// or pass an empty string ("") and set the __webpack_public_path__ variable from your code to use your own logic.
+/******/ 		if (!scriptUrl) throw new Error("Automatic publicPath is not supported in this browser");
+/******/ 		scriptUrl = scriptUrl.replace(/#.*$/, "").replace(/\?.*$/, "").replace(/\/[^\/]+$/, "/");
+/******/ 		__webpack_require__.p = scriptUrl;
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/jsonp chunk loading */
+/******/ 	(() => {
+/******/ 		// no baseURI
+/******/ 		
+/******/ 		// object to store loaded and loading chunks
+/******/ 		// undefined = chunk not loaded, null = chunk preloaded/prefetched
+/******/ 		// Promise = chunk loading, 0 = chunk loaded
+/******/ 		var installedChunks = {
+/******/ 			"main": 0
+/******/ 		};
+/******/ 		
+/******/ 		var deferredModules = [
+/******/ 			["./src/index.ts","vendors"]
+/******/ 		];
+/******/ 		__webpack_require__.f.j = (chunkId, promises) => {
+/******/ 				// JSONP chunk loading for javascript
+/******/ 				var installedChunkData = __webpack_require__.o(installedChunks, chunkId) ? installedChunks[chunkId] : undefined;
+/******/ 				if(installedChunkData !== 0) { // 0 means "already installed".
+/******/ 		
+/******/ 					// a Promise means "currently loading".
+/******/ 					if(installedChunkData) {
+/******/ 						promises.push(installedChunkData[2]);
+/******/ 					} else {
+/******/ 						if(true) { // all chunks have JS
+/******/ 							// setup Promise in chunk cache
+/******/ 							var promise = new Promise((resolve, reject) => {
+/******/ 								installedChunkData = installedChunks[chunkId] = [resolve, reject];
+/******/ 							});
+/******/ 							promises.push(installedChunkData[2] = promise);
+/******/ 		
+/******/ 							// start chunk loading
+/******/ 							var url = __webpack_require__.p + __webpack_require__.u(chunkId);
+/******/ 							// create error before stack unwound to get useful stacktrace later
+/******/ 							var error = new Error();
+/******/ 							var loadingEnded = (event) => {
+/******/ 								if(__webpack_require__.o(installedChunks, chunkId)) {
+/******/ 									installedChunkData = installedChunks[chunkId];
+/******/ 									if(installedChunkData !== 0) installedChunks[chunkId] = undefined;
+/******/ 									if(installedChunkData) {
+/******/ 										var errorType = event && (event.type === 'load' ? 'missing' : event.type);
+/******/ 										var realSrc = event && event.target && event.target.src;
+/******/ 										error.message = 'Loading chunk ' + chunkId + ' failed.\n(' + errorType + ': ' + realSrc + ')';
+/******/ 										error.name = 'ChunkLoadError';
+/******/ 										error.type = errorType;
+/******/ 										error.request = realSrc;
+/******/ 										installedChunkData[1](error);
+/******/ 									}
+/******/ 								}
+/******/ 							};
+/******/ 							__webpack_require__.l(url, loadingEnded, "chunk-" + chunkId);
+/******/ 						} else installedChunks[chunkId] = 0;
+/******/ 					}
+/******/ 				}
+/******/ 		};
+/******/ 		
+/******/ 		// no prefetching
+/******/ 		
+/******/ 		// no preloaded
+/******/ 		
+/******/ 		// no HMR
+/******/ 		
+/******/ 		// no HMR manifest
+/******/ 		
+/******/ 		var checkDeferredModules = () => {
+/******/ 		
+/******/ 		};
+/******/ 		function checkDeferredModulesImpl() {
+/******/ 			var result;
+/******/ 			for(var i = 0; i < deferredModules.length; i++) {
+/******/ 				var deferredModule = deferredModules[i];
+/******/ 				var fulfilled = true;
+/******/ 				for(var j = 1; j < deferredModule.length; j++) {
+/******/ 					var depId = deferredModule[j];
+/******/ 					if(installedChunks[depId] !== 0) fulfilled = false;
+/******/ 				}
+/******/ 				if(fulfilled) {
+/******/ 					deferredModules.splice(i--, 1);
+/******/ 					result = __webpack_require__(__webpack_require__.s = deferredModule[0]);
+/******/ 				}
+/******/ 			}
+/******/ 			if(deferredModules.length === 0) {
+/******/ 				__webpack_require__.x();
+/******/ 				__webpack_require__.x = () => {
+/******/ 		
+/******/ 				}
+/******/ 			}
+/******/ 			return result;
+/******/ 		}
+/******/ 		__webpack_require__.x = () => {
+/******/ 			// reset startup function so it can be called again when more startup code is added
+/******/ 			__webpack_require__.x = () => {
+/******/ 		
+/******/ 			}
+/******/ 			chunkLoadingGlobal = chunkLoadingGlobal.slice();
+/******/ 			for(var i = 0; i < chunkLoadingGlobal.length; i++) webpackJsonpCallback(chunkLoadingGlobal[i]);
+/******/ 			return (checkDeferredModules = checkDeferredModulesImpl)();
+/******/ 		};
+/******/ 		
+/******/ 		// install a JSONP callback for chunk loading
+/******/ 		var webpackJsonpCallback = (data) => {
+/******/ 			var [chunkIds, moreModules, runtime, executeModules] = data;
+/******/ 			// add "moreModules" to the modules object,
+/******/ 			// then flag all "chunkIds" as loaded and fire callback
+/******/ 			var moduleId, chunkId, i = 0, resolves = [];
+/******/ 			for(;i < chunkIds.length; i++) {
+/******/ 				chunkId = chunkIds[i];
+/******/ 				if(__webpack_require__.o(installedChunks, chunkId) && installedChunks[chunkId]) {
+/******/ 					resolves.push(installedChunks[chunkId][0]);
+/******/ 				}
+/******/ 				installedChunks[chunkId] = 0;
+/******/ 			}
+/******/ 			for(moduleId in moreModules) {
+/******/ 				if(__webpack_require__.o(moreModules, moduleId)) {
+/******/ 					__webpack_require__.m[moduleId] = moreModules[moduleId];
+/******/ 				}
+/******/ 			}
+/******/ 			if(runtime) runtime(__webpack_require__);
+/******/ 			parentChunkLoadingFunction(data);
+/******/ 			while(resolves.length) {
+/******/ 				resolves.shift()();
+/******/ 			}
+/******/ 		
+/******/ 			// add entry modules from loaded chunk to deferred list
+/******/ 			if(executeModules) deferredModules.push.apply(deferredModules, executeModules);
+/******/ 		
+/******/ 			// run deferred modules when all chunks ready
+/******/ 			return checkDeferredModules();
+/******/ 		}
+/******/ 		
+/******/ 		var chunkLoadingGlobal = self["webpackChunkterra"] = self["webpackChunkterra"] || [];
+/******/ 		var parentChunkLoadingFunction = chunkLoadingGlobal.push.bind(chunkLoadingGlobal);
+/******/ 		chunkLoadingGlobal.push = webpackJsonpCallback;
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/wasm chunk loading */
+/******/ 	(() => {
+/******/ 		// object to store loaded and loading wasm modules
+/******/ 		var installedWasmModules = {};
+/******/ 		
+/******/ 		function promiseResolve() { return Promise.resolve(); }
+/******/ 		
+/******/ 		var wasmImportedFuncCache0;
+/******/ 		var wasmImportedFuncCache1;
+/******/ 		var wasmImportedFuncCache2;
+/******/ 		var wasmImportedFuncCache3;
+/******/ 		var wasmImportedFuncCache4;
+/******/ 		var wasmImportedFuncCache5;
+/******/ 		var wasmImportedFuncCache6;
+/******/ 		var wasmImportedFuncCache7;
+/******/ 		var wasmImportedFuncCache8;
+/******/ 		var wasmImportedFuncCache9;
+/******/ 		var wasmImportedFuncCache10;
+/******/ 		var wasmImportedFuncCache11;
+/******/ 		var wasmImportedFuncCache12;
+/******/ 		var wasmImportedFuncCache13;
+/******/ 		var wasmImportedFuncCache14;
+/******/ 		var wasmImportedFuncCache15;
+/******/ 		var wasmImportedFuncCache16;
+/******/ 		var wasmImportedFuncCache17;
+/******/ 		var wasmImportedFuncCache18;
+/******/ 		var wasmImportedFuncCache19;
+/******/ 		var wasmImportedFuncCache20;
+/******/ 		var wasmImportedFuncCache21;
+/******/ 		var wasmImportedFuncCache22;
+/******/ 		var wasmImportedFuncCache23;
+/******/ 		var wasmImportedFuncCache24;
+/******/ 		var wasmImportedFuncCache25;
+/******/ 		var wasmImportedFuncCache26;
+/******/ 		var wasmImportedFuncCache27;
+/******/ 		var wasmImportedFuncCache28;
+/******/ 		var wasmImportedFuncCache29;
+/******/ 		var wasmImportedFuncCache30;
+/******/ 		var wasmImportedFuncCache31;
+/******/ 		var wasmImportedFuncCache32;
+/******/ 		var wasmImportedFuncCache33;
+/******/ 		var wasmImportedFuncCache34;
+/******/ 		var wasmImportedFuncCache35;
+/******/ 		var wasmImportedFuncCache36;
+/******/ 		var wasmImportedFuncCache37;
+/******/ 		var wasmImportedFuncCache38;
+/******/ 		var wasmImportedFuncCache39;
+/******/ 		var wasmImportedFuncCache40;
+/******/ 		var wasmImportedFuncCache41;
+/******/ 		var wasmImportedFuncCache42;
+/******/ 		var wasmImportObjects = {
+/******/ 			"../rust/pkg/terra-wasm_bg.wasm": function() {
+/******/ 				return {
+/******/ 					"./terra-wasm_bg.js": {
+/******/ 						"__wbg_tile_new": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache0 === undefined) wasmImportedFuncCache0 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache0["__wbg_tile_new"](p0i32);
+/******/ 						},
+/******/ 						"__wbindgen_object_drop_ref": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache1 === undefined) wasmImportedFuncCache1 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache1["__wbindgen_object_drop_ref"](p0i32);
+/******/ 						},
+/******/ 						"__wbindgen_string_new": function(p0i32,p1i32) {
+/******/ 							if(wasmImportedFuncCache2 === undefined) wasmImportedFuncCache2 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache2["__wbindgen_string_new"](p0i32,p1i32);
+/******/ 						},
+/******/ 						"__wbindgen_object_clone_ref": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache3 === undefined) wasmImportedFuncCache3 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache3["__wbindgen_object_clone_ref"](p0i32);
+/******/ 						},
+/******/ 						"__wbindgen_is_null": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache4 === undefined) wasmImportedFuncCache4 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache4["__wbindgen_is_null"](p0i32);
+/******/ 						},
+/******/ 						"__wbindgen_is_undefined": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache5 === undefined) wasmImportedFuncCache5 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache5["__wbindgen_is_undefined"](p0i32);
+/******/ 						},
+/******/ 						"__wbg_new_59cb74e423758ede": function() {
+/******/ 							if(wasmImportedFuncCache6 === undefined) wasmImportedFuncCache6 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache6["__wbg_new_59cb74e423758ede"]();
+/******/ 						},
+/******/ 						"__wbg_stack_558ba5917b466edd": function(p0i32,p1i32) {
+/******/ 							if(wasmImportedFuncCache7 === undefined) wasmImportedFuncCache7 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache7["__wbg_stack_558ba5917b466edd"](p0i32,p1i32);
+/******/ 						},
+/******/ 						"__wbg_error_4bb6c2a97407129a": function(p0i32,p1i32) {
+/******/ 							if(wasmImportedFuncCache8 === undefined) wasmImportedFuncCache8 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache8["__wbg_error_4bb6c2a97407129a"](p0i32,p1i32);
+/******/ 						},
+/******/ 						"__wbg_debug_9f067aefe2ceaadd": function(p0i32,p1i32,p2i32,p3i32) {
+/******/ 							if(wasmImportedFuncCache9 === undefined) wasmImportedFuncCache9 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache9["__wbg_debug_9f067aefe2ceaadd"](p0i32,p1i32,p2i32,p3i32);
+/******/ 						},
+/******/ 						"__wbg_error_e325755affc8634b": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache10 === undefined) wasmImportedFuncCache10 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache10["__wbg_error_e325755affc8634b"](p0i32);
+/******/ 						},
+/******/ 						"__wbg_error_7bb15b842d5b0ddb": function(p0i32,p1i32,p2i32,p3i32) {
+/******/ 							if(wasmImportedFuncCache11 === undefined) wasmImportedFuncCache11 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache11["__wbg_error_7bb15b842d5b0ddb"](p0i32,p1i32,p2i32,p3i32);
+/******/ 						},
+/******/ 						"__wbg_info_1b9fdabaafc8f4cb": function(p0i32,p1i32,p2i32,p3i32) {
+/******/ 							if(wasmImportedFuncCache12 === undefined) wasmImportedFuncCache12 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache12["__wbg_info_1b9fdabaafc8f4cb"](p0i32,p1i32,p2i32,p3i32);
+/******/ 						},
+/******/ 						"__wbg_log_37120b26fb738792": function(p0i32,p1i32,p2i32,p3i32) {
+/******/ 							if(wasmImportedFuncCache13 === undefined) wasmImportedFuncCache13 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache13["__wbg_log_37120b26fb738792"](p0i32,p1i32,p2i32,p3i32);
+/******/ 						},
+/******/ 						"__wbg_warn_6add4f04160cdbba": function(p0i32,p1i32,p2i32,p3i32) {
+/******/ 							if(wasmImportedFuncCache14 === undefined) wasmImportedFuncCache14 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache14["__wbg_warn_6add4f04160cdbba"](p0i32,p1i32,p2i32,p3i32);
+/******/ 						},
+/******/ 						"__wbg_now_7628760b7b640632": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache15 === undefined) wasmImportedFuncCache15 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache15["__wbg_now_7628760b7b640632"](p0i32);
+/******/ 						},
+/******/ 						"__wbg_instanceof_Window_49f532f06a9786ee": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache16 === undefined) wasmImportedFuncCache16 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache16["__wbg_instanceof_Window_49f532f06a9786ee"](p0i32);
+/******/ 						},
+/******/ 						"__wbg_performance_87e4f3b6f966469f": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache17 === undefined) wasmImportedFuncCache17 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache17["__wbg_performance_87e4f3b6f966469f"](p0i32);
+/******/ 						},
+/******/ 						"__wbg_get_85e0a3b459845fe2": function(p0i32,p1i32) {
+/******/ 							if(wasmImportedFuncCache18 === undefined) wasmImportedFuncCache18 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache18["__wbg_get_85e0a3b459845fe2"](p0i32,p1i32);
+/******/ 						},
+/******/ 						"__wbg_call_951bd0c6d815d6f1": function(p0i32,p1i32) {
+/******/ 							if(wasmImportedFuncCache19 === undefined) wasmImportedFuncCache19 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache19["__wbg_call_951bd0c6d815d6f1"](p0i32,p1i32);
+/******/ 						},
+/******/ 						"__wbg_new_9dff83a08f5994f3": function() {
+/******/ 							if(wasmImportedFuncCache20 === undefined) wasmImportedFuncCache20 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache20["__wbg_new_9dff83a08f5994f3"]();
+/******/ 						},
+/******/ 						"__wbg_push_3ddd8187ff2ff82d": function(p0i32,p1i32) {
+/******/ 							if(wasmImportedFuncCache21 === undefined) wasmImportedFuncCache21 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache21["__wbg_push_3ddd8187ff2ff82d"](p0i32,p1i32);
+/******/ 						},
+/******/ 						"__wbg_instanceof_ArrayBuffer_3a0fa134e6809d57": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache22 === undefined) wasmImportedFuncCache22 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache22["__wbg_instanceof_ArrayBuffer_3a0fa134e6809d57"](p0i32);
+/******/ 						},
+/******/ 						"__wbg_new_94a7dfa9529ec6e8": function(p0i32,p1i32) {
+/******/ 							if(wasmImportedFuncCache23 === undefined) wasmImportedFuncCache23 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache23["__wbg_new_94a7dfa9529ec6e8"](p0i32,p1i32);
+/******/ 						},
+/******/ 						"__wbg_newnoargs_7c6bd521992b4022": function(p0i32,p1i32) {
+/******/ 							if(wasmImportedFuncCache24 === undefined) wasmImportedFuncCache24 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache24["__wbg_newnoargs_7c6bd521992b4022"](p0i32,p1i32);
+/******/ 						},
+/******/ 						"__wbg_isSafeInteger_ca75f5e5231bd3c7": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache25 === undefined) wasmImportedFuncCache25 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache25["__wbg_isSafeInteger_ca75f5e5231bd3c7"](p0i32);
+/******/ 						},
+/******/ 						"__wbg_self_6baf3a3aa7b63415": function() {
+/******/ 							if(wasmImportedFuncCache26 === undefined) wasmImportedFuncCache26 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache26["__wbg_self_6baf3a3aa7b63415"]();
+/******/ 						},
+/******/ 						"__wbg_window_63fc4027b66c265b": function() {
+/******/ 							if(wasmImportedFuncCache27 === undefined) wasmImportedFuncCache27 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache27["__wbg_window_63fc4027b66c265b"]();
+/******/ 						},
+/******/ 						"__wbg_globalThis_513fb247e8e4e6d2": function() {
+/******/ 							if(wasmImportedFuncCache28 === undefined) wasmImportedFuncCache28 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache28["__wbg_globalThis_513fb247e8e4e6d2"]();
+/******/ 						},
+/******/ 						"__wbg_global_b87245cd886d7113": function() {
+/******/ 							if(wasmImportedFuncCache29 === undefined) wasmImportedFuncCache29 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache29["__wbg_global_b87245cd886d7113"]();
+/******/ 						},
+/******/ 						"__wbg_buffer_3f12a1c608c6d04e": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache30 === undefined) wasmImportedFuncCache30 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache30["__wbg_buffer_3f12a1c608c6d04e"](p0i32);
+/******/ 						},
+/******/ 						"__wbg_new_c6c0228e6d22a2f9": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache31 === undefined) wasmImportedFuncCache31 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache31["__wbg_new_c6c0228e6d22a2f9"](p0i32);
+/******/ 						},
+/******/ 						"__wbg_set_b91afac9fd216d99": function(p0i32,p1i32,p2i32) {
+/******/ 							if(wasmImportedFuncCache32 === undefined) wasmImportedFuncCache32 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache32["__wbg_set_b91afac9fd216d99"](p0i32,p1i32,p2i32);
+/******/ 						},
+/******/ 						"__wbg_length_c645e7c02233b440": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache33 === undefined) wasmImportedFuncCache33 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache33["__wbg_length_c645e7c02233b440"](p0i32);
+/******/ 						},
+/******/ 						"__wbg_instanceof_Uint8Array_fda7b6a64c667462": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache34 === undefined) wasmImportedFuncCache34 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache34["__wbg_instanceof_Uint8Array_fda7b6a64c667462"](p0i32);
+/******/ 						},
+/******/ 						"__wbg_byteLength_11e6bdc2fac53a3c": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache35 === undefined) wasmImportedFuncCache35 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache35["__wbg_byteLength_11e6bdc2fac53a3c"](p0i32);
+/******/ 						},
+/******/ 						"__wbindgen_number_get": function(p0i32,p1i32) {
+/******/ 							if(wasmImportedFuncCache36 === undefined) wasmImportedFuncCache36 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache36["__wbindgen_number_get"](p0i32,p1i32);
+/******/ 						},
+/******/ 						"__wbindgen_string_get": function(p0i32,p1i32) {
+/******/ 							if(wasmImportedFuncCache37 === undefined) wasmImportedFuncCache37 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache37["__wbindgen_string_get"](p0i32,p1i32);
+/******/ 						},
+/******/ 						"__wbindgen_boolean_get": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache38 === undefined) wasmImportedFuncCache38 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache38["__wbindgen_boolean_get"](p0i32);
+/******/ 						},
+/******/ 						"__wbindgen_debug_string": function(p0i32,p1i32) {
+/******/ 							if(wasmImportedFuncCache39 === undefined) wasmImportedFuncCache39 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache39["__wbindgen_debug_string"](p0i32,p1i32);
+/******/ 						},
+/******/ 						"__wbindgen_throw": function(p0i32,p1i32) {
+/******/ 							if(wasmImportedFuncCache40 === undefined) wasmImportedFuncCache40 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache40["__wbindgen_throw"](p0i32,p1i32);
+/******/ 						},
+/******/ 						"__wbindgen_rethrow": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache41 === undefined) wasmImportedFuncCache41 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache41["__wbindgen_rethrow"](p0i32);
+/******/ 						},
+/******/ 						"__wbindgen_memory": function() {
+/******/ 							if(wasmImportedFuncCache42 === undefined) wasmImportedFuncCache42 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache42["__wbindgen_memory"]();
+/******/ 						}
+/******/ 					}
+/******/ 				};
+/******/ 			},
+/******/ 		};
+/******/ 		
+/******/ 		var wasmModuleMap = {
+/******/ 			"rust_pkg_terra-wasm_js": [
+/******/ 				"../rust/pkg/terra-wasm_bg.wasm"
+/******/ 			]
+/******/ 		};
+/******/ 		
+/******/ 		// object with all WebAssembly.instance exports
+/******/ 		__webpack_require__.w = {};
+/******/ 		
+/******/ 		// Fetch + compile chunk loading for webassembly
+/******/ 		__webpack_require__.f.wasm = function(chunkId, promises) {
+/******/ 		
+/******/ 			var wasmModules = wasmModuleMap[chunkId] || [];
+/******/ 		
+/******/ 			wasmModules.forEach(function(wasmModuleId, idx) {
+/******/ 				var installedWasmModuleData = installedWasmModules[wasmModuleId];
+/******/ 		
+/******/ 				// a Promise means "currently loading" or "already loaded".
+/******/ 				if(installedWasmModuleData)
+/******/ 					promises.push(installedWasmModuleData);
+/******/ 				else {
+/******/ 					var importObject = wasmImportObjects[wasmModuleId]();
+/******/ 					var req = fetch(__webpack_require__.p + "" + {"rust_pkg_terra-wasm_js":{"../rust/pkg/terra-wasm_bg.wasm":"bbe6080a9160e8d8c9af"}}[chunkId][wasmModuleId] + ".module.wasm");
+/******/ 					var promise;
+/******/ 					if(importObject instanceof Promise && typeof WebAssembly.compileStreaming === 'function') {
+/******/ 						promise = Promise.all([WebAssembly.compileStreaming(req), importObject]).then(function(items) {
+/******/ 							return WebAssembly.instantiate(items[0], items[1]);
+/******/ 						});
+/******/ 					} else if(typeof WebAssembly.instantiateStreaming === 'function') {
+/******/ 						promise = WebAssembly.instantiateStreaming(req, importObject);
+/******/ 					} else {
+/******/ 						var bytesPromise = req.then(function(x) { return x.arrayBuffer(); });
+/******/ 						promise = bytesPromise.then(function(bytes) {
+/******/ 							return WebAssembly.instantiate(bytes, importObject);
+/******/ 						});
+/******/ 					}
+/******/ 					promises.push(installedWasmModules[wasmModuleId] = promise.then(function(res) {
+/******/ 						return __webpack_require__.w[wasmModuleId] = (res.instance || res).exports;
+/******/ 					}));
+/******/ 				}
+/******/ 			});
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+/******/ 	// module cache are used so entry inlining is disabled
+/******/ 	// run startup
+/******/ 	return __webpack_require__.x();
+/******/ })()
+;
