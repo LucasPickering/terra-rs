@@ -15,7 +15,7 @@
 /***/ ((module) => {
 
 "use strict";
-eval("module.exports = JSON.parse(\"{\\\"seed\\\":877197321,\\\"tile_radius\\\":300,\\\"elevation\\\":{\\\"octaves\\\":3,\\\"frequency\\\":1.5,\\\"lacunarity\\\":3,\\\"persistence\\\":0.3,\\\"exponent\\\":1},\\\"humidity\\\":{\\\"octaves\\\":3,\\\"frequency\\\":2,\\\"lacunarity\\\":2,\\\"persistence\\\":0.25,\\\"exponent\\\":1}}\");\n\n//# sourceURL=webpack://terra/./src/world.json?");
+eval("module.exports = JSON.parse(\"{\\\"tile_radius\\\":300,\\\"elevation\\\":{\\\"octaves\\\":3,\\\"frequency\\\":1.5,\\\"lacunarity\\\":3,\\\"persistence\\\":0.3,\\\"exponent\\\":1},\\\"humidity\\\":{\\\"octaves\\\":1,\\\"frequency\\\":2,\\\"lacunarity\\\":2,\\\"persistence\\\":1,\\\"exponent\\\":1}}\");\n\n//# sourceURL=webpack://terra/./src/world.json?");
 
 /***/ })
 
