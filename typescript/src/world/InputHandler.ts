@@ -1,6 +1,7 @@
 import { KeyboardEventTypes, KeyboardInfo } from "@babylonjs/core";
-import { assertUnreachable, RecursivePartial } from "../util";
+import { assertUnreachable } from "../util";
 import WorldScene from "./WorldScene";
+const config = await import("../input.json");
 const { TileLens } = await import("../wasm");
 
 const INPUT_ACTIONS = [
@@ -40,10 +41,7 @@ class InputHandler {
   private keyToEvent: Map<string, InputAction>;
   private scene: WorldScene;
 
-  constructor(
-    config: RecursivePartial<InputConfig> | undefined,
-    scene: WorldScene
-  ) {
+  constructor(scene: WorldScene) {
     this.config = {
       ...DEFAULT_INPUT_CONFIG,
       ...config,

@@ -58,6 +58,9 @@ module.exports = {
     },
   },
 
+  watchOptions: {
+    ignored: /world\.json/,
+  },
   devServer: {
     port: 3000,
     contentBase: path.join(__dirname, "static"),

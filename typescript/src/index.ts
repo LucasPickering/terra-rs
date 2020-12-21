@@ -25,7 +25,7 @@ export class App {
     const terra = new Terra();
 
     // initialize babylon scene and engine
-    const engine = new Engine(canvas, false, { audioEngine: false }, true);
+    const engine = new Engine(canvas, true, { audioEngine: false }, false);
     const scene = new WorldScene(terra, engine);
 
     // run the main render loop

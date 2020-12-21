@@ -186,6 +186,7 @@ impl<T> DerefMut for HexPointMap<T> {
 /// A cluster is a set of contiguous hex points. All items in a cluster are
 /// adjacent to at least one other item in the cluster (unless the cluster is a
 /// singular item).
+#[derive(Clone, Debug)]
 pub struct Cluster<T>(pub HexPointMap<T>);
 
 pub trait HasHexPosition: Sized {

@@ -1,11 +1,3 @@
-export type RecursivePartial<T> = {
-  [P in keyof T]?: T[P] extends (infer U)[]
-    ? RecursivePartial<U>[]
-    : T[P] extends Record<string, unknown>
-    ? RecursivePartial<T[P]>
-    : T[P];
-};
-
 /**
  * Assert that a point in the code is unreachable. Useful for making sure switch
  * statements are exhaustive.

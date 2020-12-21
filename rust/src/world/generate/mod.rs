@@ -21,7 +21,7 @@ use crate::{
 };
 use log::{debug, info};
 use noise::{MultiFractal, NoiseFn, Seedable};
-use rand::SeedableRng;
+use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
 use std::fmt::{Debug, Display};
 
@@ -68,11 +68,9 @@ impl WorldBuilder {
     /// Generate a world by running a series of generation steps sequentially.
     /// Must be run from a blank slate. Outputs the finalized set of tiles.
     pub fn generate_world(mut self) -> TileMap {
-        let config = self.config;
-
         // Run each generation step. The order is very important!
-        self.apply_generator(ElevationGenerator::new(&config));
-        self.apply_generator(HumidityGenerator::new(&config));
+        self.apply_generator(ElevationGenerator);
+        self.apply_generator(HumidityGenerator);
         self.apply_generator(OceanGenerator);
         self.apply_generator(BeachGenerator);
         self.apply_generator(BiomePainter);
@@ -86,8 +84,11 @@ impl WorldBuilder {
 
     /// A helper to run a generation step on this builder.
     fn apply_generator(&mut self, generator: impl Generate) {
-        let ((), elapsed) =
-            timed!(generator.generate(&mut self.tiles, &mut self.rng));
+        let ((), elapsed) = timed!(generator.generate(
+            &self.config,
+            &mut self.rng,
+            &mut self.tiles,
+        ));
         debug!("{} took {}ms", generator, elapsed.as_millis());
     }
 }
@@ -100,7 +101,12 @@ trait Generate: Display {
     /// Add new data to the existing tiles. The given map should never be
     /// inserted into or removed from, and the keys should never be changed.
     /// Only the values (tiles) should be mutated!
-    fn generate(&self, tiles: &mut HexPointMap<TileBuilder>, rng: &mut Pcg64);
+    fn generate(
+        &self,
+        config: &WorldConfig,
+        rng: &mut impl Rng,
+        tiles: &mut HexPointMap<TileBuilder>,
+    );
 }
 
 /// A wrapper around a noise function that makes it easy to use for generating
@@ -111,6 +117,10 @@ trait Generate: Display {
 pub struct TileNoiseFn<F: NoiseFn<[f64; 3]>> {
     /// The noise generation function
     noise_fn: F,
+    /// Exponent to apply to each noise value. This will be applied to values
+    /// in the range [0,1], so exponents <1 bias upwards, and >1 bias
+    /// downwards.
+    exponent: f64,
     /// The range of tile position values. Used to map the input.
     tile_pos_range: NumRange<f64>,
     output_range: NumRange<f64>,
@@ -126,13 +136,15 @@ impl<F: NoiseFn<[f64; 3]>> TileNoiseFn<F> {
 
     /// Initialize a wrapper around the given function.
     fn from_fn(
-        noise_fn: F,
         world_config: &WorldConfig,
+        noise_fn: F,
+        exponent: f64,
         output_range: NumRange<f64>,
     ) -> Self {
         let radius = world_config.tile_radius as f64;
         Self {
             noise_fn,
+            exponent,
             // The noise functions expect input in [-1, 1], so we need this to
             // map our tile positions
             tile_pos_range: NumRange::new(-radius, radius),
@@ -158,18 +170,20 @@ impl<F: Default + Seedable + MultiFractal + NoiseFn<[f64; 3]>> TileNoiseFn<F> {
     /// be mapped to this range during generation.
     pub fn new(
         world_config: &WorldConfig,
+        rng: &mut impl Rng,
         fn_config: &NoiseFnConfig,
         output_range: NumRange<f64>,
     ) -> Self {
         // Configure the noise function
         let noise_fn = F::default()
-            .set_seed(world_config.seed_u32()) // Mask off the top 32 bits
+            // Gen a new seed so that we get a different one per function
+            .set_seed(rng.gen())
             .set_octaves(fn_config.octaves)
             .set_frequency(fn_config.frequency)
             .set_lacunarity(fn_config.lacunarity)
             .set_persistence(fn_config.persistence);
 
-        Self::from_fn(noise_fn, world_config, output_range)
+        Self::from_fn(world_config, noise_fn, fn_config.exponent, output_range)
     }
 }
 
@@ -181,7 +195,13 @@ impl<F: NoiseFn<[f64; 3]>> NoiseFn<HexPoint> for TileNoiseFn<F> {
             self.normalize_input(point.y),
             self.normalize_input(point.z),
         ];
-        let normalized_output = self.noise_fn.get(normalized_input);
-        Self::NOISE_FN_OUTPUT_RANGE.map(&self.output_range, normalized_output)
+        let fn_output = self.noise_fn.get(normalized_input);
+        Self::NOISE_FN_OUTPUT_RANGE
+            .value(fn_output)
+            // Map to [0,1] so we can apply the exponent
+            .normalize()
+            .apply(|val| val.powf(self.exponent))
+            .map_to(self.output_range)
+            .inner()
     }
 }

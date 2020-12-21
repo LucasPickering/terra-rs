@@ -3,9 +3,10 @@ use crate::{
     world::{
         generate::Generate, hex::HexPointMap, tile::TileBuilder, Biome, World,
     },
+    WorldConfig,
 };
 use derive_more::Display;
-use rand_pcg::Pcg64;
+use rand::Rng;
 
 /// A generator to apply a biome for each tile. The biome is calculated based
 /// on elevation and humidity. This won't overwrite any tiles that already have
@@ -15,7 +16,12 @@ use rand_pcg::Pcg64;
 pub struct BiomePainter;
 
 impl Generate for BiomePainter {
-    fn generate(&self, tiles: &mut HexPointMap<TileBuilder>, _: &mut Pcg64) {
+    fn generate(
+        &self,
+        _: &WorldConfig,
+        _: &mut impl Rng,
+        tiles: &mut HexPointMap<TileBuilder>,
+    ) {
         // We're going to normalize all the elevations so we can use a
         // consistent set of coefficients below. We don't want to map from the
         // full range though, because 99% of the tiles below sea level we won't
@@ -42,7 +48,7 @@ impl Generate for BiomePainter {
             // https://en.wikipedia.org/wiki/Phase_diagram#Pressure_vs_temperature
             // Each of these conditions is essentially a 2d function, either
             // x = c or y = mx+b, where elevation is y and humidity is x
-            let biome = if elevation >= (-0.1 * humidity + 0.7) {
+            let biome = if elevation >= (-0.1 * humidity + 0.5) {
                 Biome::Snow
             } else if humidity <= 0.15 {
                 Biome::Desert

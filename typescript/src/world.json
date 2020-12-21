@@ -1,0 +1,18 @@
+{
+  "seed": 877197321,
+  "tile_radius": 300,
+  "elevation": {
+    "octaves": 3,
+    "frequency": 1.5,
+    "lacunarity": 3.0,
+    "persistence": 0.3,
+    "exponent": 1.0
+  },
+  "humidity": {
+    "octaves": 1,
+    "frequency": 2.0,
+    "lacunarity": 2.0,
+    "persistence": 0.25,
+    "exponent": 1.0
+  }
+}

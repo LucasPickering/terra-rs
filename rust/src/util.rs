@@ -1,4 +1,9 @@
 use anyhow::anyhow;
+use log::debug;
+use rand::{
+    distributions::uniform::{SampleRange, SampleUniform, UniformSampler},
+    RngCore,
+};
 use serde::Serialize;
 use std::{
     fmt::{Debug, Display},
@@ -125,9 +130,20 @@ impl<T: Rangeable> NumRange<T> {
         Self { min, max }
     }
 
+    /// Get a [0,1] range for this type.
+    pub fn normal_range() -> Self {
+        Self::new(T::zero(), T::one())
+    }
+
     /// Max minus min
     pub fn span(&self) -> T {
         self.max - self.min
+    }
+
+    /// Create a [RangeValue] in this range, which can be more convenient for
+    /// chaining operations.
+    pub fn value(self, value: T) -> RangeValue<T> {
+        RangeValue { value, range: self }
     }
 
     /// Create a new range that has the same span (max-min) as this range, but
@@ -149,8 +165,7 @@ impl<T: Rangeable> NumRange<T> {
 
     /// Map a value from this range to the range [0, 1]
     pub fn normalize(&self, value: T) -> T {
-        let normal_range = Self::new(T::zero(), T::one());
-        self.map(&normal_range, value)
+        self.map(&Self::normal_range(), value)
     }
 
     /// Force a value into this range. If it's already in the range, return
@@ -167,8 +182,81 @@ impl<T: Rangeable> NumRange<T> {
     }
 }
 
+// pretty print!
 impl<T: Rangeable + Display> Display for NumRange<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[{}, {}]", self.min, self.max)
+    }
+}
+
+// allow generating samples in the range
+impl<T: Rangeable + SampleUniform + PartialOrd> SampleRange<T> for NumRange<T> {
+    #[inline]
+    fn sample_single<R: RngCore + ?Sized>(self, rng: &mut R) -> T {
+        T::Sampler::sample_single_inclusive(self.min, self.max, rng)
+    }
+
+    #[inline]
+    fn is_empty(&self) -> bool {
+        self.min > self.max
+    }
+}
+
+/// An alternative interface for [NumRange] that makes it easy to chain
+/// operations on a single value.
+/// ```
+/// let range: NumRange<f32> = NumRange::new(10.0, 20.0);
+/// let value = range.value(15.0).normalize().apply(|x| x + 1.0).inner();
+/// assert_eq!(value, 1.5);
+/// ```
+#[derive(Copy, Clone, Debug)]
+pub struct RangeValue<T: Rangeable> {
+    value: T,
+    range: NumRange<T>,
+}
+
+impl<T: Rangeable> RangeValue<T> {
+    /// Get the value from this struct
+    pub fn inner(self) -> T {
+        self.value
+    }
+
+    pub fn debug(self) -> Self {
+        debug!("{:?}", self.value);
+        self
+    }
+
+    /// Map this value to the range [0,1]
+    pub fn normalize(self) -> Self {
+        self.map_to(<NumRange<T>>::normal_range())
+    }
+
+    /// Map this value from the current range to a new range.
+    pub fn map_to(self, range: NumRange<T>) -> Self {
+        let new_value = self.range.map(&range, self.value);
+        Self {
+            range,
+            value: new_value,
+        }
+    }
+
+    /// Force the given value into this range. If it falls outside the range,
+    /// it will be set to the nearer of the two bounds. In other words, if it's
+    /// below the range, use the range min. If it's above the range, use the
+    /// max.
+    pub fn clamp(self) -> Self {
+        Self {
+            value: self.range.clamp(self.value),
+            range: self.range,
+        }
+    }
+
+    /// Apply the given mapping function to this value. The value will be
+    /// replaced with the output of the function.
+    pub fn apply(self, f: impl FnOnce(T) -> T) -> Self {
+        Self {
+            value: f(self.value),
+            range: self.range,
+        }
     }
 }

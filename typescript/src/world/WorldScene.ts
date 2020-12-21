@@ -10,36 +10,14 @@ import InputHandler from "./InputHandler";
 import type { Terra, TileLens, World } from "../wasm";
 import PauseMenu from "./PauseMenu";
 
+const config = await import("../world.json");
+
 export interface NoiseFnConfig {
   octaves: number;
   frequency: number;
   lacunarity: number;
   persistence: number;
 }
-
-export interface WorldConfig {
-  seed: number;
-  tile_radius: number;
-  elevation: NoiseFnConfig;
-  humidity: NoiseFnConfig;
-}
-
-const DEFAULT_CONFIG = {
-  seed: 877197321, // TODO use a random value here
-  tile_radius: 30,
-  elevation: {
-    octaves: 5,
-    frequency: 1,
-    lacunarity: 2.0,
-    persistence: 0.6,
-  },
-  humidity: {
-    octaves: 3,
-    frequency: 2.0,
-    lacunarity: 2.0,
-    persistence: 0.25,
-  },
-};
 
 function initScene(engine: Engine): Scene {
   // Init world scene
@@ -84,10 +62,8 @@ class WorldScene {
   private scene: Scene;
   private pauseMenu: PauseMenu;
   private paused: boolean;
-  // Hack on these 3 fields because they get assigned in a subfunction
-  private worldConfig!: WorldConfig;
-  private world!: World;
-  private worldRenderer!: WorldRenderer;
+  private world: World;
+  private worldRenderer: WorldRenderer;
 
   constructor(terra: Terra, engine: Engine) {
     this.terra = terra;
@@ -95,12 +71,11 @@ class WorldScene {
     this.scene = initScene(engine);
 
     // Generate the world
-    this.generateWorld(DEFAULT_CONFIG);
-
+    this.world = this.terra.generate_world(config);
+    this.worldRenderer = new WorldRenderer(this.scene, this.world);
     this.scene.freezeActiveMeshes();
-    this.scene.freezeMaterials();
 
-    this.inputHandler = new InputHandler(undefined, this);
+    this.inputHandler = new InputHandler(this);
 
     this.scene.onKeyboardObservable.add((kbInfo) =>
       this.inputHandler.handleKeyEvent(kbInfo)
@@ -109,20 +84,6 @@ class WorldScene {
     // Init pause menu
     this.pauseMenu = new PauseMenu(engine, this);
     this.paused = false;
-  }
-
-  getWorldConfig(): WorldConfig {
-    return this.worldConfig;
-  }
-
-  generateWorld(config: WorldConfig): void {
-    this.scene.unfreezeActiveMeshes();
-
-    this.worldConfig = config;
-    this.world = this.terra.generate_world(config);
-    this.worldRenderer = new WorldRenderer(this.scene, this.world);
-
-    this.scene.freezeActiveMeshes();
   }
 
   setPaused(paused: boolean): void {

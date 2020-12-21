@@ -1,5 +1,4 @@
 #![feature(const_fn)]
-#![feature(map_first_last)]
 
 use crate::world::World;
 use log::info;
@@ -16,6 +15,7 @@ pub struct NoiseFnConfig {
     pub frequency: f64,
     pub lacunarity: f64,
     pub persistence: f64,
+    pub exponent: f64,
 }
 
 /// Configuration that defines a world gen process. Two worlds generated with
@@ -26,14 +26,6 @@ pub struct WorldConfig {
     pub tile_radius: usize,
     pub elevation: NoiseFnConfig,
     pub humidity: NoiseFnConfig,
-}
-
-impl WorldConfig {
-    /// Get the seed as a u32 value, which is needed for noise functions. This
-    /// will take just the lower 32 bits of our seed.
-    pub fn seed_u32(&self) -> u32 {
-        (self.seed & 0xffffffff) as u32
-    }
 }
 
 /// Top-level struct for a Terra instance. This holds every we need to render

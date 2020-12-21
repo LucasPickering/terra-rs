@@ -1,11 +1,14 @@
-use crate::world::{
-    generate::Generate,
-    hex::{HasHexPosition, HexPointMap},
-    tile::TileBuilder,
-    Biome, BiomeType,
+use crate::{
+    world::{
+        generate::Generate,
+        hex::{HasHexPosition, HexPointMap},
+        tile::TileBuilder,
+        Biome, BiomeType,
+    },
+    WorldConfig,
 };
 use derive_more::Display;
-use rand_pcg::Pcg64;
+use rand::Rng;
 
 /// Any coastal tile at/under this elevation will be beach, anything over will
 /// be cliff
@@ -18,7 +21,12 @@ const MAX_BEACH_ELEV: f64 = 5.0;
 pub struct BeachGenerator;
 
 impl Generate for BeachGenerator {
-    fn generate(&self, tiles: &mut HexPointMap<TileBuilder>, _: &mut Pcg64) {
+    fn generate(
+        &self,
+        _: &WorldConfig,
+        _: &mut impl Rng,
+        tiles: &mut HexPointMap<TileBuilder>,
+    ) {
         // Find every tile that's adjacent to ocean/coast, which doesn't already
         // have a biome. Then set each one to either beach or cliff, based on
         // its elevation. We have to do this in a bit of a jank way because we
