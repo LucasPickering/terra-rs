@@ -10,7 +10,9 @@ import InputHandler from "./InputHandler";
 import type { Terra, TileLens, World } from "../wasm";
 import PauseMenu from "./PauseMenu";
 
-const config = await import("../world.json");
+// We'll let Rust enforce the correct type here
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const config: any = await import("../world.json");
 
 export interface NoiseFnConfig {
   octaves: number;
@@ -71,6 +73,10 @@ class WorldScene {
     this.scene = initScene(engine);
 
     // Generate the world
+    // bullshit here to pick a random seed if we don't have one
+    if (!config.seed) {
+      config.seed = Math.round(Math.random() * Number.MAX_SAFE_INTEGER);
+    }
     this.world = this.terra.generate_world(config);
     this.worldRenderer = new WorldRenderer(this.scene, this.world);
     this.scene.freezeActiveMeshes();

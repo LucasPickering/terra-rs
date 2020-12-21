@@ -5,7 +5,7 @@ use crate::world::{
     World, WorldConfig,
 };
 use derive_more::Display;
-use noise::{BasicMulti, NoiseFn};
+use noise::{Fbm, NoiseFn};
 use rand::Rng;
 
 /// Generate an humidity map using a noise function.
@@ -20,7 +20,7 @@ impl Generate for HumidityGenerator {
         rng: &mut impl Rng,
         tiles: &mut HexPointMap<TileBuilder>,
     ) {
-        let noise_fn: TileNoiseFn<BasicMulti> = TileNoiseFn::new(
+        let noise_fn: TileNoiseFn<Fbm> = TileNoiseFn::new(
             config,
             rng,
             &config.humidity,

@@ -1,5 +1,4 @@
 {
-  "seed": 877197321,
   "tile_radius": 300,
   "elevation": {
     "octaves": 3,
@@ -12,7 +11,7 @@
     "octaves": 1,
     "frequency": 2.0,
     "lacunarity": 2.0,
-    "persistence": 0.25,
+    "persistence": 1.0,
     "exponent": 1.0
   }
 }
