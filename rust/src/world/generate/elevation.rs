@@ -1,18 +1,18 @@
 use crate::world::{
     generate::{Generate, TileNoiseFn},
     hex::{HasHexPosition, HexPointMap},
-    tile::{Tile, TileBuilder},
-    WorldConfig,
+    tile::TileBuilder,
+    World, WorldConfig,
 };
 use derive_more::Display;
-use noise::{BasicMulti, NoiseFn};
+use noise::{Fbm, NoiseFn};
 use rand_pcg::Pcg64;
 
 /// Generate an elevation map using a noise function.
 #[derive(Clone, Debug, Display)]
 #[display(fmt = "Elevation Generator")]
 pub struct ElevationGenerator {
-    noise_fn: TileNoiseFn<BasicMulti>,
+    noise_fn: TileNoiseFn<Fbm>,
 }
 
 impl ElevationGenerator {
@@ -21,7 +21,7 @@ impl ElevationGenerator {
             noise_fn: TileNoiseFn::new(
                 config,
                 &config.elevation,
-                Tile::ELEVATION_RANGE,
+                World::ELEVATION_RANGE,
             ),
         }
     }

@@ -25,6 +25,8 @@ use rand::SeedableRng;
 use rand_pcg::Pcg64;
 use std::fmt::{Debug, Display};
 
+use super::World;
+
 pub struct WorldBuilder {
     config: WorldConfig,
     rng: Pcg64,
@@ -118,12 +120,17 @@ impl<F: NoiseFn<[f64; 3]>> TileNoiseFn<F> {
     const NOISE_FN_OUTPUT_RANGE: NumRange<f64> = NumRange::new(-1.0, 1.0);
 
     /// Initialize a wrapper around the given function.
-    fn from_fn(noise_fn: F, output_range: NumRange<f64>) -> Self {
+    fn from_fn(
+        noise_fn: F,
+        world_config: &WorldConfig,
+        output_range: NumRange<f64>,
+    ) -> Self {
+        let radius = world_config.tile_radius as f64;
         Self {
             noise_fn,
-            // The noise function doesn't give interesting output for whole
-            // number inputs, so we need to map this down to decimal numbers
-            tile_pos_range: NumRange::new(-100.0, 100.0),
+            // The noise functions expect input in [-1, 1], so we need this to
+            // map our tile positions
+            tile_pos_range: NumRange::new(-radius, radius),
             output_range,
         }
     }
@@ -151,14 +158,13 @@ impl<F: Default + Seedable + MultiFractal + NoiseFn<[f64; 3]>> TileNoiseFn<F> {
     ) -> Self {
         // Configure the noise function
         let noise_fn = F::default()
-            // Mask off the top 32 bits
-            .set_seed(world_config.seed_u32())
+            .set_seed(world_config.seed_u32()) // Mask off the top 32 bits
             .set_octaves(fn_config.octaves)
             .set_frequency(fn_config.frequency)
             .set_lacunarity(fn_config.lacunarity)
             .set_persistence(fn_config.persistence);
 
-        Self::from_fn(noise_fn, output_range)
+        Self::from_fn(noise_fn, world_config, output_range)
     }
 }
 

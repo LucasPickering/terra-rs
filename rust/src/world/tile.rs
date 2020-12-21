@@ -1,8 +1,8 @@
 use crate::{
-    util::{Color3, NumRange},
+    util::Color3,
     world::{
         hex::{HasHexPosition, HexPoint, HexPointMap},
-        Biome,
+        Biome, World,
     },
 };
 use wasm_bindgen::prelude::*;
@@ -14,11 +14,6 @@ pub struct Tile {
     elevation: f64,
     humidity: f64,
     biome: Biome,
-}
-
-impl Tile {
-    pub const ELEVATION_RANGE: NumRange<f64> = NumRange::new(-100.0, 100.0);
-    pub const HUMIDITY_RANGE: NumRange<f64> = NumRange::new(0.0, 1.0);
 }
 
 #[wasm_bindgen]
@@ -38,8 +33,8 @@ impl Tile {
     /// scaling during rendering.
     #[wasm_bindgen(getter)]
     pub fn height(&self) -> f64 {
-        Self::ELEVATION_RANGE
-            .map(&Self::ELEVATION_RANGE.zeroed(), self.elevation)
+        World::ELEVATION_RANGE
+            .map(&World::ELEVATION_RANGE.zeroed(), self.elevation)
     }
 
     #[wasm_bindgen(getter)]
@@ -57,21 +52,20 @@ impl Tile {
     #[wasm_bindgen]
     pub fn color(&self, lens: TileLens) -> Color3 {
         match lens {
-            TileLens::Composite => {
-                let normal_elev =
-                    Self::ELEVATION_RANGE.normalize(self.elevation()) as f32;
-                Ok(self.biome().color() * normal_elev)
-            }
             TileLens::Biome => Ok(self.biome.color()),
             TileLens::Elevation => {
                 let normal_elev =
-                    Self::ELEVATION_RANGE.normalize(self.elevation()) as f32;
-                Color3::new(1.0, normal_elev, normal_elev)
+                    World::ELEVATION_RANGE.normalize(self.elevation()) as f32;
+                // 0 -> white
+                // 1 -> red
+                Color3::new(1.0, 1.0 - normal_elev, 1.0 - normal_elev)
             }
             TileLens::Humidity => {
                 let normal_humidity =
-                    Self::HUMIDITY_RANGE.normalize(self.humidity()) as f32;
-                Color3::new(normal_humidity, normal_humidity, 1.0)
+                    World::HUMIDITY_RANGE.normalize(self.humidity()) as f32;
+                // 0 -> white
+                // 1 -> green
+                Color3::new(1.0 - normal_humidity, 1.0, 1.0 - normal_humidity)
             }
         }
         .unwrap()
@@ -160,8 +154,7 @@ pub type TileMap = HexPointMap<Tile>;
 #[wasm_bindgen]
 #[derive(Copy, Clone, Debug)]
 pub enum TileLens {
-    Composite,
+    Biome,
     Elevation,
     Humidity,
-    Biome,
 }

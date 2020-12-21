@@ -1,8 +1,8 @@
 use crate::world::{
     generate::{Generate, TileNoiseFn},
     hex::{HasHexPosition, HexPointMap},
-    tile::{Tile, TileBuilder},
-    WorldConfig,
+    tile::TileBuilder,
+    World, WorldConfig,
 };
 use derive_more::Display;
 use noise::{BasicMulti, NoiseFn};
@@ -21,7 +21,7 @@ impl HumidityGenerator {
             noise_fn: TileNoiseFn::new(
                 config,
                 &config.humidity,
-                Tile::HUMIDITY_RANGE,
+                World::HUMIDITY_RANGE,
             ),
         }
     }

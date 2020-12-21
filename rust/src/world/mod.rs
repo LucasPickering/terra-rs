@@ -4,7 +4,7 @@ pub mod tile;
 
 use crate::{
     timed,
-    util::Color3,
+    util::{Color3, NumRange},
     world::{generate::WorldBuilder, tile::TileMap},
     WorldConfig,
 };
@@ -83,6 +83,8 @@ impl World {
     /// at OR below _could_ be ocean, but the actual chance depends upon the
     /// ocean generation logic.
     pub const SEA_LEVEL: f64 = 0.0;
+    pub const ELEVATION_RANGE: NumRange<f64> = NumRange::new(-100.0, 100.0);
+    pub const HUMIDITY_RANGE: NumRange<f64> = NumRange::new(0.0, 1.0);
 
     pub fn tiles(&self) -> &TileMap {
         &self.tiles

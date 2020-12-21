@@ -11,10 +11,9 @@ export interface InputConfig {
    */
   bindings: {
     toggleDebugOverlay: string;
-    lensComposite: string;
+    lensBiome: string;
     lensElevation: string;
     lensHumidity: string;
-    lensBiome: string;
   };
 }
 
@@ -27,10 +26,9 @@ function isInputAction(s: string): s is InputAction {
 const DEFAULT_INPUT_CONFIG: InputConfig = {
   bindings: {
     toggleDebugOverlay: "`",
-    lensComposite: "1",
+    lensBiome: "1",
     lensElevation: "2",
     lensHumidity: "3",
-    lensBiome: "4",
   },
 };
 
@@ -88,17 +86,14 @@ class InputHandler {
           this.scene.debugLayer.show();
         }
         break;
-      case "lensComposite":
-        this.worldRenderer.updateTileColors(TileLens.Composite);
+      case "lensBiome":
+        this.worldRenderer.updateTileColors(TileLens.Biome);
         break;
       case "lensElevation":
         this.worldRenderer.updateTileColors(TileLens.Elevation);
         break;
       case "lensHumidity":
         this.worldRenderer.updateTileColors(TileLens.Humidity);
-        break;
-      case "lensBiome":
-        this.worldRenderer.updateTileColors(TileLens.Biome);
         break;
     }
   }

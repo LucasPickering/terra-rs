@@ -60,8 +60,8 @@ class WorldRenderer {
       return [tile, idx];
     });
 
-    this.tileLens = TileLens.Composite;
-    this.updateTileColors(TileLens.Composite);
+    this.tileLens = TileLens.Biome;
+    this.updateTileColors(this.tileLens);
   }
 
   updateTileColors(lens: TileLensType): void {
