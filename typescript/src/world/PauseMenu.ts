@@ -1,29 +1,33 @@
-import { AdvancedDynamicTexture, Button, Rectangle } from "@babylonjs/gui";
+import { Engine, Scene, UniversalCamera, Vector3 } from "@babylonjs/core";
+import { AdvancedDynamicTexture, XmlLoader } from "@babylonjs/gui";
+import WorldScene from "./WorldScene";
 
 /**
  * In-game pause menu
  */
 class PauseMenu {
+  private scene: Scene;
   private texture: AdvancedDynamicTexture;
-  private container: Rectangle;
 
-  constructor() {
+  constructor(engine: Engine, worldScene: WorldScene) {
+    this.scene = new Scene(engine);
+    new UniversalCamera("camera", new Vector3(0, 0, 0), this.scene);
     this.texture = AdvancedDynamicTexture.CreateFullscreenUI(
       "worldGenMenu",
-      false
+      true,
+      this.scene
     );
 
-    // Add a container for the menu so we can toggle its visible easily
-    this.container = new Rectangle();
-    this.container.isVisible = false;
-    this.texture.addControl(this.container);
-
-    const button = Button.CreateSimpleButton("button1", "Click My Ass");
-    this.container.addControl(button);
+    const xmlLoader = new XmlLoader();
+    xmlLoader.loadLayout("/gui/pause.xml", this.texture, () => {
+      xmlLoader.getNodeById("unpause").onPointerUpObservable.add(() => {
+        worldScene.setPaused(false);
+      });
+    });
   }
 
-  setVisible(visible: boolean): void {
-    this.container.isVisible = visible;
+  render(): void {
+    this.scene.render();
   }
 }
 

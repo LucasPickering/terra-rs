@@ -4,12 +4,14 @@ import "@babylonjs/loaders/glTF";
 import { Engine } from "@babylonjs/core";
 import WorldScene from "./world/WorldScene";
 
+const { Terra } = await import("./wasm");
+
 const CANVAS_ID = "game-canvas";
 
 /**
  * Top-level game class
  */
-class App {
+export class App {
   constructor() {
     const canvas = document.getElementById(
       CANVAS_ID
@@ -19,9 +21,12 @@ class App {
       throw new Error(`Could not find canvas by ID: ${CANVAS_ID}`);
     }
 
+    // Initialize Terra once, which will let us generate worlds
+    const terra = new Terra();
+
     // initialize babylon scene and engine
     const engine = new Engine(canvas, false, { audioEngine: false }, true);
-    const scene = new WorldScene(engine);
+    const scene = new WorldScene(terra, engine);
 
     // run the main render loop
     engine.runRenderLoop(() => {

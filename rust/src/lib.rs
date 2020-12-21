@@ -44,12 +44,18 @@ pub struct Terra;
 
 #[wasm_bindgen]
 impl Terra {
-    /// Initialize a new world
-    #[wasm_bindgen]
-    pub fn new_world(config: JsValue) -> Result<World, JsValue> {
+    /// Initialize global state needed for world generation. Should be called
+    /// once per app instance.
+    #[wasm_bindgen(constructor)]
+    pub fn initialize() -> Self {
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));
         wasm_logger::init(wasm_logger::Config::default());
+        Self
+    }
 
+    /// Generate a new world with the given config.
+    #[wasm_bindgen]
+    pub fn generate_world(&self, config: JsValue) -> Result<World, JsValue> {
         info!("Loading config");
         let config: WorldConfig = serde_wasm_bindgen::from_value(config)?;
         info!("Loaded config: {:#?}", &config);

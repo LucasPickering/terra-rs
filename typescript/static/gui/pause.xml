@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<root>
+  <Rectangle id="firstContainer" background="gray">
+    <Slider id="elevationOctave" />
+    <Button id="unpause" width="300px" height="40px" background="red">
+      <TextBlock text="Return to World" />
+    </Button>
+  </Rectangle>
+</root>

@@ -1,6 +1,5 @@
 import { KeyboardEventTypes, KeyboardInfo } from "@babylonjs/core";
 import { assertUnreachable, RecursivePartial } from "../util";
-import WorldRenderer from "./WorldRenderer";
 import WorldScene from "./WorldScene";
 const { TileLens } = await import("../wasm");
 
@@ -40,12 +39,10 @@ class InputHandler {
   private config: InputConfig;
   private keyToEvent: Map<string, InputAction>;
   private scene: WorldScene;
-  private worldRenderer: WorldRenderer;
 
   constructor(
     config: RecursivePartial<InputConfig> | undefined,
-    scene: WorldScene,
-    worldRenderer: WorldRenderer
+    scene: WorldScene
   ) {
     this.config = {
       ...DEFAULT_INPUT_CONFIG,
@@ -56,7 +53,6 @@ class InputHandler {
       },
     };
     this.scene = scene;
-    this.worldRenderer = worldRenderer;
 
     this.keyToEvent = new Map();
     Object.entries(this.config.bindings).forEach(([key, value]) => {
@@ -84,24 +80,23 @@ class InputHandler {
   private handleAction(action: InputAction): void {
     switch (action) {
       case "pause":
-        this.scene.setPause(true);
+        this.scene.setPaused(true);
         break;
       case "toggleDebugOverlay":
         this.scene.toggleDebugOverlay();
         break;
       case "lensBiome":
-        this.worldRenderer.updateTileColors(TileLens.Biome);
+        this.scene.setTileLens(TileLens.Biome);
         break;
       case "lensElevation":
-        this.worldRenderer.updateTileColors(TileLens.Elevation);
+        this.scene.setTileLens(TileLens.Elevation);
         break;
       case "lensHumidity":
-        this.worldRenderer.updateTileColors(TileLens.Humidity);
+        this.scene.setTileLens(TileLens.Humidity);
         break;
       // Make sure this switch is exhaustive
       default:
         assertUnreachable(action);
-        break;
     }
   }
 }
