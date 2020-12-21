@@ -1,5 +1,5 @@
 use crate::{
-    util::Color3,
+    util::{Color3, NumRange},
     world::{
         hex::{HasHexPosition, HexPoint, HexPointMap},
         Biome, World,
@@ -13,6 +13,7 @@ pub struct Tile {
     position: HexPoint,
     elevation: f64,
     humidity: f64,
+    runoff_acc: f64,
     biome: Biome,
 }
 
@@ -67,6 +68,16 @@ impl Tile {
                 // 1 -> green
                 Color3::new(1.0 - normal_humidity, 1.0, 1.0 - normal_humidity)
             }
+            TileLens::Runoff => {
+                let normal_runoff = NumRange::new(0.0, 10.0)
+                    .value(self.runoff_acc)
+                    .normalize()
+                    .clamp()
+                    .inner() as f32;
+                // 0 -> white
+                // 1 -> blue
+                Color3::new(1.0 - normal_runoff, 1.0 - normal_runoff, 1.0)
+            }
         }
         .unwrap()
     }
@@ -90,6 +101,7 @@ pub struct TileBuilder {
     elevation: Option<f64>,
     humidity: Option<f64>,
     biome: Option<Biome>,
+    runoff_acc: f64,
 }
 
 impl TileBuilder {
@@ -99,6 +111,7 @@ impl TileBuilder {
             elevation: None,
             humidity: None,
             biome: None,
+            runoff_acc: 0.0,
         }
     }
 
@@ -108,6 +121,7 @@ impl TileBuilder {
             elevation: self.elevation.unwrap(),
             humidity: self.humidity.unwrap(),
             biome: self.biome.unwrap(),
+            runoff_acc: self.runoff_acc,
         }
     }
 
@@ -157,4 +171,5 @@ pub enum TileLens {
     Biome,
     Elevation,
     Humidity,
+    Runoff,
 }

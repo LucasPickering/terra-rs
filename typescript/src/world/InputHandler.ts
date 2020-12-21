@@ -10,6 +10,7 @@ const INPUT_ACTIONS = [
   "lensBiome",
   "lensElevation",
   "lensHumidity",
+  "lensRunoff",
 ] as const;
 type InputAction = typeof INPUT_ACTIONS[number];
 
@@ -33,6 +34,7 @@ const DEFAULT_INPUT_CONFIG: InputConfig = {
     lensBiome: "1",
     lensElevation: "2",
     lensHumidity: "3",
+    lensRunoff: "4",
   },
 };
 
@@ -91,6 +93,9 @@ class InputHandler {
         break;
       case "lensHumidity":
         this.scene.setTileLens(TileLens.Humidity);
+        break;
+      case "lensRunoff":
+        this.scene.setTileLens(TileLens.Runoff);
         break;
       // Make sure this switch is exhaustive
       default:
