@@ -22,8 +22,6 @@ pub struct NoiseFnConfig {
 /// same config will always be identical.
 #[derive(Copy, Clone, Debug, Deserialize)]
 pub struct WorldConfig {
-    // this causes a crash rn
-    // #[serde(default = "rand::random")]
     pub seed: u64,
     pub tile_radius: usize,
     pub elevation: NoiseFnConfig,
