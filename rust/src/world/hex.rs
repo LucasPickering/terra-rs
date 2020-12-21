@@ -1,14 +1,16 @@
-use derive_more::Display;
+use derive_more::{Add, Display};
+use indexmap::IndexMap;
 use std::{
-    collections::{BTreeMap, VecDeque},
+    collections::VecDeque,
+    hash::Hash,
     iter::FromIterator,
-    ops::{self, Deref, DerefMut},
+    ops::{Deref, DerefMut},
 };
 use strum::{EnumIter, IntoEnumIterator};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-#[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Display)]
+#[derive(Copy, Clone, Debug, Eq, Display, Add)]
 #[display(fmt = "({}, {}, {})", x, y, z)]
 pub struct HexPoint {
     pub x: isize,
@@ -24,28 +26,29 @@ impl HexPoint {
     }
 }
 
-impl ops::Add<HexPoint> for HexPoint {
-    type Output = HexPoint;
+impl PartialEq for HexPoint {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y
+    }
+}
 
-    fn add(self, rhs: HexPoint) -> Self::Output {
-        Self {
-            x: self.x + rhs.x,
-            y: self.y + rhs.y,
-            z: self.z + rhs.z,
-        }
+impl Hash for HexPoint {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.x.hash(state);
+        self.y.hash(state);
     }
 }
 
 /// A map of hex-positioned items, keyed by their position.
 #[derive(Clone, Debug, Default)]
 pub struct HexPointMap<T> {
-    map: BTreeMap<HexPoint, T>,
+    map: IndexMap<HexPoint, T>,
 }
 
 impl<T> HexPointMap<T> {
     pub fn new() -> Self {
         Self {
-            map: BTreeMap::new(),
+            map: IndexMap::new(),
         }
     }
 
@@ -100,7 +103,7 @@ impl<T> HexPointMap<T> {
         // Grab the first unchecked item and start building a cluster around it.
         // This loop runs once per generated cluster, plus once per each failed
         // attempt at a cluster (where the first item fails the predicate)
-        while let Some(first_entry) = remaining.pop_first() {
+        while let Some(first_entry) = remaining.pop() {
             let mut cluster = HexPointMap::new();
             // Start our BFS. We'll use a queue of the next items to check, and
             // seed it with our first item. It doesn't seem to matter if we
@@ -158,8 +161,8 @@ impl FromIterator<HexPoint> for HexPointMap<()> {
 }
 
 impl<T> IntoIterator for HexPointMap<T> {
-    type Item = <BTreeMap<HexPoint, T> as IntoIterator>::Item;
-    type IntoIter = <BTreeMap<HexPoint, T> as IntoIterator>::IntoIter;
+    type Item = <IndexMap<HexPoint, T> as IntoIterator>::Item;
+    type IntoIter = <IndexMap<HexPoint, T> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         self.map.into_iter()
@@ -167,7 +170,7 @@ impl<T> IntoIterator for HexPointMap<T> {
 }
 
 impl<T> Deref for HexPointMap<T> {
-    type Target = BTreeMap<HexPoint, T>;
+    type Target = IndexMap<HexPoint, T>;
 
     fn deref(&self) -> &Self::Target {
         &self.map
