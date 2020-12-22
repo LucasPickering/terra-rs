@@ -16,19 +16,14 @@ use wasm_bindgen::prelude::*;
 /// elapsed time, as a [Duration](std::time::Duration).
 #[macro_export]
 macro_rules! timed {
-    ($ex:expr) => {{
-        use std::time::Duration;
+    ($label:expr, $ex:expr) => {{
+        use web_sys::console;
 
-        // https://developer.mozilla.org/en-US/docs/Web/API/Performance/now
-        let perf = web_sys::window()
-            .expect("should have a Window")
-            .performance()
-            .expect("should have a Performance");
-        let start = perf.now();
+        // https://developer.mozilla.org/en-US/docs/Web/API/console/time
+        console::time_with_label($label);
         let value = $ex;
-        let elapsed = perf.now() - start;
-        let elapsed = Duration::from_secs_f64(elapsed / 1000.0);
-        (value, elapsed)
+        console::time_end_with_label($label);
+        value
     }};
 }
 

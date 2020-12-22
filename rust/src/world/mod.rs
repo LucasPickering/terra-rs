@@ -92,9 +92,10 @@ impl World {
 
     pub fn generate(config: WorldConfig) -> Self {
         info!("Generating world");
-        let (tiles, elapsed) =
-            timed!(WorldBuilder::new(config).generate_world());
-        info!("Generated world in {}ms", elapsed.as_millis());
+        let tiles = timed!(
+            "World generation",
+            WorldBuilder::new(config).generate_world()
+        );
         Self { config, tiles }
     }
 }

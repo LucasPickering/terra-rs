@@ -20,7 +20,7 @@ use crate::{
     },
     NoiseFnConfig,
 };
-use log::{debug, info};
+use log::info;
 use noise::{MultiFractal, NoiseFn, Seedable};
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
@@ -35,7 +35,7 @@ pub struct WorldBuilder {
 impl WorldBuilder {
     pub fn new(config: WorldConfig) -> Self {
         // Initialize each tile
-        let (tiles, elapsed) = timed!({
+        let tiles = timed!("World initialization", {
             // Initialize a set of tiles with no data
             let mut tiles = HexPointMap::new();
             let radius: isize = config.tile_radius as isize;
@@ -54,11 +54,7 @@ impl WorldBuilder {
         });
 
         // The final count should always be `4r^2 + 2r + 1`, where r is radius
-        info!(
-            "Initialized world with {} tiles in {}ms",
-            tiles.len(),
-            elapsed.as_millis()
-        );
+        info!("Initialized world with {} tiles", tiles.len(),);
         Self {
             config,
             rng: Pcg64::seed_from_u64(config.seed),
@@ -86,12 +82,10 @@ impl WorldBuilder {
 
     /// A helper to run a generation step on this builder.
     fn apply_generator(&mut self, generator: impl Generate) {
-        let ((), elapsed) = timed!(generator.generate(
-            &self.config,
-            &mut self.rng,
-            &mut self.tiles,
-        ));
-        debug!("{} took {}ms", generator, elapsed.as_millis());
+        timed!(
+            &generator.to_string(),
+            generator.generate(&self.config, &mut self.rng, &mut self.tiles,)
+        );
     }
 }
 

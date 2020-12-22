@@ -69,7 +69,7 @@ fn sim_continent_runoff(mut continent: HexPointMap<&mut TileBuilder>) {
                 let adj_elev = match continent.get(&adj_pos) {
                     // Adjacent tile isn't part of this continent, so assume
                     // it's ocean. (Right now that isn't entirely true because
-                    // the map gets got off, but at some point we'll ensure that
+                    // the map gets cut off, but at some point we'll ensure that
                     // the map always has a water boundary)
                     None => World::SEA_LEVEL,
                     Some(adj_tile) => adj_tile.elevation().unwrap(),
