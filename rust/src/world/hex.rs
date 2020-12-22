@@ -1,4 +1,5 @@
 use derive_more::{Add, Display};
+use fnv::FnvBuildHasher;
 use indexmap::IndexMap;
 use std::{
     collections::VecDeque,
@@ -43,13 +44,22 @@ impl Hash for HexPoint {
 #[derive(Clone, Debug, Default)]
 pub struct HexPointMap<T> {
     // TODO investigate using a faster hasher here
-    map: IndexMap<HexPoint, T>,
+    map: IndexMap<HexPoint, T, FnvBuildHasher>,
 }
 
 impl<T> HexPointMap<T> {
     pub fn new() -> Self {
         Self {
-            map: IndexMap::new(),
+            map: IndexMap::default(),
+        }
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            map: IndexMap::with_capacity_and_hasher(
+                capacity,
+                FnvBuildHasher::default(),
+            ),
         }
     }
 
@@ -168,7 +178,7 @@ impl<T> IntoIterator for HexPointMap<T> {
 }
 
 impl<T> Deref for HexPointMap<T> {
-    type Target = IndexMap<HexPoint, T>;
+    type Target = IndexMap<HexPoint, T, FnvBuildHasher>;
 
     fn deref(&self) -> &Self::Target {
         &self.map

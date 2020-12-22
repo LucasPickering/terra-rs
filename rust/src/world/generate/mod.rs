@@ -36,10 +36,14 @@ impl WorldBuilder {
     pub fn new(config: WorldConfig) -> Self {
         // Initialize each tile
         let tiles = timed!("World initialization", {
-            // Initialize a set of tiles with no data
-            let mut tiles = HexPointMap::new();
-            let radius: isize = config.tile_radius as isize;
+            // We'll always have (2r + 1)^2 tiles, because the range for x and y
+            // is [-r, r]
+            let x = 2 * config.tile_radius + 1;
+            let capacity = x * x;
+            let mut tiles = HexPointMap::with_capacity(capacity);
 
+            // Initialize a set of tiles with no data
+            let radius: isize = config.tile_radius as isize;
             for x in -radius..=radius {
                 for y in -radius..=radius {
                     // x+y+z == 0 always, so we can derive z from x & y.

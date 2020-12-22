@@ -441,6 +441,7 @@ dependencies = [
  "anyhow",
  "console_error_panic_hook",
  "derive_more",
+ "fnv",
  "getrandom",
  "indexmap",
  "js-sys",
