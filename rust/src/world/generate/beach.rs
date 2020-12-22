@@ -3,7 +3,7 @@ use crate::{
         generate::Generate,
         hex::{HasHexPosition, HexPointMap},
         tile::TileBuilder,
-        Biome, BiomeType,
+        Biome,
     },
     WorldConfig,
 };
@@ -38,15 +38,12 @@ impl Generate for BeachGenerator {
         let to_paint: HexPointMap<()> = tiles
             .values()
             .filter(|tile| {
+                // Does this tile have no biome set, and is it adjacent to
+                // water?
                 tile.biome().is_none()
-                    && tiles.adjacents(tile.position()).any(|(_, adj_tile)| {
-                        match adj_tile.biome() {
-                            Some(biome) => {
-                                biome.biome_type() == BiomeType::Water
-                            }
-                            None => false,
-                        }
-                    })
+                    && tiles
+                        .adjacents(tile.position())
+                        .any(|adj_tile| adj_tile.is_water())
             })
             .map(|tile| tile.position())
             .collect();

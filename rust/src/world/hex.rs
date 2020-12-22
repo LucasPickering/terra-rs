@@ -42,6 +42,7 @@ impl Hash for HexPoint {
 /// A map of hex-positioned items, keyed by their position.
 #[derive(Clone, Debug, Default)]
 pub struct HexPointMap<T> {
+    // TODO investigate using a faster hasher here
     map: IndexMap<HexPoint, T>,
 }
 
@@ -55,13 +56,10 @@ impl<T> HexPointMap<T> {
     /// Find all the items adjacent to the given position. This can return up to
     /// 6 items, but will return less if there are gaps in the map or the
     /// position is at the edge.
-    pub fn adjacents(
-        &self,
-        pos: HexPoint,
-    ) -> impl Iterator<Item = (HexPoint, &T)> {
+    pub fn adjacents(&self, pos: HexPoint) -> impl Iterator<Item = &T> {
         HexDirection::iter().filter_map(move |dir| {
             let adj_pos = pos + dir.offset();
-            Some((adj_pos, self.map.get(&adj_pos)?))
+            Some(self.map.get(&adj_pos)?)
         })
     }
 
@@ -194,7 +192,7 @@ pub trait HasHexPosition: Sized {
 }
 
 /// The 6 directions on the hex axes. Left/right is aligned with the x axis
-#[derive(Copy, Clone, Debug, EnumIter)]
+#[derive(Copy, Clone, Debug, EnumIter, PartialEq, Eq, Hash)]
 pub enum HexDirection {
     Up,
     UpRight,

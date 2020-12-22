@@ -2,7 +2,7 @@ use crate::{
     util::{Color3, NumRange},
     world::{
         hex::{HasHexPosition, HexPoint, HexPointMap},
-        Biome, World,
+        Biome, BiomeType, World,
     },
 };
 use wasm_bindgen::prelude::*;
@@ -13,6 +13,8 @@ pub struct Tile {
     position: HexPoint,
     elevation: f64,
     humidity: f64,
+    /// Amount of runoff water that this tile holds. This uses the same scale
+    /// as elevation.
     runoff_acc: f64,
     biome: Biome,
 }
@@ -69,9 +71,11 @@ impl Tile {
                 Color3::new(1.0 - normal_humidity, 1.0, 1.0 - normal_humidity)
             }
             TileLens::Runoff => {
-                let normal_runoff = NumRange::new(0.0, 10.0)
+                let normal_runoff = NumRange::new(0.0, 1.0)
                     .value(self.runoff_acc)
                     .normalize()
+                    // Runoff doesn't have a fixed range so we have to clamp
+                    // this to make sure we don't overflow the color value
                     .clamp()
                     .inner() as f32;
                 // 0 -> white
@@ -95,13 +99,13 @@ impl HasHexPosition for Tile {
 /// Since the fields may not be defined, the getters all panic if the field
 /// has not be set. This makes it easy to catch bugs where we're trying to use
 /// world values that haven't been generated yet.
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct TileBuilder {
     position: HexPoint,
     elevation: Option<f64>,
     humidity: Option<f64>,
     biome: Option<Biome>,
-    runoff_acc: f64,
+    runoff: f64,
 }
 
 impl TileBuilder {
@@ -111,7 +115,7 @@ impl TileBuilder {
             elevation: None,
             humidity: None,
             biome: None,
-            runoff_acc: 0.0,
+            runoff: 0.0,
         }
     }
 
@@ -121,7 +125,7 @@ impl TileBuilder {
             elevation: self.elevation.unwrap(),
             humidity: self.humidity.unwrap(),
             biome: self.biome.unwrap(),
-            runoff_acc: self.runoff_acc,
+            runoff_acc: self.runoff,
         }
     }
 
@@ -153,6 +157,39 @@ impl TileBuilder {
     /// Set the biome for this tile.
     pub fn set_biome(&mut self, biome: Biome) {
         self.biome = Some(biome);
+    }
+
+    /// TODO
+    pub fn add_runoff(&mut self, runoff: f64) {
+        if runoff < 0.0 {
+            panic!("Cannot add negative runoff. Try remove_runoff instead");
+        }
+        self.runoff += runoff;
+    }
+
+    /// Reset the runoff on this tile to 0 and return whatever amount was here
+    pub fn clear_runoff(&mut self) -> f64 {
+        let runoff = self.runoff;
+        self.runoff = 0.0;
+        runoff
+    }
+
+    /// Convenience method to check if this tile is land. Will return false if
+    /// the tile is water OR has no biome set.
+    pub fn is_land(&self) -> bool {
+        match self.biome {
+            Some(biome) => biome.biome_type() == BiomeType::Land,
+            None => false,
+        }
+    }
+
+    /// Convenience method to check if this tile is water. Will return false if
+    /// the tile is land OR has no biome set.
+    pub fn is_water(&self) -> bool {
+        match self.biome {
+            Some(biome) => biome.biome_type() == BiomeType::Water,
+            None => false,
+        }
     }
 }
 

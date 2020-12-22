@@ -3,6 +3,7 @@ mod biome;
 mod elevation;
 mod humidity;
 mod ocean;
+mod runoff;
 
 use crate::{
     timed,
@@ -11,7 +12,7 @@ use crate::{
         generate::{
             beach::BeachGenerator, biome::BiomePainter,
             elevation::ElevationGenerator, humidity::HumidityGenerator,
-            ocean::OceanGenerator,
+            ocean::OceanGenerator, runoff::RunoffGenerator,
         },
         hex::{HexPoint, HexPointMap},
         tile::{TileBuilder, TileMap},
@@ -72,6 +73,7 @@ impl WorldBuilder {
         self.apply_generator(ElevationGenerator);
         self.apply_generator(HumidityGenerator);
         self.apply_generator(OceanGenerator);
+        self.apply_generator(RunoffGenerator);
         self.apply_generator(BeachGenerator);
         self.apply_generator(BiomePainter);
 
