@@ -132,7 +132,7 @@ impl<F: NoiseFn<[f64; 3]>> TileNoiseFn<F> {
     }
 
     /// Helper to map one value in a [HexPoint] to [-1, 1].
-    fn normalize_input(&self, value: isize) -> f64 {
+    fn normalize_input(&self, value: i16) -> f64 {
         self.tile_pos_range
             .map(&Self::NOISE_FN_INPUT_RANGE, value as f64)
     }

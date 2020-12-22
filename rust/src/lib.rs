@@ -23,7 +23,7 @@ pub struct NoiseFnConfig {
 #[derive(Copy, Clone, Debug, Deserialize)]
 pub struct WorldConfig {
     pub seed: u64,
-    pub tile_radius: usize,
+    pub tile_radius: u16,
     pub elevation: NoiseFnConfig,
     pub humidity: NoiseFnConfig,
 }

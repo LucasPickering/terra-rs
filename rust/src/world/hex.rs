@@ -5,50 +5,46 @@ use std::{collections::VecDeque, convert::TryInto, hash::Hash};
 use strum::{EnumIter, IntoEnumIterator};
 use wasm_bindgen::prelude::*;
 
+/// A point in a hexagon-tiled world. Each point has an x, y, and z component.
+/// See this page for info on how the 3D system works:
+/// https://www.redblobgames.com/grids/hexagons/
+///
+/// This struct actually only needs to store x and y, since x+y+z=0 for all
+/// points, so z can be derived as necessary which means we can save 33% of
+/// the memory.
+///
+/// The x and y coordinates are stored as i16s. We'll never have a world with
+/// a radius of more than 32k (that'd be ~4 billion tiles), so this saves on
+/// memory a lot.
 #[wasm_bindgen]
-#[derive(Copy, Clone, Debug, Eq, Display, Add)]
-#[display(fmt = "({}, {}, {})", x, y, z)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Display, Add)]
+#[display(fmt = "({}, {}, {})", "self.x()", "self.y()", "self.z()")]
 pub struct HexPoint {
-    x: isize,
-    y: isize,
-    /// TODO try removing this field entirely
-    z: isize,
+    x: i16,
+    y: i16,
 }
 
 #[wasm_bindgen]
 impl HexPoint {
     /// Construct a new hex point with the given x and y. Since x+y+z=0 for all
     /// points, we can derive z from x & y.
-    pub fn new(x: isize, y: isize) -> Self {
-        Self { x, y, z: -(x + y) }
+    pub fn new(x: i16, y: i16) -> Self {
+        Self { x, y }
     }
 
     #[wasm_bindgen(getter)]
-    pub fn x(&self) -> isize {
+    pub fn x(&self) -> i16 {
         self.x
     }
 
     #[wasm_bindgen(getter)]
-    pub fn y(&self) -> isize {
+    pub fn y(&self) -> i16 {
         self.y
     }
 
     #[wasm_bindgen(getter)]
-    pub fn z(&self) -> isize {
-        self.z
-    }
-}
-
-impl PartialEq for HexPoint {
-    fn eq(&self, other: &Self) -> bool {
-        self.x == other.x && self.y == other.y
-    }
-}
-
-impl Hash for HexPoint {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.x.hash(state);
-        self.y.hash(state);
+    pub fn z(&self) -> i16 {
+        -(self.x + self.y)
     }
 }
 
@@ -60,9 +56,9 @@ impl Hash for HexPoint {
 pub struct WorldMap<T> {
     /// Distance from the center of the world to the edge. 0 means the world is
     /// exactly 1 tile. 1 means 7 tiles, and so on. We frequently need to treat
-    /// this as an `isize` as well, so this cannot exceed [std::isize::MAX]!
+    /// this as an `i16` as well, so this cannot exceed [std::isize::MAX]!
     /// If it does, we're gonna have bigger problems anyway...
-    world_radius: usize,
+    world_radius: u16,
     /// Items get flattened into a vec. We can do this because we know the
     /// exact x/y bounds of the world. Items are ordered by ascending y, then
     /// ascending x. E.g. [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 0), ...]
@@ -72,18 +68,15 @@ pub struct WorldMap<T> {
 impl<T> WorldMap<T> {
     /// Initialize a new world with the given radius. The passed function will
     /// be called to initialize each item in the world.
-    pub fn new(
-        world_radius: usize,
-        initializer: impl Fn(HexPoint) -> T,
-    ) -> Self {
+    pub fn new(world_radius: u16, initializer: impl Fn(HexPoint) -> T) -> Self {
         // We'll always have (2r + 1)^2 tiles, because the range for x and y
         // is [-r, r]
-        let x = 2 * world_radius + 1;
+        let x: usize = 2 * (world_radius as usize) + 1;
         let capacity = x * x;
-        let mut vec = Vec::with_capacity(capacity);
+        let mut vec = Vec::with_capacity(capacity as usize);
 
         // Initialize a set of tiles with no data
-        let radius: isize = world_radius as isize;
+        let radius = world_radius as i16;
         for x in -radius..=radius {
             for y in -radius..=radius {
                 // x+y+z == 0 always, so we can derive z from x & y.
@@ -98,7 +91,7 @@ impl<T> WorldMap<T> {
     /// Get the number of items on one side of the world. This number squared
     /// will be the total number of items in the vec.
     fn world_dim_len(&self) -> usize {
-        2 * self.world_radius + 1
+        2 * (self.world_radius as usize) + 1
     }
 
     /// Convert the given position to an index into our vec, for doing internal
@@ -109,10 +102,8 @@ impl<T> WorldMap<T> {
         // [radius=10] (-5, 5) -> (5, 15)
         // If the position is not in the map, then one of these converions may
         // fail. In that case, do a quick getaway.
-        let x: usize =
-            (pos.x() + self.world_radius as isize).try_into().ok()?;
-        let y: usize =
-            (pos.y() + self.world_radius as isize).try_into().ok()?;
+        let x: usize = (pos.x() + self.world_radius as i16).try_into().ok()?;
+        let y: usize = (pos.y() + self.world_radius as i16).try_into().ok()?;
 
         // [radius=10] (5, 15) -> (5 * 21) + 15 -> 120
         let idx = (x * self.world_dim_len()) + y;
