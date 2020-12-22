@@ -1,7 +1,7 @@
 use crate::{
     util::{Color3, NumRange},
     world::{
-        hex::{HasHexPosition, HexPoint, HexPointMap},
+        hex::{HasHexPosition, HexPoint},
         Biome, BiomeType, World,
     },
 };
@@ -159,7 +159,7 @@ impl TileBuilder {
         self.biome = Some(biome);
     }
 
-    /// TODO
+    /// Add some amount of runoff to this tile. Amount must be non-negative!
     pub fn add_runoff(&mut self, runoff: f64) {
         if runoff < 0.0 {
             panic!("Cannot add negative runoff. Try remove_runoff instead");
@@ -198,8 +198,6 @@ impl HasHexPosition for TileBuilder {
         self.position
     }
 }
-
-pub type TileMap = HexPointMap<Tile>;
 
 /// A definition of what data is used to compute a tile's color.
 #[wasm_bindgen]

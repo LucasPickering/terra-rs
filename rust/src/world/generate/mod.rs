@@ -14,8 +14,8 @@ use crate::{
             elevation::ElevationGenerator, humidity::HumidityGenerator,
             ocean::OceanGenerator, runoff::RunoffGenerator,
         },
-        hex::{HexPoint, HexPointMap},
-        tile::{TileBuilder, TileMap},
+        hex::{HexPoint, WorldMap},
+        tile::{Tile, TileBuilder},
         WorldConfig,
     },
     NoiseFnConfig,
@@ -29,36 +29,18 @@ use std::fmt::{Debug, Display};
 pub struct WorldBuilder {
     config: WorldConfig,
     rng: Pcg64,
-    tiles: HexPointMap<TileBuilder>,
+    tiles: WorldMap<TileBuilder>,
 }
 
 impl WorldBuilder {
     pub fn new(config: WorldConfig) -> Self {
         // Initialize each tile
         let tiles = timed!("World initialization", {
-            // We'll always have (2r + 1)^2 tiles, because the range for x and y
-            // is [-r, r]
-            let x = 2 * config.tile_radius + 1;
-            let capacity = x * x;
-            let mut tiles = HexPointMap::with_capacity(capacity);
-
-            // Initialize a set of tiles with no data
-            let radius: isize = config.tile_radius as isize;
-            for x in -radius..=radius {
-                for y in -radius..=radius {
-                    // x+y+z == 0 always, so we can derive z from x & y.
-                    let pos = HexPoint::new(x, y);
-
-                    // There will be duplicate positions, when `x == y`. Avoid
-                    // an insert for those.
-                    tiles.entry(pos).or_insert_with(|| TileBuilder::new(pos));
-                }
-            }
-            tiles
+            WorldMap::new(config.tile_radius, TileBuilder::new)
         });
 
         // The final count should always be `4r^2 + 2r + 1`, where r is radius
-        info!("Initialized world with {} tiles", tiles.len(),);
+        info!("Initialized world with {} tiles", tiles.len());
         Self {
             config,
             rng: Pcg64::seed_from_u64(config.seed),
@@ -68,7 +50,7 @@ impl WorldBuilder {
 
     /// Generate a world by running a series of generation steps sequentially.
     /// Must be run from a blank slate. Outputs the finalized set of tiles.
-    pub fn generate_world(mut self) -> TileMap {
+    pub fn generate_world(mut self) -> WorldMap<Tile> {
         // Run each generation step. The order is very important!
         self.apply_generator(ElevationGenerator);
         self.apply_generator(HumidityGenerator);
@@ -78,17 +60,14 @@ impl WorldBuilder {
         self.apply_generator(BiomePainter);
 
         // Build each tile into its final value
-        self.tiles
-            .into_iter()
-            .map(|(pos, tile)| (pos, tile.build()))
-            .collect()
+        self.tiles.map(TileBuilder::build)
     }
 
     /// A helper to run a generation step on this builder.
     fn apply_generator(&mut self, generator: impl Generate) {
         timed!(
             &generator.to_string(),
-            generator.generate(&self.config, &mut self.rng, &mut self.tiles,)
+            generator.generate(&self.config, &mut self.rng, &mut self.tiles)
         );
     }
 }
@@ -105,7 +84,7 @@ trait Generate: Display {
         &self,
         config: &WorldConfig,
         rng: &mut impl Rng,
-        tiles: &mut HexPointMap<TileBuilder>,
+        tiles: &mut WorldMap<TileBuilder>,
     );
 }
 
@@ -191,9 +170,9 @@ impl<F: NoiseFn<[f64; 3]>> NoiseFn<HexPoint> for TileNoiseFn<F> {
     fn get(&self, point: HexPoint) -> f64 {
         // Map each input value to [-1, 1]
         let normalized_input = [
-            self.normalize_input(point.x),
-            self.normalize_input(point.y),
-            self.normalize_input(point.z),
+            self.normalize_input(point.x()),
+            self.normalize_input(point.y()),
+            self.normalize_input(point.z()),
         ];
         let fn_output = self.noise_fn.get(normalized_input);
         Self::NOISE_FN_OUTPUT_RANGE

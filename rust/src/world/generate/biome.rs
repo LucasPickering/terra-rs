@@ -1,7 +1,7 @@
 use crate::{
     util::NumRange,
     world::{
-        generate::Generate, hex::HexPointMap, tile::TileBuilder, Biome, World,
+        generate::Generate, hex::WorldMap, tile::TileBuilder, Biome, World,
     },
     WorldConfig,
 };
@@ -20,7 +20,7 @@ impl Generate for BiomePainter {
         &self,
         _: &WorldConfig,
         _: &mut impl Rng,
-        tiles: &mut HexPointMap<TileBuilder>,
+        tiles: &mut WorldMap<TileBuilder>,
     ) {
         // We're going to normalize all the elevations so we can use a
         // consistent set of coefficients below. We don't want to map from the
@@ -33,7 +33,7 @@ impl Generate for BiomePainter {
             NumRange::new(World::SEA_LEVEL, World::ELEVATION_RANGE.max);
 
         // Set the biome for each tile, but don't overwrite any existing biomes
-        for tile in tiles.values_mut().filter(|tile| tile.biome().is_none()) {
+        for tile in tiles.iter_mut().filter(|tile| tile.biome().is_none()) {
             // Normalize these values so we don't have to update this code when
             // we change the elevation/humidity range bounds
             let elevation =

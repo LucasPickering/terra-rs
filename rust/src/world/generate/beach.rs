@@ -1,7 +1,7 @@
 use crate::{
     world::{
         generate::Generate,
-        hex::{HasHexPosition, HexPointMap},
+        hex::{HasHexPosition, HexPointSet, WorldMap},
         tile::TileBuilder,
         Biome,
     },
@@ -25,18 +25,20 @@ impl Generate for BeachGenerator {
         &self,
         _: &WorldConfig,
         _: &mut impl Rng,
-        tiles: &mut HexPointMap<TileBuilder>,
+        tiles: &mut WorldMap<TileBuilder>,
     ) {
         // Find every tile that's adjacent to ocean/coast, which doesn't already
         // have a biome. Then set each one to either beach or cliff, based on
-        // its elevation. We have to do this in a bit of a jank way because we
-        // can't call tiles.adjacents() once we've grabbed a mutable reference.
-        // So we have to pull the positions of the target tiles into a separate
-        // set, then mutate those.
-        // Potential optimization? - do this in one pass
+        // its elevation.
 
-        let to_paint: HexPointMap<()> = tiles
-            .values()
+        // We have to do this in a bit of a jank way because we can't call
+        // tiles.adjacents() once we've grabbed a mutable reference. So we have
+        // to pull the positions of the target tiles into a separate set, then
+        // mutate those.
+        // Potential optimization - figure out a way to do this in one pass
+
+        let to_paint: HexPointSet = tiles
+            .iter()
             .filter(|tile| {
                 // Does this tile have no biome set, and is it adjacent to
                 // water?
@@ -48,8 +50,8 @@ impl Generate for BeachGenerator {
             .map(|tile| tile.position())
             .collect();
 
-        for tile in tiles.values_mut() {
-            if to_paint.contains_key(&tile.position()) {
+        for tile in tiles.iter_mut() {
+            if to_paint.contains(&tile.position()) {
                 let biome = if tile.elevation().unwrap() <= MAX_BEACH_ELEV {
                     Biome::Beach
                 } else {

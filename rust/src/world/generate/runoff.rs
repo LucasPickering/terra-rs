@@ -1,6 +1,6 @@
 use crate::world::{
     generate::Generate,
-    hex::{HasHexPosition, HexDirection, HexPoint, HexPointMap},
+    hex::{HasHexPosition, HexDirection, HexPoint, HexPointMap, WorldMap},
     tile::TileBuilder,
     World, WorldConfig,
 };
@@ -25,7 +25,7 @@ impl Generate for RunoffGenerator {
         &self,
         _: &WorldConfig,
         _: &mut impl Rng,
-        tiles: &mut HexPointMap<TileBuilder>,
+        tiles: &mut WorldMap<TileBuilder>,
     ) {
         let continents = tiles.clusters_predicate(|tile| !tile.is_water());
         for continent in continents {
@@ -59,7 +59,8 @@ fn sim_continent_runoff(mut continent: HexPointMap<&mut TileBuilder>) {
     // Build a map of runoff patterns for each tile. IMPORTANT: this map has
     // the same ordering as the continent, which allows us to do index lookups
     // instead of key lookups later. gotta go fast
-    let mut runoff_patterns: HexPointMap<RunoffPattern> = HexPointMap::new();
+    let mut runoff_patterns: HexPointMap<RunoffPattern> =
+        HexPointMap::default();
     for source_tile in continent.values() {
         // For each neighbor of this tile, determine how much water it gets.
         // This is a map of direction:elevation_diff
@@ -111,7 +112,7 @@ fn sim_continent_runoff(mut continent: HexPointMap<&mut TileBuilder>) {
     // Now that we have our runoff patterns, we can figure out how much water
     // ends up going to each terminal. We have to do this in two steps because
     // borrow checking.
-    let mut terminal_runoffs: HexPointMap<f64> = HexPointMap::new();
+    let mut terminal_runoffs: HexPointMap<f64> = HexPointMap::default();
     for (i, tile) in continent.values_mut().enumerate() {
         let to_distribute = tile.clear_runoff();
         // optimization here - look up by index

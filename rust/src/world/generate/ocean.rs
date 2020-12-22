@@ -1,7 +1,7 @@
 use crate::{
     util::NumRange,
     world::{
-        generate::Generate, hex::HexPointMap, tile::TileBuilder, Biome, World,
+        generate::Generate, hex::WorldMap, tile::TileBuilder, Biome, World,
     },
     WorldConfig,
 };
@@ -22,7 +22,7 @@ impl Generate for OceanGenerator {
         &self,
         _: &WorldConfig,
         rng: &mut impl Rng,
-        tiles: &mut HexPointMap<TileBuilder>,
+        tiles: &mut WorldMap<TileBuilder>,
     ) {
         // Find all clusters of tiles that are entirely below sea level
         let clusters = tiles.clusters_predicate(|tile| {

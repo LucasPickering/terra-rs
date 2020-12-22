@@ -1,6 +1,6 @@
 use crate::world::{
     generate::{Generate, TileNoiseFn},
-    hex::{HasHexPosition, HexPointMap},
+    hex::{HasHexPosition, WorldMap},
     tile::TileBuilder,
     World, WorldConfig,
 };
@@ -18,7 +18,7 @@ impl Generate for HumidityGenerator {
         &self,
         config: &WorldConfig,
         rng: &mut impl Rng,
-        tiles: &mut HexPointMap<TileBuilder>,
+        tiles: &mut WorldMap<TileBuilder>,
     ) {
         let noise_fn: TileNoiseFn<Fbm> = TileNoiseFn::new(
             config,
@@ -26,7 +26,7 @@ impl Generate for HumidityGenerator {
             &config.humidity,
             World::HUMIDITY_RANGE,
         );
-        for tile in tiles.values_mut() {
+        for tile in tiles.iter_mut() {
             tile.set_humidity(noise_fn.get(tile.position()));
         }
     }
