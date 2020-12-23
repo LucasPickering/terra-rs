@@ -1,7 +1,7 @@
-mod beach;
 mod biome;
 mod elevation;
 mod humidity;
+mod lake;
 mod ocean;
 mod runoff;
 
@@ -10,8 +10,8 @@ use crate::{
     util::NumRange,
     world::{
         generate::{
-            beach::BeachGenerator, biome::BiomePainter,
-            elevation::ElevationGenerator, humidity::HumidityGenerator,
+            biome::BiomePainter, elevation::ElevationGenerator,
+            humidity::HumidityGenerator, lake::LakeGenerator,
             ocean::OceanGenerator, runoff::RunoffGenerator,
         },
         hex::{HexPoint, WorldMap},
@@ -26,6 +26,7 @@ use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
 use std::fmt::{Debug, Display};
 
+/// TODO
 pub struct WorldBuilder {
     config: WorldConfig,
     rng: Pcg64,
@@ -56,7 +57,7 @@ impl WorldBuilder {
         self.apply_generator(HumidityGenerator);
         self.apply_generator(OceanGenerator);
         self.apply_generator(RunoffGenerator);
-        self.apply_generator(BeachGenerator);
+        self.apply_generator(LakeGenerator);
         self.apply_generator(BiomePainter);
 
         // Build each tile into its final value
@@ -126,7 +127,8 @@ impl<F: NoiseFn<[f64; 3]>> TileNoiseFn<F> {
             exponent,
             // The noise functions expect input in [-1, 1], so we need this to
             // map our tile positions
-            tile_pos_range: NumRange::new(-radius, radius),
+            // tile_pos_range: NumRange::new(-radius, radius),
+            tile_pos_range: NumRange::new(-100.0, 100.0),
             output_range,
         }
     }

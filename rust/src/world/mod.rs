@@ -54,20 +54,19 @@ impl Biome {
 
     pub fn color(self) -> Color3 {
         match self {
-            Self::Ocean => Color3::new(0.08, 0.30, 0.64),
-            Self::Coast => Color3::new(0.22, 0.55, 0.78),
-            Self::Lake => Color3::new(0.04, 0.55, 0.75),
+            Self::Ocean => Color3::new(0.08, 0.30, 0.64).unwrap(),
+            Self::Coast => Color3::new_int(32, 166, 178),
+            Self::Lake => Color3::new_int(72, 192, 240),
 
-            Self::Snow => Color3::new(0.75, 0.75, 0.75),
-            Self::Desert => Color3::new(0.84, 0.80, 0.42),
-            Self::Alpine => Color3::new(0.39, 0.48, 0.37),
-            Self::Jungle => Color3::new(0.17, 0.70, 0.12),
-            Self::Forest => Color3::new(0.09, 0.48, 0.0),
-            Self::Plains => Color3::new(0.68, 0.79, 0.45),
-            Self::Beach => Color3::new(0.95, 0.94, 0.35),
-            Self::Cliff => Color3::new(0.21, 0.20, 0.17),
+            Self::Snow => Color3::new(0.75, 0.75, 0.75).unwrap(),
+            Self::Desert => Color3::new(0.84, 0.80, 0.42).unwrap(),
+            Self::Alpine => Color3::new(0.39, 0.48, 0.37).unwrap(),
+            Self::Jungle => Color3::new(0.17, 0.70, 0.12).unwrap(),
+            Self::Forest => Color3::new(0.09, 0.48, 0.0).unwrap(),
+            Self::Plains => Color3::new(0.68, 0.79, 0.45).unwrap(),
+            Self::Beach => Color3::new(0.95, 0.94, 0.35).unwrap(),
+            Self::Cliff => Color3::new(0.21, 0.20, 0.17).unwrap(),
         }
-        .unwrap()
     }
 }
 

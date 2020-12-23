@@ -66,6 +66,15 @@ impl Color3 {
             blue: check_component("blue", blue)?,
         })
     }
+
+    /// Create a new RGB color from integer components in the [0,255] range.
+    pub fn new_int(red: u8, green: u8, blue: u8) -> Self {
+        Self {
+            red: red as f32 / 255.0,
+            green: green as f32 / 255.0,
+            blue: blue as f32 / 255.0,
+        }
+    }
 }
 
 // Scale a color by a constant

@@ -99,7 +99,7 @@ impl HasHexPosition for Tile {
 /// Since the fields may not be defined, the getters all panic if the field
 /// has not be set. This makes it easy to catch bugs where we're trying to use
 /// world values that haven't been generated yet.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug)] // intentionally omit Copy because it may not be possible in the future
 pub struct TileBuilder {
     position: HexPoint,
     elevation: Option<f64>,
@@ -159,12 +159,21 @@ impl TileBuilder {
         self.biome = Some(biome);
     }
 
+    /// Amount of runoff CURRENTLY on this tile (NOT the total amount that has
+    /// crossed over this tile).
+    pub fn runoff(&self) -> f64 {
+        self.runoff
+    }
+
     /// Add some amount of runoff to this tile. Amount must be non-negative!
     pub fn add_runoff(&mut self, runoff: f64) {
-        if runoff < 0.0 {
-            panic!("Cannot add negative runoff. Try remove_runoff instead");
-        }
+        assert!(runoff >= 0.0, "Must add non-negative runoff");
         self.runoff += runoff;
+    }
+
+    pub fn set_runoff(&mut self, runoff: f64) {
+        assert!(runoff > 0.0, "Must set runoff to positive value");
+        self.runoff = runoff;
     }
 
     /// Reset the runoff on this tile to 0 and return whatever amount was here

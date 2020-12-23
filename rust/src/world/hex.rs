@@ -1,7 +1,7 @@
 use derive_more::{Add, Display};
 use fnv::FnvBuildHasher;
 use indexmap::{IndexMap, IndexSet};
-use std::{collections::VecDeque, convert::TryInto, hash::Hash};
+use std::{collections::VecDeque, convert::TryInto, fmt::Debug, hash::Hash};
 use strum::{EnumIter, IntoEnumIterator};
 use wasm_bindgen::prelude::*;
 
@@ -45,6 +45,14 @@ impl HexPoint {
     #[wasm_bindgen(getter)]
     pub fn z(&self) -> i16 {
         -(self.x + self.y)
+    }
+}
+
+impl HexPoint {
+    /// Get an iterator of all the points directly adjacent to this one. The
+    /// iterator will always contain exactly 6 values.
+    pub fn adjacents(self) -> impl Iterator<Item = HexPoint> {
+        HexDirection::iter().map(move |dir| self + dir.offset())
     }
 }
 
@@ -153,11 +161,11 @@ impl<T> WorldMap<T> {
     /// 6 items, but will return less if there are gaps in the map or the
     /// position is at the edge.
     pub fn adjacents(&self, pos: HexPoint) -> impl Iterator<Item = &T> {
-        HexDirection::iter().filter_map(move |dir| self.get(pos + dir.offset()))
+        pos.adjacents().filter_map(move |adj| self.get(adj))
     }
 }
 
-impl<T: HasHexPosition> WorldMap<T> {
+impl<T: Debug + HasHexPosition> WorldMap<T> {
     /// Locate clusters of points within this map according to a predicate. All
     /// items that satisfy the predicate will be clustered such that any two
     /// satisfactory tiles that are adjacent to each other will be in a cluster
@@ -209,17 +217,16 @@ impl<T: HasHexPosition> WorldMap<T> {
                     // Remove all the adjacent items from the unclustered list
                     // map and add them to the queue
                     let rem = &mut remaining;
-                    bfs_queue.extend(HexDirection::iter().filter_map(
-                        move |dir| {
-                            let adj_pos = pos + dir.offset();
+                    bfs_queue.extend(
+                        pos.adjacents().filter_map(move |adj_pos| {
                             rem.remove_entry(&adj_pos)
-                        },
-                    ));
+                        }),
+                    );
                 }
             }
 
             if !cluster.is_empty() {
-                clusters.push(Cluster(cluster));
+                clusters.push(Cluster::new(cluster));
             }
         }
 
@@ -243,7 +250,54 @@ pub type HexPointMap<T> = IndexMap<HexPoint, T, FnvBuildHasher>;
 /// adjacent to at least one other item in the cluster (unless the cluster is a
 /// singular item).
 #[derive(Clone, Debug)]
-pub struct Cluster<T>(pub HexPointMap<T>);
+pub struct Cluster<T> {
+    pub tiles: HexPointMap<T>,
+    pub adjacents: HexPointSet,
+}
+
+impl<T: Debug> Cluster<T> {
+    pub fn new(tiles: HexPointMap<T>) -> Self {
+        let mut adjacents = HexPointSet::default();
+        for pos in tiles.keys() {
+            for adj in pos.adjacents() {
+                if !tiles.contains_key(&adj) {
+                    adjacents.insert(adj);
+                }
+            }
+        }
+        Self { tiles, adjacents }
+    }
+
+    /// The set of positions that are directly adjacent to at least one tile in
+    /// this cluster, but NOT in the cluster themselves. **These positions do
+    /// not necessarily exist in the world!** The cluster has no context of the
+    /// bounds of the world, so there's no guarantees around the validity of
+    /// these neighbors.
+    pub fn adjacents(&self) -> &HexPointSet {
+        &self.adjacents
+    }
+
+    /// TODO
+    pub fn insert(&mut self, pos: HexPoint, tile: T) {
+        // Any tile we add in should already be a neighbor of the cluster. If
+        // it isn't that means it's discontiguous which breaks the cardinal rule
+        if !self.adjacents.remove(&pos) {
+            panic!(
+                "Cannot add tile at {} to cluster {:?}, it is not adjacent!",
+                pos, self
+            );
+        }
+
+        // Add the tile to the map, and add its neighbors to our set of
+        // neighbors
+        self.tiles.insert(pos, tile);
+        let tiles = &self.tiles; // cause closure capturing is kinda dumb
+        let new_neighbors = pos
+            .adjacents()
+            .filter(|adj_pos| !tiles.contains_key(adj_pos));
+        self.adjacents.extend(new_neighbors);
+    }
+}
 
 pub trait HasHexPosition: Sized {
     fn position(&self) -> HexPoint;

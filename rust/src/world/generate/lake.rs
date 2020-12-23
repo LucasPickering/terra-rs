@@ -1,0 +1,30 @@
+use crate::{
+    world::{generate::Generate, hex::WorldMap, tile::TileBuilder, Biome},
+    WorldConfig,
+};
+use derive_more::Display;
+use rand::Rng;
+
+/// Any tile with at least this amount of runoff on it will become a lake
+const LAKE_RUNOFF_THRESHOLD: f64 = 0.1;
+
+/// TODO
+#[derive(Copy, Clone, Debug, Default, Display)]
+#[display(fmt = "Lake Generator")]
+pub struct LakeGenerator;
+
+impl Generate for LakeGenerator {
+    fn generate(
+        &self,
+        _: &WorldConfig,
+        _: &mut impl Rng,
+        tiles: &mut WorldMap<TileBuilder>,
+    ) {
+        // Set the biome for each tile, but don't overwrite any existing biomes
+        for tile in tiles.iter_mut() {
+            if tile.runoff() >= LAKE_RUNOFF_THRESHOLD {
+                tile.set_biome(Biome::Lake);
+            }
+        }
+    }
+}
