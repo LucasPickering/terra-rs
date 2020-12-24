@@ -36,7 +36,7 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
   \***********************************/
 /***/ ((module, __webpack_exports__, __webpack_require__) => {
 
-eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => __WEBPACK_DEFAULT_EXPORT__\n/* harmony export */ });\n/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ \"./node_modules/@babylonjs/core/index.js\");\n/* harmony import */ var _util__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../util */ \"./src/util.ts\");\n\n\nconst config = await __webpack_require__.e(/*! import() */ \"src_input_json\").then(__webpack_require__.t.bind(__webpack_require__, /*! ../input.json */ \"./src/input.json\", 19));\nconst { TileLens } = await __webpack_require__.e(/*! import() */ \"rust_pkg_terra-wasm_js\").then(__webpack_require__.bind(__webpack_require__, /*! ../wasm */ \"../rust/pkg/terra-wasm.js\"));\nconst INPUT_ACTIONS = [\n    \"pause\",\n    \"toggleDebugOverlay\",\n    \"lensBiome\",\n    \"lensElevation\",\n    \"lensHumidity\",\n];\nfunction isInputAction(s) {\n    return INPUT_ACTIONS.includes(s);\n}\nconst DEFAULT_INPUT_CONFIG = {\n    bindings: {\n        pause: \"ESCAPE\",\n        toggleDebugOverlay: \"`\",\n        lensBiome: \"1\",\n        lensElevation: \"2\",\n        lensHumidity: \"3\",\n    },\n};\nclass InputHandler {\n    constructor(scene) {\n        this.config = Object.assign(Object.assign(Object.assign({}, DEFAULT_INPUT_CONFIG), config), { bindings: Object.assign(Object.assign({}, DEFAULT_INPUT_CONFIG.bindings), config === null || config === void 0 ? void 0 : config.bindings) });\n        this.scene = scene;\n        this.keyToEvent = new Map();\n        Object.entries(this.config.bindings).forEach(([key, value]) => {\n            // We could potentially get garbage actions from the user's config, so\n            // validate each action here\n            if (isInputAction(key)) {\n                this.keyToEvent.set(value.toUpperCase(), key);\n            }\n            else {\n                // eslint-disable-next-line no-console\n                console.warn(\"Unknown input action:\", key);\n            }\n        });\n    }\n    handleKeyEvent(kbInfo) {\n        if (kbInfo.type === _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.KeyboardEventTypes.KEYDOWN) {\n            // Map the keyboard key to a known action\n            const action = this.keyToEvent.get(kbInfo.event.key.toUpperCase());\n            if (action) {\n                this.handleAction(action);\n            }\n        }\n    }\n    handleAction(action) {\n        switch (action) {\n            case \"pause\":\n                this.scene.setPaused(true);\n                break;\n            case \"toggleDebugOverlay\":\n                this.scene.toggleDebugOverlay();\n                break;\n            case \"lensBiome\":\n                this.scene.setTileLens(TileLens.Biome);\n                break;\n            case \"lensElevation\":\n                this.scene.setTileLens(TileLens.Elevation);\n                break;\n            case \"lensHumidity\":\n                this.scene.setTileLens(TileLens.Humidity);\n                break;\n            // Make sure this switch is exhaustive\n            default:\n                (0,_util__WEBPACK_IMPORTED_MODULE_1__.assertUnreachable)(action);\n        }\n    }\n}\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (InputHandler);\n\nreturn __webpack_exports__;\n})();\n\n//# sourceURL=webpack://terra/./src/world/InputHandler.ts?");
+eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => __WEBPACK_DEFAULT_EXPORT__\n/* harmony export */ });\n/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ \"./node_modules/@babylonjs/core/index.js\");\n/* harmony import */ var _util__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../util */ \"./src/util.ts\");\n\n\nconst config = await __webpack_require__.e(/*! import() */ \"src_input_json\").then(__webpack_require__.t.bind(__webpack_require__, /*! ../input.json */ \"./src/input.json\", 19));\nconst { TileLens } = await __webpack_require__.e(/*! import() */ \"rust_pkg_terra-wasm_js\").then(__webpack_require__.bind(__webpack_require__, /*! ../wasm */ \"../rust/pkg/terra-wasm.js\"));\nconst INPUT_ACTIONS = [\n    \"pause\",\n    \"toggleDebugOverlay\",\n    \"lensBiome\",\n    \"lensElevation\",\n    \"lensHumidity\",\n    \"lensRunoff\",\n];\nfunction isInputAction(s) {\n    return INPUT_ACTIONS.includes(s);\n}\nconst DEFAULT_INPUT_CONFIG = {\n    bindings: {\n        pause: \"ESCAPE\",\n        toggleDebugOverlay: \"`\",\n        lensBiome: \"1\",\n        lensElevation: \"2\",\n        lensHumidity: \"3\",\n        lensRunoff: \"4\",\n    },\n};\nclass InputHandler {\n    constructor(scene) {\n        this.config = Object.assign(Object.assign(Object.assign({}, DEFAULT_INPUT_CONFIG), config), { bindings: Object.assign(Object.assign({}, DEFAULT_INPUT_CONFIG.bindings), config === null || config === void 0 ? void 0 : config.bindings) });\n        this.scene = scene;\n        this.keyToEvent = new Map();\n        Object.entries(this.config.bindings).forEach(([key, value]) => {\n            // We could potentially get garbage actions from the user's config, so\n            // validate each action here\n            if (isInputAction(key)) {\n                this.keyToEvent.set(value.toUpperCase(), key);\n            }\n            else {\n                // eslint-disable-next-line no-console\n                console.warn(\"Unknown input action:\", key);\n            }\n        });\n    }\n    handleKeyEvent(kbInfo) {\n        if (kbInfo.type === _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.KeyboardEventTypes.KEYDOWN) {\n            // Map the keyboard key to a known action\n            const action = this.keyToEvent.get(kbInfo.event.key.toUpperCase());\n            if (action) {\n                this.handleAction(action);\n            }\n        }\n    }\n    handleAction(action) {\n        switch (action) {\n            case \"pause\":\n                this.scene.setPaused(true);\n                break;\n            case \"toggleDebugOverlay\":\n                this.scene.toggleDebugOverlay();\n                break;\n            case \"lensBiome\":\n                this.scene.setTileLens(TileLens.Biome);\n                break;\n            case \"lensElevation\":\n                this.scene.setTileLens(TileLens.Elevation);\n                break;\n            case \"lensHumidity\":\n                this.scene.setTileLens(TileLens.Humidity);\n                break;\n            case \"lensRunoff\":\n                this.scene.setTileLens(TileLens.Runoff);\n                break;\n            // Make sure this switch is exhaustive\n            default:\n                (0,_util__WEBPACK_IMPORTED_MODULE_1__.assertUnreachable)(action);\n        }\n    }\n}\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (InputHandler);\n\nreturn __webpack_exports__;\n})();\n\n//# sourceURL=webpack://terra/./src/world/InputHandler.ts?");
 
 /***/ }),
 
@@ -66,7 +66,7 @@ eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__
   \*********************************/
 /***/ ((module, __webpack_exports__, __webpack_require__) => {
 
-eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => __WEBPACK_DEFAULT_EXPORT__\n/* harmony export */ });\n/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ \"./node_modules/@babylonjs/core/index.js\");\n/* harmony import */ var _WorldRenderer__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./WorldRenderer */ \"./src/world/WorldRenderer.ts\");\n/* harmony import */ var _InputHandler__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./InputHandler */ \"./src/world/InputHandler.ts\");\n/* harmony import */ var _PauseMenu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./PauseMenu */ \"./src/world/PauseMenu.ts\");\n([_InputHandler__WEBPACK_IMPORTED_MODULE_2__, _WorldRenderer__WEBPACK_IMPORTED_MODULE_1__] = await Promise.all([_InputHandler__WEBPACK_IMPORTED_MODULE_2__, _WorldRenderer__WEBPACK_IMPORTED_MODULE_1__]));\n\n\n\n\n// We'll let Rust enforce the correct type here\n// eslint-disable-next-line @typescript-eslint/no-explicit-any\nconst config = await __webpack_require__.e(/*! import() */ \"src_world_json\").then(__webpack_require__.t.bind(__webpack_require__, /*! ../world.json */ \"./src/world.json\", 19));\nfunction initScene(engine) {\n    // Init world scene\n    const scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Scene(engine);\n    // do a bunch of shit to make it go zoomer fast\n    // (doesn't actually make much of a difference)\n    scene.animationsEnabled = false;\n    scene.texturesEnabled = false;\n    scene.proceduralTexturesEnabled = false;\n    scene.collisionsEnabled = false;\n    scene.physicsEnabled = false;\n    scene.fogEnabled = false;\n    scene.particlesEnabled = false;\n    scene.blockMaterialDirtyMechanism = true;\n    // Init the camera\n    const camera = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ArcRotateCamera(\"camera\", 0, Math.PI / 4, 500.0, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0.0, 200.0, 0.0), scene);\n    camera.lowerRadiusLimit = 1.0;\n    camera.upperRadiusLimit = 500.0;\n    camera.panningSensibility = 100;\n    camera.attachControl(engine.getRenderingCanvas(), true);\n    // Init world lighting\n    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.HemisphericLight(\"lightSun\", new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 1, 0), scene);\n    return scene;\n}\n/**\n * The scene that handles everything in-game\n */\nclass WorldScene {\n    constructor(terra, engine) {\n        this.terra = terra;\n        // Init world scene\n        this.scene = initScene(engine);\n        // Generate the world\n        // bullshit here to pick a random seed if we don't have one\n        if (!config.seed) {\n            config.seed = Math.round(Math.random() * Number.MAX_SAFE_INTEGER);\n        }\n        this.world = this.terra.generate_world(config);\n        this.worldRenderer = new _WorldRenderer__WEBPACK_IMPORTED_MODULE_1__.default(this.scene, this.world);\n        this.scene.freezeActiveMeshes();\n        this.inputHandler = new _InputHandler__WEBPACK_IMPORTED_MODULE_2__.default(this);\n        this.scene.onKeyboardObservable.add((kbInfo) => this.inputHandler.handleKeyEvent(kbInfo));\n        // Init pause menu\n        this.pauseMenu = new _PauseMenu__WEBPACK_IMPORTED_MODULE_3__.default(engine, this);\n        this.paused = false;\n    }\n    setPaused(paused) {\n        this.paused = paused;\n    }\n    toggleDebugOverlay() {\n        if (this.scene.debugLayer.isVisible()) {\n            this.scene.debugLayer.hide();\n        }\n        else {\n            this.scene.debugLayer.show();\n        }\n    }\n    setTileLens(lens) {\n        this.worldRenderer.updateTileColors(lens);\n    }\n    render() {\n        if (this.paused) {\n            this.pauseMenu.render();\n        }\n        else {\n            this.scene.render();\n        }\n    }\n}\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (WorldScene);\n\nreturn __webpack_exports__;\n})();\n\n//# sourceURL=webpack://terra/./src/world/WorldScene.ts?");
+eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => __WEBPACK_DEFAULT_EXPORT__\n/* harmony export */ });\n/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ \"./node_modules/@babylonjs/core/index.js\");\n/* harmony import */ var _WorldRenderer__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./WorldRenderer */ \"./src/world/WorldRenderer.ts\");\n/* harmony import */ var _InputHandler__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./InputHandler */ \"./src/world/InputHandler.ts\");\n/* harmony import */ var _PauseMenu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./PauseMenu */ \"./src/world/PauseMenu.ts\");\n([_InputHandler__WEBPACK_IMPORTED_MODULE_2__, _WorldRenderer__WEBPACK_IMPORTED_MODULE_1__] = await Promise.all([_InputHandler__WEBPACK_IMPORTED_MODULE_2__, _WorldRenderer__WEBPACK_IMPORTED_MODULE_1__]));\n\n\n\n\n// We'll let Rust enforce the correct type here\n// eslint-disable-next-line @typescript-eslint/no-explicit-any\nconst config = await __webpack_require__.e(/*! import() */ \"src_world_json\").then(__webpack_require__.t.bind(__webpack_require__, /*! ../world.json */ \"./src/world.json\", 19));\nfunction initScene(engine) {\n    // Init world scene\n    const scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Scene(engine);\n    // do a bunch of shit to make it go zoomer fast\n    // (doesn't actually make much of a difference)\n    scene.animationsEnabled = false;\n    scene.texturesEnabled = false;\n    scene.proceduralTexturesEnabled = false;\n    scene.collisionsEnabled = false;\n    scene.physicsEnabled = false;\n    scene.fogEnabled = false;\n    scene.particlesEnabled = false;\n    scene.blockMaterialDirtyMechanism = true;\n    // Init the camera\n    const camera = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ArcRotateCamera(\"camera\", 0, Math.PI / 4, 500.0, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0.0, 200.0, 0.0), scene);\n    camera.lowerRadiusLimit = 1.0;\n    camera.upperRadiusLimit = 500.0;\n    camera.panningSensibility = 100;\n    camera.attachControl(engine.getRenderingCanvas(), true);\n    // Init world lighting\n    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.HemisphericLight(\"lightSun\", new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 1, 0), scene);\n    return scene;\n}\nfunction getWorldConfig() {\n    const queryParams = new URLSearchParams(window.location.search);\n    const cfg = Object.assign({ \n        // bullshit here to pick a random seed if we don't have one\n        seed: Math.round(Math.random() * Number.MAX_SAFE_INTEGER) }, config);\n    // This is shitty but it works for now\n    const addQueryParam = (param) => {\n        const val = queryParams.get(param);\n        const parsed = parseInt(val !== null && val !== void 0 ? val : \"\", 10);\n        if (Number.isFinite(parsed)) {\n            cfg[param] = parsed;\n        }\n    };\n    addQueryParam(\"seed\");\n    addQueryParam(\"tile_radius\");\n    return cfg;\n}\n/**\n * The scene that handles everything in-game\n */\nclass WorldScene {\n    constructor(terra, engine) {\n        this.terra = terra;\n        // Init world scene\n        this.scene = initScene(engine);\n        // Generate the world\n        this.world = this.terra.generate_world(getWorldConfig());\n        this.worldRenderer = new _WorldRenderer__WEBPACK_IMPORTED_MODULE_1__.default(this.scene, this.world);\n        this.scene.freezeActiveMeshes();\n        this.inputHandler = new _InputHandler__WEBPACK_IMPORTED_MODULE_2__.default(this);\n        this.scene.onKeyboardObservable.add((kbInfo) => this.inputHandler.handleKeyEvent(kbInfo));\n        // Init pause menu\n        this.pauseMenu = new _PauseMenu__WEBPACK_IMPORTED_MODULE_3__.default(engine, this);\n        this.paused = false;\n    }\n    setPaused(paused) {\n        this.paused = paused;\n    }\n    toggleDebugOverlay() {\n        if (this.scene.debugLayer.isVisible()) {\n            this.scene.debugLayer.hide();\n        }\n        else {\n            this.scene.debugLayer.show();\n        }\n    }\n    setTileLens(lens) {\n        this.worldRenderer.updateTileColors(lens);\n    }\n    render() {\n        if (this.paused) {\n            this.pauseMenu.render();\n        }\n        else {\n            this.scene.render();\n        }\n    }\n}\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (WorldScene);\n\nreturn __webpack_exports__;\n})();\n\n//# sourceURL=webpack://terra/./src/world/WorldScene.ts?");
 
 /***/ })
 
@@ -467,13 +467,6 @@ eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__
 /******/ 		var wasmImportedFuncCache33;
 /******/ 		var wasmImportedFuncCache34;
 /******/ 		var wasmImportedFuncCache35;
-/******/ 		var wasmImportedFuncCache36;
-/******/ 		var wasmImportedFuncCache37;
-/******/ 		var wasmImportedFuncCache38;
-/******/ 		var wasmImportedFuncCache39;
-/******/ 		var wasmImportedFuncCache40;
-/******/ 		var wasmImportedFuncCache41;
-/******/ 		var wasmImportedFuncCache42;
 /******/ 		var wasmImportObjects = {
 /******/ 			"../rust/pkg/terra-wasm_bg.wasm": function() {
 /******/ 				return {
@@ -534,121 +527,93 @@ eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__
 /******/ 							if(wasmImportedFuncCache13 === undefined) wasmImportedFuncCache13 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
 /******/ 							return wasmImportedFuncCache13["__wbg_log_37120b26fb738792"](p0i32,p1i32,p2i32,p3i32);
 /******/ 						},
-/******/ 						"__wbg_warn_6add4f04160cdbba": function(p0i32,p1i32,p2i32,p3i32) {
+/******/ 						"__wbg_time_7b20e0fb24128e35": function(p0i32,p1i32) {
 /******/ 							if(wasmImportedFuncCache14 === undefined) wasmImportedFuncCache14 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache14["__wbg_warn_6add4f04160cdbba"](p0i32,p1i32,p2i32,p3i32);
+/******/ 							return wasmImportedFuncCache14["__wbg_time_7b20e0fb24128e35"](p0i32,p1i32);
 /******/ 						},
-/******/ 						"__wbg_now_7628760b7b640632": function(p0i32) {
+/******/ 						"__wbg_timeEnd_533927dc25d673d0": function(p0i32,p1i32) {
 /******/ 							if(wasmImportedFuncCache15 === undefined) wasmImportedFuncCache15 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache15["__wbg_now_7628760b7b640632"](p0i32);
+/******/ 							return wasmImportedFuncCache15["__wbg_timeEnd_533927dc25d673d0"](p0i32,p1i32);
 /******/ 						},
-/******/ 						"__wbg_instanceof_Window_49f532f06a9786ee": function(p0i32) {
+/******/ 						"__wbg_warn_6add4f04160cdbba": function(p0i32,p1i32,p2i32,p3i32) {
 /******/ 							if(wasmImportedFuncCache16 === undefined) wasmImportedFuncCache16 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache16["__wbg_instanceof_Window_49f532f06a9786ee"](p0i32);
-/******/ 						},
-/******/ 						"__wbg_performance_87e4f3b6f966469f": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache17 === undefined) wasmImportedFuncCache17 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache17["__wbg_performance_87e4f3b6f966469f"](p0i32);
+/******/ 							return wasmImportedFuncCache16["__wbg_warn_6add4f04160cdbba"](p0i32,p1i32,p2i32,p3i32);
 /******/ 						},
 /******/ 						"__wbg_get_85e0a3b459845fe2": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache18 === undefined) wasmImportedFuncCache18 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache18["__wbg_get_85e0a3b459845fe2"](p0i32,p1i32);
-/******/ 						},
-/******/ 						"__wbg_call_951bd0c6d815d6f1": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache19 === undefined) wasmImportedFuncCache19 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache19["__wbg_call_951bd0c6d815d6f1"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache17 === undefined) wasmImportedFuncCache17 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache17["__wbg_get_85e0a3b459845fe2"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbg_new_9dff83a08f5994f3": function() {
-/******/ 							if(wasmImportedFuncCache20 === undefined) wasmImportedFuncCache20 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache20["__wbg_new_9dff83a08f5994f3"]();
+/******/ 							if(wasmImportedFuncCache18 === undefined) wasmImportedFuncCache18 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache18["__wbg_new_9dff83a08f5994f3"]();
 /******/ 						},
 /******/ 						"__wbg_push_3ddd8187ff2ff82d": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache21 === undefined) wasmImportedFuncCache21 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache21["__wbg_push_3ddd8187ff2ff82d"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache19 === undefined) wasmImportedFuncCache19 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache19["__wbg_push_3ddd8187ff2ff82d"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbg_instanceof_ArrayBuffer_3a0fa134e6809d57": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache22 === undefined) wasmImportedFuncCache22 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache22["__wbg_instanceof_ArrayBuffer_3a0fa134e6809d57"](p0i32);
+/******/ 							if(wasmImportedFuncCache20 === undefined) wasmImportedFuncCache20 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache20["__wbg_instanceof_ArrayBuffer_3a0fa134e6809d57"](p0i32);
 /******/ 						},
 /******/ 						"__wbg_new_94a7dfa9529ec6e8": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache23 === undefined) wasmImportedFuncCache23 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache23["__wbg_new_94a7dfa9529ec6e8"](p0i32,p1i32);
-/******/ 						},
-/******/ 						"__wbg_newnoargs_7c6bd521992b4022": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache24 === undefined) wasmImportedFuncCache24 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache24["__wbg_newnoargs_7c6bd521992b4022"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache21 === undefined) wasmImportedFuncCache21 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache21["__wbg_new_94a7dfa9529ec6e8"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbg_isSafeInteger_ca75f5e5231bd3c7": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache25 === undefined) wasmImportedFuncCache25 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache25["__wbg_isSafeInteger_ca75f5e5231bd3c7"](p0i32);
-/******/ 						},
-/******/ 						"__wbg_self_6baf3a3aa7b63415": function() {
-/******/ 							if(wasmImportedFuncCache26 === undefined) wasmImportedFuncCache26 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache26["__wbg_self_6baf3a3aa7b63415"]();
-/******/ 						},
-/******/ 						"__wbg_window_63fc4027b66c265b": function() {
-/******/ 							if(wasmImportedFuncCache27 === undefined) wasmImportedFuncCache27 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache27["__wbg_window_63fc4027b66c265b"]();
-/******/ 						},
-/******/ 						"__wbg_globalThis_513fb247e8e4e6d2": function() {
-/******/ 							if(wasmImportedFuncCache28 === undefined) wasmImportedFuncCache28 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache28["__wbg_globalThis_513fb247e8e4e6d2"]();
-/******/ 						},
-/******/ 						"__wbg_global_b87245cd886d7113": function() {
-/******/ 							if(wasmImportedFuncCache29 === undefined) wasmImportedFuncCache29 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache29["__wbg_global_b87245cd886d7113"]();
+/******/ 							if(wasmImportedFuncCache22 === undefined) wasmImportedFuncCache22 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache22["__wbg_isSafeInteger_ca75f5e5231bd3c7"](p0i32);
 /******/ 						},
 /******/ 						"__wbg_buffer_3f12a1c608c6d04e": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache30 === undefined) wasmImportedFuncCache30 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache30["__wbg_buffer_3f12a1c608c6d04e"](p0i32);
+/******/ 							if(wasmImportedFuncCache23 === undefined) wasmImportedFuncCache23 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache23["__wbg_buffer_3f12a1c608c6d04e"](p0i32);
 /******/ 						},
 /******/ 						"__wbg_new_c6c0228e6d22a2f9": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache31 === undefined) wasmImportedFuncCache31 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache31["__wbg_new_c6c0228e6d22a2f9"](p0i32);
+/******/ 							if(wasmImportedFuncCache24 === undefined) wasmImportedFuncCache24 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache24["__wbg_new_c6c0228e6d22a2f9"](p0i32);
 /******/ 						},
 /******/ 						"__wbg_set_b91afac9fd216d99": function(p0i32,p1i32,p2i32) {
-/******/ 							if(wasmImportedFuncCache32 === undefined) wasmImportedFuncCache32 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache32["__wbg_set_b91afac9fd216d99"](p0i32,p1i32,p2i32);
+/******/ 							if(wasmImportedFuncCache25 === undefined) wasmImportedFuncCache25 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache25["__wbg_set_b91afac9fd216d99"](p0i32,p1i32,p2i32);
 /******/ 						},
 /******/ 						"__wbg_length_c645e7c02233b440": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache33 === undefined) wasmImportedFuncCache33 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache33["__wbg_length_c645e7c02233b440"](p0i32);
+/******/ 							if(wasmImportedFuncCache26 === undefined) wasmImportedFuncCache26 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache26["__wbg_length_c645e7c02233b440"](p0i32);
 /******/ 						},
 /******/ 						"__wbg_instanceof_Uint8Array_fda7b6a64c667462": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache34 === undefined) wasmImportedFuncCache34 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache34["__wbg_instanceof_Uint8Array_fda7b6a64c667462"](p0i32);
+/******/ 							if(wasmImportedFuncCache27 === undefined) wasmImportedFuncCache27 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache27["__wbg_instanceof_Uint8Array_fda7b6a64c667462"](p0i32);
 /******/ 						},
 /******/ 						"__wbg_byteLength_11e6bdc2fac53a3c": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache35 === undefined) wasmImportedFuncCache35 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache35["__wbg_byteLength_11e6bdc2fac53a3c"](p0i32);
+/******/ 							if(wasmImportedFuncCache28 === undefined) wasmImportedFuncCache28 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache28["__wbg_byteLength_11e6bdc2fac53a3c"](p0i32);
 /******/ 						},
 /******/ 						"__wbindgen_number_get": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache36 === undefined) wasmImportedFuncCache36 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache36["__wbindgen_number_get"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache29 === undefined) wasmImportedFuncCache29 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache29["__wbindgen_number_get"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbindgen_string_get": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache37 === undefined) wasmImportedFuncCache37 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache37["__wbindgen_string_get"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache30 === undefined) wasmImportedFuncCache30 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache30["__wbindgen_string_get"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbindgen_boolean_get": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache38 === undefined) wasmImportedFuncCache38 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache38["__wbindgen_boolean_get"](p0i32);
+/******/ 							if(wasmImportedFuncCache31 === undefined) wasmImportedFuncCache31 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache31["__wbindgen_boolean_get"](p0i32);
 /******/ 						},
 /******/ 						"__wbindgen_debug_string": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache39 === undefined) wasmImportedFuncCache39 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache39["__wbindgen_debug_string"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache32 === undefined) wasmImportedFuncCache32 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache32["__wbindgen_debug_string"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbindgen_throw": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache40 === undefined) wasmImportedFuncCache40 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache40["__wbindgen_throw"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache33 === undefined) wasmImportedFuncCache33 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache33["__wbindgen_throw"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbindgen_rethrow": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache41 === undefined) wasmImportedFuncCache41 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache41["__wbindgen_rethrow"](p0i32);
+/******/ 							if(wasmImportedFuncCache34 === undefined) wasmImportedFuncCache34 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache34["__wbindgen_rethrow"](p0i32);
 /******/ 						},
 /******/ 						"__wbindgen_memory": function() {
-/******/ 							if(wasmImportedFuncCache42 === undefined) wasmImportedFuncCache42 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache42["__wbindgen_memory"]();
+/******/ 							if(wasmImportedFuncCache35 === undefined) wasmImportedFuncCache35 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache35["__wbindgen_memory"]();
 /******/ 						}
 /******/ 					}
 /******/ 				};
@@ -677,7 +642,7 @@ eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__
 /******/ 					promises.push(installedWasmModuleData);
 /******/ 				else {
 /******/ 					var importObject = wasmImportObjects[wasmModuleId]();
-/******/ 					var req = fetch(__webpack_require__.p + "" + {"rust_pkg_terra-wasm_js":{"../rust/pkg/terra-wasm_bg.wasm":"6cf68cf07e0133f99ed5"}}[chunkId][wasmModuleId] + ".module.wasm");
+/******/ 					var req = fetch(__webpack_require__.p + "" + {"rust_pkg_terra-wasm_js":{"../rust/pkg/terra-wasm_bg.wasm":"f7bcfc0d3a944c0fbaa0"}}[chunkId][wasmModuleId] + ".module.wasm");
 /******/ 					var promise;
 /******/ 					if(importObject instanceof Promise && typeof WebAssembly.compileStreaming === 'function') {
 /******/ 						promise = Promise.all([WebAssembly.compileStreaming(req), importObject]).then(function(items) {
