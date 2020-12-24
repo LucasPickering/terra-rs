@@ -33,8 +33,6 @@ pub enum Biome {
     Jungle,
     Forest,
     Plains,
-    Beach,
-    Cliff,
 }
 
 impl Biome {
@@ -46,9 +44,7 @@ impl Biome {
             | Self::Alpine
             | Self::Jungle
             | Self::Forest
-            | Self::Plains
-            | Self::Beach
-            | Self::Cliff => BiomeType::Land,
+            | Self::Plains => BiomeType::Land,
         }
     }
 
@@ -64,8 +60,6 @@ impl Biome {
             Self::Jungle => Color3::new(0.17, 0.70, 0.12).unwrap(),
             Self::Forest => Color3::new(0.09, 0.48, 0.0).unwrap(),
             Self::Plains => Color3::new(0.68, 0.79, 0.45).unwrap(),
-            Self::Beach => Color3::new(0.95, 0.94, 0.35).unwrap(),
-            Self::Cliff => Color3::new(0.21, 0.20, 0.17).unwrap(),
         }
     }
 }

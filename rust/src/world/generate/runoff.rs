@@ -12,7 +12,9 @@ use rand::Rng;
 use std::{cmp::Ordering, collections::HashMap, default::Default, iter};
 use strum::IntoEnumIterator;
 
-const HUMIDITY_TO_RUNOFF_SCALE: f64 = 25.0;
+/// Each tile gets some amount of initial runoff based on its humidity. This is
+/// the conversion factor.
+const HUMIDITY_TO_RUNOFF_SCALE: f64 = 15.0;
 
 /// Simulate water runoff. This applies some amount of rainfall to each tile,
 /// then simulates the water flowing downhill. This doesn't actually do

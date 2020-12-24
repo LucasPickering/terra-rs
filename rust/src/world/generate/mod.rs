@@ -101,42 +101,29 @@ pub struct TileNoiseFn<F: NoiseFn<[f64; 3]>> {
     /// in the range [0,1], so exponents <1 bias upwards, and >1 bias
     /// downwards.
     exponent: f64,
-    /// The range of tile position values. Used to map the input.
-    tile_pos_range: NumRange<f64>,
     output_range: NumRange<f64>,
 }
 
 impl<F: NoiseFn<[f64; 3]>> TileNoiseFn<F> {
-    /// The output range of the internal noise function. Used to map our
-    /// input values to the noise function's input values.
-    const NOISE_FN_INPUT_RANGE: NumRange<f64> = NumRange::new(-1.0, 1.0);
+    /// If we used the full values from the input, our frequencies would have
+    /// to be stupid low to get resonable looking output, so we scale them
+    /// down by this factor
+    const INPUT_SCALE: f64 = 100.0;
     /// The output range of the internal noise function. Used to map the noise
     /// values to our own output range.
     const NOISE_FN_OUTPUT_RANGE: NumRange<f64> = NumRange::new(-1.0, 1.0);
 
     /// Initialize a wrapper around the given function.
     fn from_fn(
-        world_config: &WorldConfig,
         noise_fn: F,
         exponent: f64,
         output_range: NumRange<f64>,
     ) -> Self {
-        let radius = world_config.tile_radius as f64;
         Self {
             noise_fn,
             exponent,
-            // The noise functions expect input in [-1, 1], so we need this to
-            // map our tile positions
-            // tile_pos_range: NumRange::new(-radius, radius),
-            tile_pos_range: NumRange::new(-100.0, 100.0),
             output_range,
         }
-    }
-
-    /// Helper to map one value in a [HexPoint] to [-1, 1].
-    fn normalize_input(&self, value: i16) -> f64 {
-        self.tile_pos_range
-            .map(&Self::NOISE_FN_INPUT_RANGE, value as f64)
     }
 }
 
@@ -150,7 +137,6 @@ impl<F: Default + Seedable + MultiFractal + NoiseFn<[f64; 3]>> TileNoiseFn<F> {
     /// - `output_range` - The output range of this function. Noise values will
     /// be mapped to this range during generation.
     pub fn new(
-        world_config: &WorldConfig,
         rng: &mut impl Rng,
         fn_config: &NoiseFnConfig,
         output_range: NumRange<f64>,
@@ -164,17 +150,17 @@ impl<F: Default + Seedable + MultiFractal + NoiseFn<[f64; 3]>> TileNoiseFn<F> {
             .set_lacunarity(fn_config.lacunarity)
             .set_persistence(fn_config.persistence);
 
-        Self::from_fn(world_config, noise_fn, fn_config.exponent, output_range)
+        Self::from_fn(noise_fn, fn_config.exponent, output_range)
     }
 }
 
 impl<F: NoiseFn<[f64; 3]>> NoiseFn<HexPoint> for TileNoiseFn<F> {
     fn get(&self, point: HexPoint) -> f64 {
-        // Map each input value to [-1, 1]
+        // See INPUT_SCALE doc comment for why we need it
         let normalized_input = [
-            self.normalize_input(point.x()),
-            self.normalize_input(point.y()),
-            self.normalize_input(point.z()),
+            point.x() as f64 / Self::INPUT_SCALE,
+            point.y() as f64 / Self::INPUT_SCALE,
+            point.z() as f64 / Self::INPUT_SCALE,
         ];
         let fn_output = self.noise_fn.get(normalized_input);
         Self::NOISE_FN_OUTPUT_RANGE
