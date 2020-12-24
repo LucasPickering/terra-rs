@@ -252,11 +252,12 @@ pub type HexPointMap<T> = IndexMap<HexPoint, T, FnvBuildHasher>;
 #[derive(Clone, Debug)]
 pub struct Cluster<T> {
     pub tiles: HexPointMap<T>,
-    pub adjacents: HexPointSet,
+    adjacents: HexPointSet,
 }
 
 impl<T: Debug> Cluster<T> {
     pub fn new(tiles: HexPointMap<T>) -> Self {
+        // TODO optimize this
         let mut adjacents = HexPointSet::default();
         for pos in tiles.keys() {
             for adj in pos.adjacents() {
@@ -277,7 +278,7 @@ impl<T: Debug> Cluster<T> {
         &self.adjacents
     }
 
-    /// TODO
+    /// Add a new tile to the cluster
     pub fn insert(&mut self, pos: HexPoint, tile: T) {
         // Any tile we add in should already be a neighbor of the cluster. If
         // it isn't that means it's discontiguous which breaks the cardinal rule

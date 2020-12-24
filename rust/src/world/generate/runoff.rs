@@ -66,7 +66,6 @@ fn gen_initial_runoff(continent: &mut HexPointMap<&mut TileBuilder>) {
     // Set initial runoff for each tile
     for tile in continent.values_mut() {
         // Set initial runoff level
-        // TODO make this dynamic based on humidity
         tile.set_runoff(tile.humidity().unwrap() * HUMIDITY_TO_RUNOFF_SCALE);
     }
 }
@@ -93,7 +92,7 @@ fn calc_runoff_patterns(
     // instead of key lookups later. gotta go fast
     let mut runoff_patterns: HexPointMap<RunoffPattern> =
         HexPointMap::default();
-    for (_, source_tile) in continent.iter() {
+    for source_tile in continent.values() {
         // For each neighbor of this tile, determine how much water it gets.
         // This is a map of direction:elevation_diff
         let recipients: Vec<(HexDirection, f64)> = HexDirection::iter()
@@ -126,11 +125,10 @@ fn calc_runoff_patterns(
             recipients.iter().map(|(_, elev_diff)| elev_diff).sum();
 
         // For each adjacent lower tile, mark it as an exit in the pattern
-        let mut runoff_pattern = RunoffPattern::default();
+        let mut runoff_pattern = RunoffPattern::new(source_tile.position());
         for (dir, elev_diff) in recipients {
             let adj_pos = source_tile.position() + dir.offset();
             runoff_pattern.add_exit(
-                source_tile.position(),
                 dir,
                 // This is why the tiles have to be ascending by elevation,
                 // because we back-reference the lower tiles
@@ -182,28 +180,40 @@ fn push_downhill(
 /// can be neatly distributed in its area, but in some cases it will overflow
 /// the terminal's hole/dip, and some of it will end up flowing over into the
 /// ocean. We also need to handle cases where two terminal clusters join to form
-/// a larger lake.
+/// a larger lake, or when one cluster overflows into another but they DON'T
+/// join.
 fn sim_backflow(
     continent: &mut HexPointMap<(&mut TileBuilder, RunoffPattern)>,
 ) {
     // For each terminal, map it to its constituents (all the other tiles that
-    // it will spread to), and the total runoff in its ~~district~~ hole
-    let mut terminal_holes: HexPointMap<(Cluster<()>, f64)> = continent
+    // it will spread to)
+    let mut terminal_holes: HexPointMap<Cluster<()>> = continent
         .iter()
         .filter(|(_, (_, pattern))| pattern.is_terminal())
-        .map(|(pos, (tile, _))| {
+        .map(|(pos, _)| {
             let init_map: HexPointMap<()> = iter::once((*pos, ())).collect();
-            (*pos, (Cluster::new(init_map), tile.runoff()))
+            (*pos, Cluster::new(init_map))
         })
         .collect();
 
     // For each terminal, we'll try to spread its water around
-    'outer: for (terminal_pos, (hole_cluster, total_runoff)) in
-        terminal_holes.iter_mut()
-    {
+    'outer: for (terminal_pos, hole_cluster) in terminal_holes.iter_mut() {
+        // Ok so here's the deal: We have a single terminal tile with a bunch of
+        // runoff on it, and we need to distribute it around. The general
+        // approach is:
+        // 1. Find the lowest neighbor to the hole
+        // 2. See if we have enough runoff to overflow onto that neighbor
+        //   a. If so, then overflow onto it and repeat from step 1
+        //   b. If not, then our cluster is complete
+
         let (terminal_tile, _) = continent.get(terminal_pos).unwrap();
+        // "Runoff elevation" is elevation+runoff for any tile, i.e. the
+        // elevation of the surface of the water. Since water is a
+        // liquid[citation needed], it will spread evenly across the cluster
+        // which means all tiles in the cluster will have the same runoff
+        // elevation -- that's what this value is.
         let mut current_runoff_elev =
-            terminal_tile.elevation().unwrap() + *total_runoff;
+            terminal_tile.elevation().unwrap() + terminal_tile.runoff();
 
         // Each iteration of this loop will add a tile to the cluster, EXCEPT
         // for the last iteration. So for n iterations, we add n-1 tiles. This
@@ -217,23 +227,45 @@ fn sim_backflow(
             .min_by(|a, b| cmp_elev(a.0, b.0))
         {
             if candidate_pattern.terminals.len() > 1 {
-                // TODO
+                // TODO - this case is hard to handle, figure it out
                 error!("Tried to add tile with multiple terminals, fix this ya doof. source={}", terminal_pos);
                 continue 'outer;
             }
 
-            assert!(candidate_tile.runoff() == 0.0); // TODO explain
+            // Just a sanity check. We expect every tile that's not a terminal
+            // to have no runoff on it. Once cluster-joining is working, this
+            // check probably won't make sense anymore.
+            assert!(candidate_tile.runoff() == 0.0);
 
-            let elev_diff =
-                candidate_tile.elevation().unwrap() - current_runoff_elev;
-            if elev_diff >= 0.0 || candidate_pattern.drains_to_ocean() {
+            // If the candidate is higher than our current water level, then
+            // we can't reach it so the runoff stops spreading.
+            let candidate_elev = candidate_tile.elevation().unwrap();
+            if candidate_elev >= current_runoff_elev {
+                break;
+            }
+
+            // If we can overflow onto the candidate, but that tile drains
+            // partially (or fully) to the ocean, then any runoff we put on it
+            // will just drain away. That means our cluster's water level can
+            // only get as high as the candidate, so that's our upper limit.
+            if candidate_pattern.drains_to_ocean() {
+                current_runoff_elev = candidate_elev;
                 break;
             }
 
             // Candidate has been elected! Welcome to the club.
-            hole_cluster.insert(candidate_tile.position(), ());
+            hole_cluster.insert(candidate_tile.position(), ()); // Initiation!
+
+            // This math is neat. When we induct the candidate, we're not adding
+            // any more runoff to the system, but there's one more tile worth
+            // of space to fill, so the water level across the cluster has to
+            // drop. First, calculate how much empty space we've just added to
+            // the system.
+            let added_volume = current_runoff_elev - candidate_elev;
+            // Now spread that volume shortfall across the whole cluster
             current_runoff_elev -=
-                elev_diff / (hole_cluster.tiles.len() as f64);
+                added_volume / (hole_cluster.tiles.len() as f64);
+            // (tbh I'm not 100% sure this is correct but maybe like 98%)
         }
 
         // Now we know which tiles our runoff spreads to, so we can distribute
@@ -265,8 +297,10 @@ fn sim_backflow(
 /// information about how much water any tile holds, how much water has
 /// traversed the tile, etc. The pattern only maintains proportional information
 /// of how water should move from/through the source.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 struct RunoffPattern {
+    position: HexPoint,
+
     /// The neighbors of this tile, and how much water each one gets from this
     /// tile. This map will only include entries for tiles that actually get
     /// some water, and all the values should sum to 1 (unless it's empty). If
@@ -286,6 +320,14 @@ struct RunoffPattern {
 }
 
 impl RunoffPattern {
+    fn new(position: HexPoint) -> Self {
+        Self {
+            position,
+            exits: HashMap::new(),
+            terminals: HexPointMap::default(),
+        }
+    }
+
     /// Is this tile a terminal? A terminal is a tile with no exits.
     fn is_terminal(&self) -> bool {
         self.exits.is_empty()
@@ -298,13 +340,13 @@ impl RunoffPattern {
     /// Check if **some** (or all) of the water from this tile drains to the
     /// ocean.
     fn drains_to_ocean(&self) -> bool {
-        self.terminals.values().sum::<f64>() + 0.00001 < 1.0
+        self.terminals.values().sum::<f64>() + 0.000001 < 1.0
     }
 
-    /// TODO
+    /// Add a new exit to this pattern. The exit has a specific direction and
+    /// factor. All of a the factors for all of a tile's exits should sum to 1.
     fn add_exit(
         &mut self,
-        source_pos: HexPoint,
         dir: HexDirection,
         other_pattern: Option<&RunoffPattern>,
         factor: f64,
@@ -315,9 +357,11 @@ impl RunoffPattern {
         // where our terminals are. If not, then that means it's ocean.
         if let Some(other_pattern) = other_pattern {
             if other_pattern.is_terminal() {
-                let other_pos = source_pos + dir.offset();
                 // This exit is a terminal itself, so add/update it to our map
-                *self.terminals.entry(other_pos).or_insert(factor) += factor;
+                *self
+                    .terminals
+                    .entry(other_pattern.position)
+                    .or_insert(factor) += factor;
             } else {
                 // This exit is NOT a terminal, so add all its terminals to us
                 for (p, f) in &other_pattern.terminals {

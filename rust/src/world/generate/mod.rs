@@ -26,7 +26,8 @@ use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
 use std::fmt::{Debug, Display};
 
-/// TODO
+/// A container for generating a new world. This applies a series of generators
+/// in sequence to create the world.
 pub struct WorldBuilder {
     config: WorldConfig,
     rng: Pcg64,
