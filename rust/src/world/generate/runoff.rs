@@ -91,7 +91,10 @@ fn calc_runoff_patterns(
     // the same ordering as the continent, which allows us to do index lookups
     // instead of key lookups later. gotta go fast
     let mut runoff_patterns: HexPointMap<RunoffPattern> =
-        HexPointMap::default();
+        HexPointMap::with_capacity_and_hasher(
+            continent.len(),
+            Default::default(),
+        );
     for source_tile in continent.values() {
         // For each neighbor of this tile, determine how much water it gets.
         // This is a map of direction:elevation_diff

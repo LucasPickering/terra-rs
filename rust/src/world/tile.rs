@@ -183,15 +183,6 @@ impl TileBuilder {
         runoff
     }
 
-    /// Convenience method to check if this tile is land. Will return false if
-    /// the tile is water OR has no biome set.
-    pub fn is_land(&self) -> bool {
-        match self.biome {
-            Some(biome) => biome.biome_type() == BiomeType::Land,
-            None => false,
-        }
-    }
-
     /// Convenience method to check if this tile is water. Will return false if
     /// the tile is land OR has no biome set.
     pub fn is_water(&self) -> bool {

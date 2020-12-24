@@ -257,7 +257,8 @@ pub struct Cluster<T> {
 
 impl<T: Debug> Cluster<T> {
     pub fn new(tiles: HexPointMap<T>) -> Self {
-        // TODO optimize this
+        // Initialize the set of all tiles that are adjacent to (but not in) the
+        // cluster
         let mut adjacents = HexPointSet::default();
         for pos in tiles.keys() {
             for adj in pos.adjacents() {
