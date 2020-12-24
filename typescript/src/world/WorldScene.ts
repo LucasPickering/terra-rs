@@ -55,6 +55,30 @@ function initScene(engine: Engine): Scene {
   return scene;
 }
 
+function getWorldConfig(): Record<string, unknown> {
+  const queryParams = new URLSearchParams(window.location.search);
+
+  const cfg = {
+    // bullshit here to pick a random seed if we don't have one
+    seed: Math.round(Math.random() * Number.MAX_SAFE_INTEGER),
+    ...config,
+  };
+
+  // This is shitty but it works for now
+  const addQueryParam = (param: string): void => {
+    const val = queryParams.get(param);
+    const parsed = parseInt(val ?? "", 10);
+    if (Number.isFinite(parsed)) {
+      cfg[param] = parsed;
+    }
+  };
+
+  addQueryParam("seed");
+  addQueryParam("tile_radius");
+
+  return cfg;
+}
+
 /**
  * The scene that handles everything in-game
  */
@@ -73,11 +97,7 @@ class WorldScene {
     this.scene = initScene(engine);
 
     // Generate the world
-    // bullshit here to pick a random seed if we don't have one
-    if (!config.seed) {
-      config.seed = Math.round(Math.random() * Number.MAX_SAFE_INTEGER);
-    }
-    this.world = this.terra.generate_world(config);
+    this.world = this.terra.generate_world(getWorldConfig());
     this.worldRenderer = new WorldRenderer(this.scene, this.world);
     this.scene.freezeActiveMeshes();
 
