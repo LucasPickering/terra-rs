@@ -14,7 +14,7 @@ use strum::IntoEnumIterator;
 
 /// Each tile gets some amount of initial runoff based on its humidity. This is
 /// the conversion factor.
-const HUMIDITY_TO_RUNOFF_SCALE: f64 = 15.0;
+const HUMIDITY_TO_RUNOFF_SCALE: f64 = 0.1;
 
 /// Simulate water runoff. This applies some amount of rainfall to each tile,
 /// then simulates the water flowing downhill. This doesn't actually do
@@ -197,7 +197,7 @@ fn sim_backflow(
         .collect();
 
     // For each terminal, we'll try to spread its water around
-    'outer: for (terminal_pos, hole_cluster) in terminal_holes.iter_mut() {
+    for (terminal_pos, hole_cluster) in terminal_holes.iter_mut() {
         // Ok so here's the deal: We have a single terminal tile with a bunch of
         // runoff on it, and we need to distribute it around. The general
         // approach is:
@@ -227,9 +227,11 @@ fn sim_backflow(
             .min_by(|a, b| cmp_elev(a.0, b.0))
         {
             if candidate_pattern.terminals.len() > 1 {
-                // TODO - this case is hard to handle, figure it out
+                // If we reach a tile that spreads into another cluster, just
+                // punt for now. This case is hard to handle
+                // TODO figure it out
                 error!("Tried to add tile with multiple terminals, fix this ya doof. source={}", terminal_pos);
-                continue 'outer;
+                break;
             }
 
             // Just a sanity check. We expect every tile that's not a terminal
@@ -299,6 +301,7 @@ fn sim_backflow(
 /// of how water should move from/through the source.
 #[derive(Clone, Debug)]
 struct RunoffPattern {
+    /// Position of the source tile that this pattern is built for.
     position: HexPoint,
 
     /// The neighbors of this tile, and how much water each one gets from this
@@ -358,10 +361,8 @@ impl RunoffPattern {
         if let Some(other_pattern) = other_pattern {
             if other_pattern.is_terminal() {
                 // This exit is a terminal itself, so add/update it to our map
-                *self
-                    .terminals
-                    .entry(other_pattern.position)
-                    .or_insert(factor) += factor;
+                *self.terminals.entry(other_pattern.position).or_insert(0.0) +=
+                    factor;
             } else {
                 // This exit is NOT a terminal, so add all its terminals to us
                 for (p, f) in &other_pattern.terminals {
@@ -372,8 +373,7 @@ impl RunoffPattern {
                     let term_factor = f * factor;
                     // If we're already sending some runoff to this terminal,
                     // make sure we update that value instead of overwriting
-                    *self.terminals.entry(*p).or_insert(term_factor) +=
-                        term_factor;
+                    *self.terminals.entry(*p).or_insert(0.0) += term_factor;
                 }
             }
         }

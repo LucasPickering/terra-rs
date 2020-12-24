@@ -172,7 +172,7 @@ impl TileBuilder {
     }
 
     pub fn set_runoff(&mut self, runoff: f64) {
-        assert!(runoff > 0.0, "Must set runoff to positive value");
+        assert!(runoff >= 0.0, "Must set runoff to non-negative value");
         self.runoff = runoff;
     }
 
