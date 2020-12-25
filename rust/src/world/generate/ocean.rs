@@ -5,7 +5,6 @@ use crate::{
     },
     WorldConfig,
 };
-use derive_more::Display;
 use rand::Rng;
 
 const MAYBE_OCEAN_SIZE_RANGE: NumRange<f32> = NumRange::new(5000.0, 10000.0);
@@ -13,8 +12,7 @@ const MAYBE_OCEAN_SIZE_RANGE: NumRange<f32> = NumRange::new(5000.0, 10000.0);
 const MIN_COAST_DEPTH: f64 = -3.0;
 
 /// A generator to create oceans at/below sea level.
-#[derive(Copy, Clone, Debug, Default, Display)]
-#[display(fmt = "Ocean Generator")]
+#[derive(Debug)]
 pub struct OceanGenerator;
 
 impl Generate for OceanGenerator {

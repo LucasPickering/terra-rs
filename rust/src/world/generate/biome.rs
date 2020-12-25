@@ -5,14 +5,12 @@ use crate::{
     },
     WorldConfig,
 };
-use derive_more::Display;
 use rand::Rng;
 
 /// A generator to apply a biome for each tile. The biome is calculated based
 /// on elevation and humidity. This won't overwrite any tiles that already have
 /// a biome set, so it can be called after other biome-related generators.
-#[derive(Copy, Clone, Debug, Default, Display)]
-#[display(fmt = "Biome Painter")]
+#[derive(Debug)]
 pub struct BiomePainter;
 
 impl Generate for BiomePainter {

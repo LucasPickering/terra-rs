@@ -24,7 +24,7 @@ use log::info;
 use noise::{MultiFractal, NoiseFn, Seedable};
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 
 /// A container for generating a new world. This applies a series of generators
 /// in sequence to create the world.
@@ -54,21 +54,21 @@ impl WorldBuilder {
     /// Must be run from a blank slate. Outputs the finalized set of tiles.
     pub fn generate_world(mut self) -> WorldMap<Tile> {
         // Run each generation step. The order is very important!
-        self.apply_generator(ElevationGenerator);
-        self.apply_generator(HumidityGenerator);
-        self.apply_generator(OceanGenerator);
-        self.apply_generator(RunoffGenerator);
-        self.apply_generator(LakeGenerator);
-        self.apply_generator(BiomePainter);
+        self.apply_generator("Elevation Generator", ElevationGenerator);
+        self.apply_generator("Humidity Generator", HumidityGenerator);
+        self.apply_generator("Ocean Generator", OceanGenerator);
+        self.apply_generator("Runoff Generator", RunoffGenerator);
+        self.apply_generator("Lake Generator", LakeGenerator);
+        self.apply_generator("Biome Painter", BiomePainter);
 
         // Build each tile into its final value
         self.tiles.map(TileBuilder::build)
     }
 
     /// A helper to run a generation step on this builder.
-    fn apply_generator(&mut self, generator: impl Generate) {
+    fn apply_generator(&mut self, name: &str, generator: impl Generate) {
         timed!(
-            &generator.to_string(),
+            name,
             generator.generate(&self.config, &mut self.rng, &mut self.tiles)
         );
     }
@@ -78,7 +78,7 @@ impl WorldBuilder {
 /// of tiles that have some data generated, and mutates the tiles to add new
 /// data. Generally there will be a series of generators chained together,
 /// where each one adds some more data until the world is complete.
-trait Generate: Display {
+trait Generate {
     /// Add new data to the existing tiles. The given map should never be
     /// inserted into or removed from, and the keys should never be changed.
     /// Only the values (tiles) should be mutated!

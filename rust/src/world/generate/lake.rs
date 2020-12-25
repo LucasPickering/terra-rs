@@ -2,7 +2,6 @@ use crate::{
     world::{generate::Generate, hex::WorldMap, tile::TileBuilder, Biome},
     WorldConfig,
 };
-use derive_more::Display;
 use rand::Rng;
 
 /// Any tile with at least this amount of runoff on it will become a lake
@@ -10,8 +9,7 @@ const LAKE_RUNOFF_THRESHOLD: f64 = 0.1;
 
 /// A generator that creates lakes based on runoff levels. This has to run AFTER
 /// runoff simulation.
-#[derive(Copy, Clone, Debug, Default, Display)]
-#[display(fmt = "Lake Generator")]
+#[derive(Debug)]
 pub struct LakeGenerator;
 
 impl Generate for LakeGenerator {

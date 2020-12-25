@@ -6,7 +6,6 @@ use crate::world::{
     tile::TileBuilder,
     World, WorldConfig,
 };
-use derive_more::Display;
 use log::error;
 use rand::Rng;
 use std::{cmp::Ordering, collections::HashMap, default::Default, iter};
@@ -23,8 +22,7 @@ const HUMIDITY_TO_RUNOFF_SCALE: f64 = 0.1;
 /// lakes/rivers/etc.
 ///
 /// This needs to run AFTER ocean generation!
-#[derive(Clone, Debug, Display)]
-#[display(fmt = "Runoff Generator")]
+#[derive(Debug)]
 pub struct RunoffGenerator;
 
 impl Generate for RunoffGenerator {

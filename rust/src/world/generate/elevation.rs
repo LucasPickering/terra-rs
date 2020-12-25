@@ -4,13 +4,11 @@ use crate::world::{
     tile::TileBuilder,
     World, WorldConfig,
 };
-use derive_more::Display;
 use noise::{Fbm, NoiseFn};
 use rand::Rng;
 
 /// Generate an elevation map using a noise function.
-#[derive(Clone, Debug, Display)]
-#[display(fmt = "Elevation Generator")]
+#[derive(Debug)]
 pub struct ElevationGenerator;
 
 impl Generate for ElevationGenerator {
