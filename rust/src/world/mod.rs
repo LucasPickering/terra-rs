@@ -1,11 +1,13 @@
 mod generate;
 pub mod hex;
-pub mod tile;
 
 use crate::{
     timed,
     util::{Color3, NumRange},
-    world::{generate::WorldBuilder, hex::WorldMap, tile::Tile},
+    world::{
+        generate::WorldBuilder,
+        hex::{HasHexPosition, HexPoint, WorldMap},
+    },
     WorldConfig,
 };
 use js_sys::Array;
@@ -106,6 +108,102 @@ impl World {
             .collect::<Array>()
             .unchecked_into()
     }
+}
+
+#[wasm_bindgen]
+#[derive(Copy, Clone, Debug)]
+pub struct Tile {
+    position: HexPoint,
+    elevation: f64,
+    humidity: f64,
+    /// Amount of runoff water that this tile holds. This uses the same scale
+    /// as elevation.
+    runoff: f64,
+    biome: Biome,
+}
+
+#[wasm_bindgen]
+impl Tile {
+    #[wasm_bindgen(getter)]
+    pub fn pos(&self) -> HexPoint {
+        self.position
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn elevation(&self) -> f64 {
+        self.elevation
+    }
+
+    /// Tile elevation, but mapped to a zero-based range so the value is
+    /// guaranteed to be non-negative. This makes it safe to use for vertical
+    /// scaling during rendering.
+    #[wasm_bindgen(getter)]
+    pub fn height(&self) -> f64 {
+        World::ELEVATION_RANGE
+            .map(&World::ELEVATION_RANGE.zeroed(), self.elevation)
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn humidity(&self) -> f64 {
+        self.humidity
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn biome(&self) -> Biome {
+        self.biome
+    }
+
+    /// Compute the color of a tile based on the lens being viewed. The lens
+    /// controls what data the color is derived from.
+    #[wasm_bindgen]
+    pub fn color(&self, lens: TileLens) -> Color3 {
+        match lens {
+            TileLens::Biome => Ok(self.biome.color()),
+            TileLens::Elevation => {
+                let normal_elev =
+                    World::ELEVATION_RANGE.normalize(self.elevation()) as f32;
+                // 0 -> white
+                // 1 -> red
+                Color3::new(1.0, 1.0 - normal_elev, 1.0 - normal_elev)
+            }
+            TileLens::Humidity => {
+                let normal_humidity =
+                    World::HUMIDITY_RANGE.normalize(self.humidity()) as f32;
+                // 0 -> white
+                // 1 -> green
+                Color3::new(1.0 - normal_humidity, 1.0, 1.0 - normal_humidity)
+            }
+            TileLens::Runoff => {
+                let normal_runoff = NumRange::new(0.0, 1.0)
+                    .value(self.runoff)
+                    .normalize()
+                    // Runoff doesn't have a fixed range so we have to clamp
+                    // this to make sure we don't overflow the color value
+                    .clamp()
+                    .inner() as f32;
+                // 0 -> white
+                // 1 -> blue
+                Color3::new(1.0 - normal_runoff, 1.0 - normal_runoff, 1.0)
+            }
+        }
+        .unwrap()
+    }
+}
+
+impl HasHexPosition for Tile {
+    fn position(&self) -> HexPoint {
+        self.position
+    }
+}
+
+/// A definition of what data is used to compute a tile's color.
+#[wasm_bindgen]
+#[derive(Copy, Clone, Debug)]
+pub enum TileLens {
+    Biome,
+    Elevation,
+    Humidity,
+    Runoff,
 }
 
 // Types that we can't natively return. These are assigned TS types, but

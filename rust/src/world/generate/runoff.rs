@@ -1,9 +1,8 @@
 use crate::world::{
-    generate::Generate,
+    generate::{Generate, TileBuilder},
     hex::{
         Cluster, HasHexPosition, HexDirection, HexPoint, HexPointMap, WorldMap,
     },
-    tile::TileBuilder,
     World, WorldConfig,
 };
 use log::error;

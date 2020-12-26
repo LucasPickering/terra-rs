@@ -1,3 +1,5 @@
+//! This module holds basic types and data structures related to hexagon grids.
+
 use derive_more::{Add, Display};
 use fnv::FnvBuildHasher;
 use indexmap::{IndexMap, IndexSet};

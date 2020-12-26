@@ -1,5 +1,9 @@
 use crate::{
-    world::{generate::Generate, hex::WorldMap, tile::TileBuilder, Biome},
+    world::{
+        generate::{Generate, TileBuilder},
+        hex::WorldMap,
+        Biome,
+    },
     WorldConfig,
 };
 use rand::Rng;

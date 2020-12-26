@@ -1,7 +1,9 @@
 use crate::{
     util::NumRange,
     world::{
-        generate::Generate, hex::WorldMap, tile::TileBuilder, Biome, World,
+        generate::{Generate, TileBuilder},
+        hex::WorldMap,
+        Biome, World,
     },
     WorldConfig,
 };

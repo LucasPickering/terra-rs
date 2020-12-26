@@ -1,7 +1,6 @@
 use crate::world::{
-    generate::{Generate, TileNoiseFn},
+    generate::{Generate, TileBuilder, TileNoiseFn},
     hex::{HasHexPosition, WorldMap},
-    tile::TileBuilder,
     World, WorldConfig,
 };
 use noise::{Fbm, NoiseFn};

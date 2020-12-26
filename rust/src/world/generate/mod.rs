@@ -14,9 +14,8 @@ use crate::{
             humidity::HumidityGenerator, lake::LakeGenerator,
             ocean::OceanGenerator, runoff::RunoffGenerator,
         },
-        hex::{HexPoint, WorldMap},
-        tile::{Tile, TileBuilder},
-        WorldConfig,
+        hex::{HasHexPosition, HexPoint, WorldMap},
+        Biome, BiomeType, Tile, WorldConfig,
     },
     NoiseFnConfig,
 };
@@ -28,6 +27,14 @@ use std::fmt::Debug;
 
 /// A container for generating a new world. This applies a series of generators
 /// in sequence to create the world.
+///
+/// In the generator code that this builder calls, you'll see a lot of
+/// algorithms that tend to generate new values in a separate map, then do a 2nd
+/// pass to put those values into this map. This is necessary because a lot of
+/// them need to reference multiple tiles at once, and once you have a mutable
+/// reference to one tile in a collection, you can't grab references to any
+/// other items. But it turns out that doing it this way is usually a lot faster
+/// and simpler than using a hack like `Rc<RefCell<_>>`.
 pub struct WorldBuilder {
     config: WorldConfig,
     rng: Pcg64,
@@ -54,21 +61,21 @@ impl WorldBuilder {
     /// Must be run from a blank slate. Outputs the finalized set of tiles.
     pub fn generate_world(mut self) -> WorldMap<Tile> {
         // Run each generation step. The order is very important!
-        self.apply_generator("Elevation Generator", ElevationGenerator);
-        self.apply_generator("Humidity Generator", HumidityGenerator);
-        self.apply_generator("Ocean Generator", OceanGenerator);
-        self.apply_generator("Runoff Generator", RunoffGenerator);
-        self.apply_generator("Lake Generator", LakeGenerator);
-        self.apply_generator("Biome Painter", BiomePainter);
+        self.apply_generator(ElevationGenerator);
+        self.apply_generator(HumidityGenerator);
+        self.apply_generator(OceanGenerator);
+        self.apply_generator(RunoffGenerator);
+        self.apply_generator(LakeGenerator);
+        self.apply_generator(BiomePainter);
 
         // Build each tile into its final value
         self.tiles.map(TileBuilder::build)
     }
 
     /// A helper to run a generation step on this builder.
-    fn apply_generator(&mut self, name: &str, generator: impl Generate) {
+    fn apply_generator(&mut self, generator: impl Debug + Generate) {
         timed!(
-            name,
+            &format!("{:?}", generator),
             generator.generate(&self.config, &mut self.rng, &mut self.tiles)
         );
     }
@@ -88,6 +95,112 @@ trait Generate {
         rng: &mut impl Rng,
         tiles: &mut WorldMap<TileBuilder>,
     );
+}
+
+/// A partially built [Tile]. This should only be used while the world is being
+/// generated. After generation is complete, only [Tile] should be used. All the
+/// fields on this type, other than `position`, have a getter and a setter.
+/// Since the fields may not be defined, the getters all panic if the field
+/// has not be set. This makes it easy to catch bugs where we're trying to use
+/// world values that haven't been generated yet.
+#[derive(Clone, Debug)] // intentionally omit Copy because it may not be possible in the future
+pub struct TileBuilder {
+    position: HexPoint,
+    elevation: Option<f64>,
+    humidity: Option<f64>,
+    biome: Option<Biome>,
+    runoff: f64,
+}
+
+impl TileBuilder {
+    pub fn new(position: HexPoint) -> Self {
+        Self {
+            position,
+            elevation: None,
+            humidity: None,
+            biome: None,
+            runoff: 0.0,
+        }
+    }
+
+    pub fn build(self) -> Tile {
+        Tile {
+            position: self.position,
+            elevation: self.elevation.unwrap(),
+            humidity: self.humidity.unwrap(),
+            biome: self.biome.unwrap(),
+            runoff: self.runoff,
+        }
+    }
+
+    /// Get this tile's elevation. Panics if elevation has not been set yet.
+    pub fn elevation(&self) -> Option<f64> {
+        self.elevation
+    }
+
+    /// Set the elevation for this tile.
+    pub fn set_elevation(&mut self, elevation: f64) {
+        self.elevation = Some(elevation);
+    }
+
+    /// Get this tile's humidity. Panics if humidity has not been set yet.
+    pub fn humidity(&self) -> Option<f64> {
+        self.humidity
+    }
+
+    /// Set the humidity for this tile.
+    pub fn set_humidity(&mut self, humidity: f64) {
+        self.humidity = Some(humidity);
+    }
+
+    /// Get this tile's biome. Panics if biome has not been set yet.
+    pub fn biome(&self) -> Option<Biome> {
+        self.biome
+    }
+
+    /// Set the biome for this tile.
+    pub fn set_biome(&mut self, biome: Biome) {
+        self.biome = Some(biome);
+    }
+
+    /// Amount of runoff CURRENTLY on this tile (NOT the total amount that has
+    /// crossed over this tile).
+    pub fn runoff(&self) -> f64 {
+        self.runoff
+    }
+
+    /// Add some amount of runoff to this tile. Amount must be non-negative!
+    pub fn add_runoff(&mut self, runoff: f64) {
+        assert!(runoff >= 0.0, "Must add non-negative runoff");
+        self.runoff += runoff;
+    }
+
+    pub fn set_runoff(&mut self, runoff: f64) {
+        assert!(runoff >= 0.0, "Must set runoff to non-negative value");
+        self.runoff = runoff;
+    }
+
+    /// Reset the runoff on this tile to 0 and return whatever amount was here
+    pub fn clear_runoff(&mut self) -> f64 {
+        let runoff = self.runoff;
+        self.runoff = 0.0;
+        runoff
+    }
+
+    /// Convenience method to check if this tile is water. Will return false if
+    /// the tile is land OR has no biome set.
+    pub fn is_water(&self) -> bool {
+        match self.biome {
+            Some(biome) => biome.biome_type() == BiomeType::Water,
+            None => false,
+        }
+    }
+}
+
+impl HasHexPosition for TileBuilder {
+    fn position(&self) -> HexPoint {
+        self.position
+    }
 }
 
 /// A wrapper around a noise function that makes it easy to use for generating
