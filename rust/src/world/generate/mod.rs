@@ -7,7 +7,7 @@ mod runoff;
 
 use crate::{
     timed,
-    util::{NumRange, Rangeable},
+    util::{Meter3, NumRange, Rangeable},
     world::{
         generate::{
             biome::BiomePainter, elevation::ElevationGenerator,
@@ -15,7 +15,6 @@ use crate::{
             ocean::OceanGenerator, runoff::RunoffGenerator,
         },
         hex::{HasHexPosition, HexPoint, WorldMap},
-        unit::Meter3,
         Biome, BiomeType, Meter, Tile, WorldConfig,
     },
     NoiseFnConfig,
@@ -169,15 +168,6 @@ impl TileBuilder {
     /// crossed over this tile).
     pub fn runoff(&self) -> Option<Meter3> {
         self.runoff
-    }
-
-    /// The elevation of the top of the runoff on this tile. This is just the
-    /// standard elevation plus the height of the runoff. Panics if either
-    /// elevation or runoff is uninitialized.
-    pub fn runoff_elevation(&self) -> Meter {
-        // Since the area of a tile is 1m^2, we can safely convert volume to
-        // elevation as 1:1
-        self.elevation().unwrap() + Meter(self.runoff.unwrap().0)
     }
 
     /// Add some amount of runoff to this tile. Amount must be non-negative!

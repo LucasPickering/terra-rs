@@ -24,6 +24,9 @@ pub struct NoiseFnConfig {
 pub struct WorldConfig {
     pub seed: u64,
     pub tile_radius: u16,
+    /// Ratio of humidity:initial_runoff. For example, if the scale is 0.5,
+    /// then a tile with 0.5 humidity will start with 0.25 m³ runoff on it.
+    pub rainfall_scale: f64,
     pub elevation: NoiseFnConfig,
     pub humidity: NoiseFnConfig,
 }

@@ -1,14 +1,12 @@
 mod generate;
 pub mod hex;
-pub mod unit;
 
 use crate::{
     timed,
-    util::{Color3, NumRange},
+    util::{Color3, Meter, Meter2, Meter3, NumRange},
     world::{
         generate::WorldBuilder,
         hex::{HasHexPosition, HexPoint, WorldMap},
-        unit::{Meter, Meter3},
     },
     WorldConfig,
 };
@@ -123,6 +121,11 @@ pub struct Tile {
     /// as elevation.
     runoff: Meter3,
     biome: Biome,
+}
+
+impl Tile {
+    /// The top surface area of a single tile.
+    pub const AREA: Meter2 = Meter2(1.0);
 }
 
 #[wasm_bindgen]

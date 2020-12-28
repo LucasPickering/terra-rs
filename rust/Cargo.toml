@@ -13,8 +13,7 @@ wasm-opt = ['-O4', '-g']
 # to turn dev into profiling (optimized, but with debug symbols)
 # https://github.com/wasm-tool/wasm-pack-plugin/issues/86
 [profile.dev]
-# opt-level = 3
-opt-level = 1
+opt-level = 3
 
 [lib]
 crate-type = ["cdylib"]

@@ -1,8 +1,8 @@
 use crate::{
+    util::Meter3,
     world::{
         generate::{Generate, TileBuilder},
         hex::WorldMap,
-        unit::Meter3,
         Biome,
     },
     WorldConfig,

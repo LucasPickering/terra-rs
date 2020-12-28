@@ -1,9 +1,8 @@
 use crate::{
-    util::NumRange,
+    util::{Meter, NumRange},
     world::{
         generate::{Generate, TileBuilder},
         hex::WorldMap,
-        unit::Meter,
         Biome, World,
     },
     WorldConfig,
@@ -36,9 +35,9 @@ impl Generate for OceanGenerator {
             // Clusters at/above the max size have a chance of 1. Anything in
             // between is proportional to its size.
             let threshold: f32 = rng.gen_range(MAYBE_OCEAN_SIZE_RANGE);
-            if cluster.tiles.len() as f32 >= threshold {
+            if cluster.tiles().len() as f32 >= threshold {
                 // Update every tile in this cluster to be coast/ocean
-                for (_, tile) in cluster.tiles {
+                for (_, tile) in cluster.into_tiles() {
                     let biome = if tile.elevation().unwrap() >= MIN_COAST_ELEV {
                         Biome::Coast
                     } else {

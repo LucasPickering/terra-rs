@@ -253,7 +253,7 @@ pub type HexPointMap<T> = IndexMap<HexPoint, T, FnvBuildHasher>;
 /// singular item).
 #[derive(Clone, Debug)]
 pub struct Cluster<T> {
-    pub tiles: HexPointMap<T>,
+    tiles: HexPointMap<T>,
     adjacents: HexPointSet,
 }
 
@@ -270,6 +270,16 @@ impl<T: Debug> Cluster<T> {
             }
         }
         Self { tiles, adjacents }
+    }
+
+    /// A reference to the map of tiles in this cluster
+    pub fn tiles(&self) -> &HexPointMap<T> {
+        &self.tiles
+    }
+
+    /// Move the tile map out of this struct
+    pub fn into_tiles(self) -> HexPointMap<T> {
+        self.tiles
     }
 
     /// The set of positions that are directly adjacent to at least one tile in
@@ -300,6 +310,22 @@ impl<T: Debug> Cluster<T> {
             .adjacents()
             .filter(|adj_pos| !tiles.contains_key(adj_pos));
         self.adjacents.extend(new_neighbors);
+    }
+
+    /// Join this cluster with the other one. This assumes that the two clusters
+    /// are already adjacent to each other, so that the resulting cluster
+    /// remains contiguous. This assumption is not checked though! So be careful
+    /// here.
+    pub fn join(&mut self, other: Cluster<T>) {
+        self.tiles.extend(other.tiles);
+        // TODO make this more efficient somehow
+        self.adjacents = self
+            .adjacents
+            .iter()
+            .copied()
+            .chain(other.adjacents.into_iter())
+            .filter(|pos| !self.tiles.contains_key(pos))
+            .collect();
     }
 }
 

@@ -1,8 +1,10 @@
-use crate::world::{
-    generate::{Generate, TileBuilder, TileNoiseFn},
-    hex::{HasHexPosition, WorldMap},
-    unit::Meter,
-    World, WorldConfig,
+use crate::{
+    util::Meter,
+    world::{
+        generate::{Generate, TileBuilder, TileNoiseFn},
+        hex::{HasHexPosition, WorldMap},
+        World, WorldConfig,
+    },
 };
 use noise::Fbm;
 use rand::Rng;
