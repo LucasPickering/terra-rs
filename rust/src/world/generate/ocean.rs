@@ -3,6 +3,7 @@ use crate::{
     world::{
         generate::{Generate, TileBuilder},
         hex::WorldMap,
+        unit::Meter,
         Biome, World,
     },
     WorldConfig,
@@ -11,7 +12,7 @@ use rand::Rng;
 
 const MAYBE_OCEAN_SIZE_RANGE: NumRange<f32> = NumRange::new(5000.0, 10000.0);
 // Any ocean tile at or above this elevation will be coastal
-const MIN_COAST_DEPTH: f64 = -3.0;
+const MIN_COAST_ELEV: Meter = Meter(-3.0);
 
 /// A generator to create oceans at/below sea level.
 #[derive(Debug)]
@@ -38,8 +39,7 @@ impl Generate for OceanGenerator {
             if cluster.tiles.len() as f32 >= threshold {
                 // Update every tile in this cluster to be coast/ocean
                 for (_, tile) in cluster.tiles {
-                    let biome = if tile.elevation().unwrap() >= MIN_COAST_DEPTH
-                    {
+                    let biome = if tile.elevation().unwrap() >= MIN_COAST_ELEV {
                         Biome::Coast
                     } else {
                         Biome::Ocean

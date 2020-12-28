@@ -3,7 +3,7 @@ use crate::{
     world::{
         generate::{Generate, TileBuilder},
         hex::WorldMap,
-        Biome, World,
+        Biome, Meter, World,
     },
     WorldConfig,
 };
@@ -48,15 +48,15 @@ impl Generate for BiomePainter {
             // https://en.wikipedia.org/wiki/Phase_diagram#Pressure_vs_temperature
             // Each of these conditions is essentially a 2d function, either
             // x = c or y = mx+b, where elevation is y and humidity is x
-            let biome = if elevation >= (-0.1 * humidity + 0.5) {
+            let biome = if elevation >= Meter(-0.1 * humidity + 0.5) {
                 Biome::Snow
             } else if humidity <= 0.15 {
                 Biome::Desert
-            } else if elevation >= (-0.1 * humidity + 0.4) {
+            } else if elevation >= Meter(-0.1 * humidity + 0.4) {
                 Biome::Alpine
             } else if humidity >= 0.75 {
                 Biome::Jungle
-            } else if elevation >= (-0.88 * humidity + 0.54) {
+            } else if elevation >= Meter(-0.88 * humidity + 0.54) {
                 Biome::Forest
             } else {
                 Biome::Plains

@@ -1,9 +1,10 @@
 use crate::world::{
     generate::{Generate, TileBuilder, TileNoiseFn},
     hex::{HasHexPosition, WorldMap},
+    unit::Meter,
     World, WorldConfig,
 };
-use noise::{Fbm, NoiseFn};
+use noise::Fbm;
 use rand::Rng;
 
 /// Generate an elevation map using a noise function.
@@ -17,7 +18,7 @@ impl Generate for ElevationGenerator {
         rng: &mut impl Rng,
         tiles: &mut WorldMap<TileBuilder>,
     ) {
-        let noise_fn: TileNoiseFn<Fbm> =
+        let noise_fn: TileNoiseFn<Fbm, Meter> =
             TileNoiseFn::new(rng, &config.elevation, World::ELEVATION_RANGE);
         for tile in tiles.iter_mut() {
             tile.set_elevation(noise_fn.get(tile.position()));

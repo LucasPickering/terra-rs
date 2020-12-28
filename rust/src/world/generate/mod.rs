@@ -7,7 +7,7 @@ mod runoff;
 
 use crate::{
     timed,
-    util::NumRange,
+    util::{NumRange, Rangeable},
     world::{
         generate::{
             biome::BiomePainter, elevation::ElevationGenerator,
@@ -15,7 +15,8 @@ use crate::{
             ocean::OceanGenerator, runoff::RunoffGenerator,
         },
         hex::{HasHexPosition, HexPoint, WorldMap},
-        Biome, BiomeType, Tile, WorldConfig,
+        unit::Meter3,
+        Biome, BiomeType, Meter, Tile, WorldConfig,
     },
     NoiseFnConfig,
 };
@@ -106,10 +107,10 @@ trait Generate {
 #[derive(Clone, Debug)] // intentionally omit Copy because it may not be possible in the future
 pub struct TileBuilder {
     position: HexPoint,
-    elevation: Option<f64>,
+    elevation: Option<Meter>,
     humidity: Option<f64>,
     biome: Option<Biome>,
-    runoff: f64,
+    runoff: Option<Meter3>,
 }
 
 impl TileBuilder {
@@ -119,7 +120,7 @@ impl TileBuilder {
             elevation: None,
             humidity: None,
             biome: None,
-            runoff: 0.0,
+            runoff: None,
         }
     }
 
@@ -129,21 +130,22 @@ impl TileBuilder {
             elevation: self.elevation.unwrap(),
             humidity: self.humidity.unwrap(),
             biome: self.biome.unwrap(),
-            runoff: self.runoff,
+            // This will still be uninitialized for ocean tiles
+            runoff: self.runoff.unwrap_or(Meter3(0.0)),
         }
     }
 
-    /// Get this tile's elevation. Panics if elevation has not been set yet.
-    pub fn elevation(&self) -> Option<f64> {
+    /// Get this tile's elevation.
+    pub fn elevation(&self) -> Option<Meter> {
         self.elevation
     }
 
     /// Set the elevation for this tile.
-    pub fn set_elevation(&mut self, elevation: f64) {
+    pub fn set_elevation(&mut self, elevation: Meter) {
         self.elevation = Some(elevation);
     }
 
-    /// Get this tile's humidity. Panics if humidity has not been set yet.
+    /// Get this tile's humidity.
     pub fn humidity(&self) -> Option<f64> {
         self.humidity
     }
@@ -153,7 +155,7 @@ impl TileBuilder {
         self.humidity = Some(humidity);
     }
 
-    /// Get this tile's biome. Panics if biome has not been set yet.
+    /// Get this tile's biome.
     pub fn biome(&self) -> Option<Biome> {
         self.biome
     }
@@ -165,25 +167,42 @@ impl TileBuilder {
 
     /// Amount of runoff CURRENTLY on this tile (NOT the total amount that has
     /// crossed over this tile).
-    pub fn runoff(&self) -> f64 {
+    pub fn runoff(&self) -> Option<Meter3> {
         self.runoff
     }
 
+    /// The elevation of the top of the runoff on this tile. This is just the
+    /// standard elevation plus the height of the runoff. Panics if either
+    /// elevation or runoff is uninitialized.
+    pub fn runoff_elevation(&self) -> Meter {
+        // Since the area of a tile is 1m^2, we can safely convert volume to
+        // elevation as 1:1
+        self.elevation().unwrap() + Meter(self.runoff.unwrap().0)
+    }
+
     /// Add some amount of runoff to this tile. Amount must be non-negative!
-    pub fn add_runoff(&mut self, runoff: f64) {
-        assert!(runoff >= 0.0, "Must add non-negative runoff");
-        self.runoff += runoff;
+    /// Also panics if runoff is uninitialized.
+    pub fn add_runoff(&mut self, runoff: Meter3) {
+        assert!(runoff >= Meter3(0.0), "Must add non-negative runoff");
+        self.runoff = Some(self.runoff.unwrap() + runoff);
     }
 
-    pub fn set_runoff(&mut self, runoff: f64) {
-        assert!(runoff >= 0.0, "Must set runoff to non-negative value");
-        self.runoff = runoff;
+    /// Set the runoff level of this tile (any existing runoff will be deleted).
+    pub fn set_runoff(&mut self, runoff: Meter3) {
+        assert!(
+            runoff >= Meter3(0.0),
+            "Must set runoff to non-negative value"
+        );
+        self.runoff = Some(runoff);
     }
 
-    /// Reset the runoff on this tile to 0 and return whatever amount was here
-    pub fn clear_runoff(&mut self) -> f64 {
-        let runoff = self.runoff;
-        self.runoff = 0.0;
+    /// Reset the runoff on this tile to 0 and return whatever amount was here.
+    /// Panics if runoff is uninitialized.
+    pub fn clear_runoff(&mut self) -> Meter3 {
+        let runoff = self
+            .runoff
+            .expect("Runoff has not been initialized, cannot clear it");
+        self.runoff = Some(Meter3(0.0));
         runoff
     }
 
@@ -207,18 +226,21 @@ impl HasHexPosition for TileBuilder {
 /// tile values. This is initialized for a particular function type, and
 /// makes it easy to pass in a [HexPoint] and get out values in an arbitrary
 /// output range.
+///
+/// This type can optionally also do transparent conversions on the output type,
+/// e.g. if you are using a newtype that wraps `f64`.
 #[derive(Clone, Debug)]
-pub struct TileNoiseFn<F: NoiseFn<[f64; 3]>> {
+pub struct TileNoiseFn<F: NoiseFn<[f64; 3]>, T: Rangeable<f64> = f64> {
     /// The noise generation function
     noise_fn: F,
     /// Exponent to apply to each noise value. This will be applied to values
     /// in the range [0,1], so exponents <1 bias upwards, and >1 bias
     /// downwards.
     exponent: f64,
-    output_range: NumRange<f64>,
+    output_range: NumRange<T, f64>,
 }
 
-impl<F: NoiseFn<[f64; 3]>> TileNoiseFn<F> {
+impl<F: NoiseFn<[f64; 3]>, T: Rangeable<f64>> TileNoiseFn<F, T> {
     /// If we used the full values from the input, our frequencies would have
     /// to be stupid low to get resonable looking output, so we scale them
     /// down by this factor
@@ -231,7 +253,7 @@ impl<F: NoiseFn<[f64; 3]>> TileNoiseFn<F> {
     fn from_fn(
         noise_fn: F,
         exponent: f64,
-        output_range: NumRange<f64>,
+        output_range: NumRange<T, f64>,
     ) -> Self {
         Self {
             noise_fn,
@@ -239,9 +261,32 @@ impl<F: NoiseFn<[f64; 3]>> TileNoiseFn<F> {
             output_range,
         }
     }
+
+    /// Get the function output at the given point
+    pub fn get(&self, point: HexPoint) -> T {
+        // See INPUT_SCALE doc comment for why we need it
+        let scaled_input = [
+            point.x() as f64 / Self::INPUT_SCALE,
+            point.y() as f64 / Self::INPUT_SCALE,
+            point.z() as f64 / Self::INPUT_SCALE,
+        ];
+        let fn_output = self.noise_fn.get(scaled_input);
+        Self::NOISE_FN_OUTPUT_RANGE
+            .value(fn_output)
+            // Map to [0,1] so we can apply the exponent
+            .normalize()
+            .apply(|val| val.powf(self.exponent))
+            .convert() // f64 -> T
+            .map_to(self.output_range)
+            .inner()
+    }
 }
 
-impl<F: Default + Seedable + MultiFractal + NoiseFn<[f64; 3]>> TileNoiseFn<F> {
+impl<
+        F: Default + Seedable + MultiFractal + NoiseFn<[f64; 3]>,
+        T: Rangeable<f64>,
+    > TileNoiseFn<F, T>
+{
     /// Initialize a new function for some underlying noise fn type.
     ///
     /// ### Arguments
@@ -253,7 +298,7 @@ impl<F: Default + Seedable + MultiFractal + NoiseFn<[f64; 3]>> TileNoiseFn<F> {
     pub fn new(
         rng: &mut impl Rng,
         fn_config: &NoiseFnConfig,
-        output_range: NumRange<f64>,
+        output_range: NumRange<T, f64>,
     ) -> Self {
         // Configure the noise function
         let noise_fn = F::default()
@@ -265,24 +310,5 @@ impl<F: Default + Seedable + MultiFractal + NoiseFn<[f64; 3]>> TileNoiseFn<F> {
             .set_persistence(fn_config.persistence);
 
         Self::from_fn(noise_fn, fn_config.exponent, output_range)
-    }
-}
-
-impl<F: NoiseFn<[f64; 3]>> NoiseFn<HexPoint> for TileNoiseFn<F> {
-    fn get(&self, point: HexPoint) -> f64 {
-        // See INPUT_SCALE doc comment for why we need it
-        let normalized_input = [
-            point.x() as f64 / Self::INPUT_SCALE,
-            point.y() as f64 / Self::INPUT_SCALE,
-            point.z() as f64 / Self::INPUT_SCALE,
-        ];
-        let fn_output = self.noise_fn.get(normalized_input);
-        Self::NOISE_FN_OUTPUT_RANGE
-            .value(fn_output)
-            // Map to [0,1] so we can apply the exponent
-            .normalize()
-            .apply(|val| val.powf(self.exponent))
-            .map_to(self.output_range)
-            .inner()
     }
 }

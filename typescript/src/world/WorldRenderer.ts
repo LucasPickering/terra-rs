@@ -51,10 +51,10 @@ class WorldRenderer {
       const pos = tile.pos;
       const transformMatrix = Matrix.Translation(
         pos.x * 0.75 * TILE_VERTEX_DIAM,
-        tile.height,
+        tile.height[0],
         (pos.x / 2 + pos.y) * -(Math.sqrt(3) / 2) * TILE_VERTEX_DIAM
         // I'm not entirely sure why this scaling works, but it does
-      ).add(Matrix.Scaling(0, tile.height, 0));
+      ).add(Matrix.Scaling(0, tile.height[0], 0));
 
       // Refresh meshes if this is the last tile in the list
       const isLastTile = i === tiles.length - 1;

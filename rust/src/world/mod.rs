@@ -1,5 +1,6 @@
 mod generate;
 pub mod hex;
+pub mod unit;
 
 use crate::{
     timed,
@@ -7,6 +8,7 @@ use crate::{
     world::{
         generate::WorldBuilder,
         hex::{HasHexPosition, HexPoint, WorldMap},
+        unit::{Meter, Meter3},
     },
     WorldConfig,
 };
@@ -77,8 +79,9 @@ impl World {
     /// All tiles above this elevation are guaranteed to be non-ocean. All tiles
     /// at OR below _could_ be ocean, but the actual chance depends upon the
     /// ocean generation logic.
-    pub const SEA_LEVEL: f64 = 0.0;
-    pub const ELEVATION_RANGE: NumRange<f64> = NumRange::new(-100.0, 100.0);
+    pub const SEA_LEVEL: Meter = Meter(0.0);
+    pub const ELEVATION_RANGE: NumRange<Meter, f64> =
+        NumRange::new(Meter(-100.0), Meter(100.0));
     pub const HUMIDITY_RANGE: NumRange<f64> = NumRange::new(0.0, 1.0);
 
     pub fn tiles(&self) -> &WorldMap<Tile> {
@@ -114,11 +117,11 @@ impl World {
 #[derive(Copy, Clone, Debug)]
 pub struct Tile {
     position: HexPoint,
-    elevation: f64,
+    elevation: Meter,
     humidity: f64,
     /// Amount of runoff water that this tile holds. This uses the same scale
     /// as elevation.
-    runoff: f64,
+    runoff: Meter3,
     biome: Biome,
 }
 
@@ -130,7 +133,7 @@ impl Tile {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn elevation(&self) -> f64 {
+    pub fn elevation(&self) -> Meter {
         self.elevation
     }
 
@@ -138,7 +141,7 @@ impl Tile {
     /// guaranteed to be non-negative. This makes it safe to use for vertical
     /// scaling during rendering.
     #[wasm_bindgen(getter)]
-    pub fn height(&self) -> f64 {
+    pub fn height(&self) -> Meter {
         World::ELEVATION_RANGE
             .map(&World::ELEVATION_RANGE.zeroed(), self.elevation)
     }
@@ -161,7 +164,7 @@ impl Tile {
             TileLens::Biome => Ok(self.biome.color()),
             TileLens::Elevation => {
                 let normal_elev =
-                    World::ELEVATION_RANGE.normalize(self.elevation()) as f32;
+                    World::ELEVATION_RANGE.normalize(self.elevation()).0 as f32;
                 // 0 -> white
                 // 1 -> red
                 Color3::new(1.0, 1.0 - normal_elev, 1.0 - normal_elev)
@@ -174,13 +177,14 @@ impl Tile {
                 Color3::new(1.0 - normal_humidity, 1.0, 1.0 - normal_humidity)
             }
             TileLens::Runoff => {
-                let normal_runoff = NumRange::new(0.0, 1.0)
+                let normal_runoff = NumRange::new(Meter3(0.0), Meter3(1.0))
                     .value(self.runoff)
                     .normalize()
                     // Runoff doesn't have a fixed range so we have to clamp
                     // this to make sure we don't overflow the color value
                     .clamp()
-                    .inner() as f32;
+                    .inner()
+                    .0 as f32;
                 // 0 -> white
                 // 1 -> blue
                 Color3::new(1.0 - normal_runoff, 1.0 - normal_runoff, 1.0)

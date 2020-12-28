@@ -1,3 +1,4 @@
+use crate::world::unit::{Meter, Meter3};
 use anyhow::anyhow;
 use log::debug;
 use rand::{
@@ -7,6 +8,7 @@ use rand::{
 use serde::Serialize;
 use std::{
     fmt::{Debug, Display},
+    marker::PhantomData,
     ops,
 };
 use wasm_bindgen::prelude::*;
@@ -89,14 +91,22 @@ impl ops::Mul<f32> for Color3 {
     }
 }
 
-pub trait Rangeable:
+/// A type of value that we can create ranges of, where a range has a min and
+/// max. This allows us to do all kinds of neat conversions and shit. Usually,
+/// the type parameter `I` isn't necessary, because it's just `Self`. It's
+/// useful in some situations though where you want to have ranges of
+/// non-numeric types, e.g. a newtype that holds an `f64`. In that case, the
+/// type param would be whatever internal type you use for the math.
+pub trait Rangeable<I = Self>:
     Copy
     + Debug
     + PartialOrd
+    + From<I>
+    + Into<I>
     + ops::Add<Self, Output = Self>
     + ops::Sub<Self, Output = Self>
-    + ops::Mul<Self, Output = Self>
-    + ops::Div<Self, Output = Self>
+    + ops::Mul<I, Output = Self>
+    + ops::Div<I, Output = Self>
 {
     fn zero() -> Self;
     fn one() -> Self;
@@ -122,16 +132,41 @@ impl Rangeable for f64 {
     }
 }
 
-/// A range between two numeric values, inclusive on both ends.
-#[derive(Copy, Clone, Debug)]
-pub struct NumRange<T: Rangeable> {
-    pub min: T,
-    pub max: T,
+impl Rangeable<f64> for Meter {
+    fn zero() -> Self {
+        0.0.into()
+    }
+
+    fn one() -> Self {
+        1.0.into()
+    }
 }
 
-impl<T: Rangeable> NumRange<T> {
+impl Rangeable<f64> for Meter3 {
+    fn zero() -> Self {
+        0.0.into()
+    }
+
+    fn one() -> Self {
+        1.0.into()
+    }
+}
+
+/// A range between two numeric values, inclusive on both ends.
+#[derive(Copy, Clone, Debug)]
+pub struct NumRange<T: Rangeable<I>, I = T> {
+    pub min: T,
+    pub max: T,
+    phantom: PhantomData<I>,
+}
+
+impl<T: Into<I> + Rangeable<I>, I> NumRange<T, I> {
     pub const fn new(min: T, max: T) -> Self {
-        Self { min, max }
+        Self {
+            min,
+            max,
+            phantom: PhantomData,
+        }
     }
 
     /// Get a [0,1] range for this type.
@@ -146,7 +181,7 @@ impl<T: Rangeable> NumRange<T> {
 
     /// Create a [RangeValue] in this range, which can be more convenient for
     /// chaining operations.
-    pub fn value(self, value: T) -> RangeValue<T> {
+    pub fn value(self, value: T) -> RangeValue<T, I> {
         RangeValue { value, range: self }
     }
 
@@ -163,8 +198,8 @@ impl<T: Rangeable> NumRange<T> {
 
     /// Map a value from this range to the target range.
     pub fn map(&self, dest_range: &Self, value: T) -> T {
-        let normalized = (value - self.min) / self.span();
-        dest_range.min + (normalized * dest_range.span())
+        let normalized = (value - self.min) / self.span().into();
+        dest_range.min + (normalized * dest_range.span().into())
     }
 
     /// Map a value from this range to the range [0, 1]
@@ -214,12 +249,12 @@ impl<T: Rangeable + SampleUniform + PartialOrd> SampleRange<T> for NumRange<T> {
 /// assert_eq!(value, 1.5);
 /// ```
 #[derive(Copy, Clone, Debug)]
-pub struct RangeValue<T: Rangeable> {
+pub struct RangeValue<T: Rangeable<I>, I> {
     value: T,
-    range: NumRange<T>,
+    range: NumRange<T, I>,
 }
 
-impl<T: Rangeable> RangeValue<T> {
+impl<T: Into<I> + Rangeable<I>, I> RangeValue<T, I> {
     /// Get the value from this struct
     pub fn inner(self) -> T {
         self.value
@@ -232,11 +267,11 @@ impl<T: Rangeable> RangeValue<T> {
 
     /// Map this value to the range [0,1]
     pub fn normalize(self) -> Self {
-        self.map_to(<NumRange<T>>::normal_range())
+        self.map_to(<NumRange<T, I>>::normal_range())
     }
 
     /// Map this value from the current range to a new range.
-    pub fn map_to(self, range: NumRange<T>) -> Self {
+    pub fn map_to(self, range: NumRange<T, I>) -> Self {
         let new_value = self.range.map(&range, self.value);
         Self {
             range,
@@ -262,5 +297,16 @@ impl<T: Rangeable> RangeValue<T> {
             value: f(self.value),
             range: self.range,
         }
+    }
+
+    /// Convert this value to another type with a transparent conversion. It
+    /// would be nice to just provide this as a `From` implementation, but that
+    /// gets conflicts with std's blanket implementation, so it's not possible
+    /// until specialization is done.
+    pub fn convert<U: Rangeable<I> + From<T>>(self) -> RangeValue<U, I> {
+        let value = U::from(self.value);
+        let range =
+            NumRange::new(U::from(self.range.min), U::from(self.range.max));
+        RangeValue { value, range }
     }
 }

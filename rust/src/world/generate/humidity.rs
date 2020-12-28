@@ -3,7 +3,7 @@ use crate::world::{
     hex::{HasHexPosition, WorldMap},
     World, WorldConfig,
 };
-use noise::{Fbm, NoiseFn};
+use noise::Fbm;
 use rand::Rng;
 
 /// Generate an humidity map using a noise function.

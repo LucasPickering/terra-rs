@@ -3,6 +3,7 @@ use crate::world::{
     hex::{
         Cluster, HasHexPosition, HexDirection, HexPoint, HexPointMap, WorldMap,
     },
+    unit::{Meter, Meter3},
     World, WorldConfig,
 };
 use log::error;
@@ -51,7 +52,7 @@ fn cmp_elev(a: &TileBuilder, b: &TileBuilder) -> Ordering {
 /// Simulate runoff for a single continent. Each continent is an independent
 /// system, meaning its runoff doesn't affect any other continents in any way.
 fn sim_continent_runoff(mut continent: HexPointMap<&mut TileBuilder>) {
-    gen_initial_runoff(&mut continent);
+    initialize_runoff(&mut continent);
     let mut continent: HexPointMap<(&mut TileBuilder, RunoffPattern)> =
         calc_runoff_patterns(continent);
     push_downhill(&mut continent);
@@ -59,11 +60,13 @@ fn sim_continent_runoff(mut continent: HexPointMap<&mut TileBuilder>) {
 }
 
 /// Generate an initial runoff level for every tile in a continent.
-fn gen_initial_runoff(continent: &mut HexPointMap<&mut TileBuilder>) {
+fn initialize_runoff(continent: &mut HexPointMap<&mut TileBuilder>) {
     // Set initial runoff for each tile
     for tile in continent.values_mut() {
         // Set initial runoff level
-        tile.set_runoff(tile.humidity().unwrap() * HUMIDITY_TO_RUNOFF_SCALE);
+        tile.set_runoff(Meter3(
+            tile.humidity().unwrap() * HUMIDITY_TO_RUNOFF_SCALE,
+        ));
     }
 }
 
@@ -95,7 +98,7 @@ fn calc_runoff_patterns(
     for source_tile in continent.values() {
         // For each neighbor of this tile, determine how much water it gets.
         // This is a map of direction:elevation_diff
-        let recipients: Vec<(HexDirection, f64)> = HexDirection::iter()
+        let recipients: Vec<(HexDirection, Meter)> = HexDirection::iter()
             .filter_map(|dir| {
                 let adj_pos = source_tile.position() + dir.offset();
                 let adj_elev = match continent.get(&adj_pos) {
@@ -107,7 +110,7 @@ fn calc_runoff_patterns(
                     Some(adj_tile) => adj_tile.elevation().unwrap(),
                 };
                 let elev_diff = source_tile.elevation().unwrap() - adj_elev;
-                if elev_diff > 0.0 {
+                if elev_diff > Meter(0.0) {
                     // Neighbor is lower, we'll send runoff there
                     Some((dir, elev_diff))
                 } else {
@@ -121,8 +124,8 @@ fn calc_runoff_patterns(
         // proportional to the elevation different between us and them. I.e.
         // steeper slopes get more water.
 
-        let total_elev_diff: f64 =
-            recipients.iter().map(|(_, elev_diff)| elev_diff).sum();
+        let total_elev_diff: Meter =
+            recipients.iter().map(|(_, elev_diff)| *elev_diff).sum();
 
         // For each adjacent lower tile, mark it as an exit in the pattern
         let mut runoff_pattern = RunoffPattern::new(source_tile.position());
@@ -133,7 +136,7 @@ fn calc_runoff_patterns(
                 // This is why the tiles have to be ascending by elevation,
                 // because we back-reference the lower tiles
                 runoff_patterns.get(&adj_pos),
-                elev_diff / total_elev_diff,
+                elev_diff.0 / total_elev_diff.0,
             );
         }
         runoff_patterns.insert(source_tile.position(), runoff_pattern);
@@ -159,14 +162,14 @@ fn push_downhill(
     // Now that we have our runoff patterns, we can figure out how much water
     // ends up going to each terminal. We have to do this in two steps because
     // borrow checking.
-    let mut terminal_runoffs: HexPointMap<f64> = HexPointMap::default();
+    let mut terminal_runoffs: HexPointMap<Meter3> = HexPointMap::default();
     for (source_tile, source_pattern) in continent.values_mut() {
         let to_distribute = source_tile.clear_runoff();
         // Add the appropriate amount of water to each terminal. For most tiles,
         // the terminals' factors don't add up to 1, so some or all of the water
         // gets deleted from the system (i.e. flows to the ocean).
         for (term_pos, factor) in source_pattern.terminals().iter() {
-            *terminal_runoffs.entry(*term_pos).or_insert(0.0) +=
+            *terminal_runoffs.entry(*term_pos).or_insert(Meter3(0.0)) +=
                 to_distribute * factor;
         }
     }
@@ -212,8 +215,7 @@ fn sim_backflow(
         // liquid[citation needed], it will spread evenly across the cluster
         // which means all tiles in the cluster will have the same runoff
         // elevation -- that's what this value is.
-        let mut current_runoff_elev =
-            terminal_tile.elevation().unwrap() + terminal_tile.runoff();
+        let mut current_runoff_elev = terminal_tile.runoff_elevation();
 
         // Each iteration of this loop will add a tile to the cluster, EXCEPT
         // for the last iteration. So for n iterations, we add n-1 tiles. This
@@ -237,7 +239,7 @@ fn sim_backflow(
             // Just a sanity check. We expect every tile that's not a terminal
             // to have no runoff on it. Once cluster-joining is working, this
             // check probably won't make sense anymore.
-            assert!(candidate_tile.runoff() == 0.0);
+            assert!(candidate_tile.runoff().unwrap() == Meter3(0.0));
 
             // If the candidate is higher than our current water level, then
             // we can't reach it so the runoff stops spreading.
@@ -273,7 +275,9 @@ fn sim_backflow(
         // Now we know which tiles our runoff spreads to, so we can distribute
         for pos in hole_cluster.tiles.keys() {
             let (tile, _) = continent.get_mut(pos).unwrap();
-            tile.set_runoff(current_runoff_elev - tile.elevation().unwrap());
+            let runoff_height = current_runoff_elev - tile.elevation().unwrap();
+            // We can convert Meter -> Meter3 because the area of a tile is 1m^2
+            tile.set_runoff(Meter3(runoff_height.0));
         }
     }
 }
