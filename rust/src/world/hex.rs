@@ -3,7 +3,7 @@
 use derive_more::{Add, Display};
 use fnv::FnvBuildHasher;
 use indexmap::{IndexMap, IndexSet};
-use std::{collections::VecDeque, convert::TryInto, fmt::Debug, hash::Hash};
+use std::{cmp, collections::VecDeque, fmt::Debug, hash::Hash};
 use strum::{EnumIter, IntoEnumIterator};
 use wasm_bindgen::prelude::*;
 
@@ -15,7 +15,7 @@ use wasm_bindgen::prelude::*;
 /// points, so z can be derived as necessary which means we can save 33% of
 /// the memory.
 ///
-/// The x and y coordinates are stored as i16s. We'll never have a world with
+/// The x and y coordinates are stored as `i16`s. We'll never have a world with
 /// a radius of more than 32k (that'd be ~4 billion tiles), so this saves on
 /// memory a lot.
 #[wasm_bindgen]
@@ -28,12 +28,6 @@ pub struct HexPoint {
 
 #[wasm_bindgen]
 impl HexPoint {
-    /// Construct a new hex point with the given x and y. Since x+y+z=0 for all
-    /// points, we can derive z from x & y.
-    pub fn new(x: i16, y: i16) -> Self {
-        Self { x, y }
-    }
-
     #[wasm_bindgen(getter)]
     pub fn x(&self) -> i16 {
         self.x
@@ -48,9 +42,29 @@ impl HexPoint {
     pub fn z(&self) -> i16 {
         -(self.x + self.y)
     }
+
+    #[wasm_bindgen]
+    pub fn distance_to(&self, other: HexPoint) -> usize {
+        *[
+            (self.x() - other.x()).abs(),
+            (self.y() - other.y()).abs(),
+            (self.z() - other.z()).abs(),
+        ]
+        .iter()
+        .max()
+        .unwrap() as usize
+    }
 }
 
 impl HexPoint {
+    pub const ORIGIN: Self = Self::new(0, 0);
+
+    /// Construct a new hex point with the given x and y. Since x+y+z=0 for all
+    /// points, we can derive z from x & y.
+    pub const fn new(x: i16, y: i16) -> Self {
+        Self { x, y }
+    }
+
     /// Get an iterator of all the points directly adjacent to this one. The
     /// iterator will always contain exactly 6 values.
     pub fn adjacents(self) -> impl Iterator<Item = HexPoint> {
@@ -58,9 +72,10 @@ impl HexPoint {
     }
 }
 
-/// A map of items keyed by hex point. There is a major restriction on this
-/// though: it has to be a full world of items, meaning it must be a "square"!
-/// This restriction allows us to optimize a lot by storing all the items in
+/// A map of tiles keyed by hex point, in a super hexagon pattern (the tiles
+/// make up the shape of a larger hexagon). For a world of radius `r`, the
+/// furthest tiles are all `r` steps from the center. This restriction is very
+/// important because it allows us to optimize a lot by storing all the items in
 /// a flat vector.
 #[derive(Clone, Debug, Default)]
 pub struct WorldMap<T> {
@@ -76,62 +91,47 @@ pub struct WorldMap<T> {
 }
 
 impl<T> WorldMap<T> {
-    /// Initialize a new world with the given radius. The passed function will
-    /// be called to initialize each item in the world.
-    pub fn new(world_radius: u16, initializer: impl Fn(HexPoint) -> T) -> Self {
-        // We'll always have (2r + 1)^2 tiles, because the range for x and y
-        // is [-r, r]
-        let x: usize = 2 * (world_radius as usize) + 1;
-        let capacity = x * x;
-        let mut vec = Vec::with_capacity(capacity as usize);
+    /// Initialize a new world with the given radius.
+    ///
+    /// ## Arguments
+    ///
+    /// - `radius`: Distance from the origin to the edge of the world, in all
+    ///   directions. 0 means a world of 1 tile, 1 is 7 tiles, 2 => 19, etc.
+    /// - `initializer`: Function called to initialize each item in the world,
+    ///   based on its position
+    pub fn new(radius: u16, initializer: impl Fn(HexPoint) -> T) -> Self {
+        let capacity = Self::world_size(radius);
+        let mut vec = Vec::with_capacity(capacity);
 
         // Initialize a set of tiles with no data
-        let radius = world_radius as i16;
-        for x in -radius..=radius {
-            for y in -radius..=radius {
-                // x+y+z == 0 always, so we can derive z from x & y.
+        let r = radius as i16;
+        for x in -r..=r {
+            // If we just do [-r,r] for y as well, then we end up with a diamond
+            // pattern instead of a super hexagon
+            // https://www.redblobgames.com/grids/hexagons/#range
+            let y_min = cmp::max(-r, -x - r);
+            let y_max = cmp::min(r, -x + r);
+            for y in y_min..=y_max {
                 let pos = HexPoint::new(x, y);
                 vec.push(initializer(pos));
             }
         }
+        debug_assert_eq!(vec.len(), capacity, "expected 3r²+3r+1 tiles");
 
-        Self { world_radius, vec }
-    }
-
-    /// Get the number of items on one side of the world. This number squared
-    /// will be the total number of items in the vec.
-    fn world_dim_len(&self) -> usize {
-        2 * (self.world_radius as usize) + 1
-    }
-
-    /// Convert the given position to an index into our vec, for doing internal
-    /// lookups. Returns `Some` iff the position is in the map, `None` if it
-    /// produces an invalid index.
-    fn pos_to_index(&self, pos: HexPoint) -> Option<usize> {
-        // Shift x/y to be zero-based, i.e. do this:
-        // [radius=10] (-5, 5) -> (5, 15)
-        // If the position is not in the map, then one of these converions may
-        // fail. In that case, do a quick getaway.
-        let x: usize = (pos.x() + self.world_radius as i16).try_into().ok()?;
-        let y: usize = (pos.y() + self.world_radius as i16).try_into().ok()?;
-
-        // [radius=10] (5, 15) -> (5 * 21) + 15 -> 120
-        let idx = (x * self.world_dim_len()) + y;
-        // Make sure the index is valid.
-        if idx < self.vec.len() {
-            Some(idx)
-        } else {
-            None
+        Self {
+            world_radius: radius,
+            vec,
         }
     }
 
-    pub fn get(&self, pos: HexPoint) -> Option<&T> {
-        self.vec.get(self.pos_to_index(pos)?)
-    }
-
-    pub fn get_mut(&mut self, pos: HexPoint) -> Option<&mut T> {
-        let idx = self.pos_to_index(pos)?;
-        self.vec.get_mut(idx)
+    /// Calculate the size of a world (the number of tiles it contains) based on
+    /// its radius. Radius 0 means 1 tile, 1 is 7 tiles, 2 is 19, etc.
+    fn world_size(radius: u16) -> usize {
+        // We'll always have 3r^2+3r+1 tiles (a reduction of a geometric sum).
+        // f(0) = 1, and we add 6r tiles for every step after that, so:
+        // 1, (+6) 7, (+12) 19, (+18) 37, ...
+        let r = radius as usize;
+        3 * r * r + 3 * r + 1
     }
 
     pub fn iter(&self) -> std::slice::Iter<'_, T> {
@@ -159,12 +159,9 @@ impl<T> WorldMap<T> {
         self.vec.len()
     }
 
-    /// Find all the items adjacent to the given position. This can return up to
-    /// 6 items, but will return less if there are gaps in the map or the
-    /// position is at the edge.
-    pub fn adjacents(&self, pos: HexPoint) -> impl Iterator<Item = &T> {
-        pos.adjacents().filter_map(move |adj| self.get(adj))
-    }
+    // Punting on implementing `get` and `get_mut` for now because the math is
+    // annoying after switching to super hexagon layout. Will figure it out
+    // at some point though if it's necessary.
 }
 
 impl<T: Debug + HasHexPosition> WorldMap<T> {
@@ -355,5 +352,45 @@ impl HexDirection {
             Self::DownLeft => HexPoint::new(-1, 0),
             Self::UpLeft => HexPoint::new(-1, 1),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_distance_to() {
+        let p0 = HexPoint::ORIGIN;
+        let p1 = HexPoint::new(-1, 1);
+        let p2 = HexPoint::new(2, -1);
+        let p3 = HexPoint::new(2, -3);
+
+        assert_eq!(p0.distance_to(p0), 0);
+        assert_eq!(p3.distance_to(p3), 0);
+
+        assert_eq!(p0.distance_to(p1), 1);
+        assert_eq!(p0.distance_to(p2), 2);
+        assert_eq!(p0.distance_to(p3), 3);
+
+        assert_eq!(p1.distance_to(p2), 3);
+        assert_eq!(p1.distance_to(p3), 4);
+        assert_eq!(p2.distance_to(p3), 2);
+    }
+
+    #[test]
+    fn test_world_size() {
+        assert_eq!(<WorldMap<()>>::world_size(0), 1);
+        assert_eq!(<WorldMap<()>>::world_size(1), 7);
+        assert_eq!(<WorldMap<()>>::world_size(2), 19);
+        assert_eq!(<WorldMap<()>>::world_size(3), 37);
+    }
+
+    #[test]
+    fn test_world_map_len() {
+        assert_eq!(WorldMap::new(0, |_| ()).len(), 1);
+        assert_eq!(WorldMap::new(1, |_| ()).len(), 7);
+        assert_eq!(WorldMap::new(2, |_| ()).len(), 19);
+        assert_eq!(WorldMap::new(3, |_| ()).len(), 37);
     }
 }
