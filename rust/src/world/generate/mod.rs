@@ -1,9 +1,10 @@
 mod biome;
 mod elevation;
-mod humidity;
 mod lake;
 mod ocean;
+mod rainfall;
 mod runoff;
+mod wind;
 
 use crate::{
     timed,
@@ -11,10 +12,11 @@ use crate::{
     world::{
         generate::{
             biome::BiomePainter, elevation::ElevationGenerator,
-            humidity::HumidityGenerator, lake::LakeGenerator,
-            ocean::OceanGenerator, runoff::RunoffGenerator,
+            lake::LakeGenerator, ocean::OceanGenerator,
+            rainfall::RainfallGenerator, runoff::RunoffGenerator,
+            wind::WindGenerator,
         },
-        hex::{HasHexPosition, HexPoint, WorldMap},
+        hex::{HasHexPosition, HexAxialDirection, HexPoint, WorldMap},
         Biome, BiomeType, Meter, Tile, WorldConfig,
     },
     NoiseFnConfig,
@@ -44,8 +46,17 @@ pub struct WorldBuilder {
     /// This is public to allow for disjoint borrowing, but please **do not
     /// mutate the config**.
     pub config: WorldConfig,
+
+    /// RNG provider.
     pub rng: Pcg64,
+
+    /// All the tiles in the world. These individual tiles will be mutated
+    /// during world generation, but tiles can never be added/removed/moved!
     pub tiles: WorldMap<TileBuilder>,
+
+    /// Direction of the world's prevailing wind. Initialized by
+    /// [WindGenerator], and is guaranteed to be populated after that.
+    pub wind_direction: Option<HexAxialDirection>,
 }
 
 impl WorldBuilder {
@@ -61,6 +72,7 @@ impl WorldBuilder {
             config,
             rng: Pcg64::seed_from_u64(config.seed),
             tiles,
+            wind_direction: None,
         }
     }
 
@@ -69,8 +81,9 @@ impl WorldBuilder {
     pub fn generate_world(mut self) -> WorldMap<Tile> {
         // Run each generation step. The order is very important!
         self.apply_generator(ElevationGenerator);
-        self.apply_generator(HumidityGenerator);
+        self.apply_generator(WindGenerator);
         self.apply_generator(OceanGenerator);
+        self.apply_generator(RainfallGenerator);
         self.apply_generator(RunoffGenerator);
         self.apply_generator(LakeGenerator);
         self.apply_generator(BiomePainter);
@@ -106,7 +119,7 @@ trait Generate {
 pub struct TileBuilder {
     position: HexPoint,
     elevation: Option<Meter>,
-    humidity: Option<f64>,
+    rainfall: Option<Meter3>,
     biome: Option<Biome>,
     runoff: Option<Meter3>,
 }
@@ -116,7 +129,7 @@ impl TileBuilder {
         Self {
             position,
             elevation: None,
-            humidity: None,
+            rainfall: None,
             biome: None,
             runoff: None,
         }
@@ -126,7 +139,7 @@ impl TileBuilder {
         Tile {
             position: self.position,
             elevation: self.elevation.unwrap(),
-            humidity: self.humidity.unwrap(),
+            rainfall: self.rainfall.unwrap(),
             biome: self.biome.unwrap(),
             // This will still be uninitialized for ocean tiles
             runoff: self.runoff.unwrap_or(Meter3(0.0)),
@@ -143,14 +156,14 @@ impl TileBuilder {
         self.elevation = Some(elevation);
     }
 
-    /// Get this tile's humidity.
-    pub fn humidity(&self) -> Option<f64> {
-        self.humidity
+    /// Get this tile's rainfall.
+    pub fn rainfall(&self) -> Option<Meter3> {
+        self.rainfall
     }
 
-    /// Set the humidity for this tile.
-    pub fn set_humidity(&mut self, humidity: f64) {
-        self.humidity = Some(humidity);
+    /// Set the rainfall for this tile.
+    pub fn set_rainfall(&mut self, rainfall: Meter3) {
+        self.rainfall = Some(rainfall);
     }
 
     /// Get this tile's biome.

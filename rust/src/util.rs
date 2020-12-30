@@ -8,8 +8,9 @@ use rand::{
     distributions::uniform::{SampleRange, SampleUniform, UniformSampler},
     RngCore,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{
+    cmp::Ordering,
     fmt::{Debug, Display},
     marker::PhantomData,
     ops,
@@ -88,6 +89,8 @@ pub struct Meter2(pub f64);
     MulAssign,
     DivAssign,
     Sum,
+    Serialize,
+    Deserialize,
 )]
 #[display(fmt = "{} m³", "self.0")]
 pub struct Meter3(pub f64);
@@ -407,4 +410,11 @@ impl<T: Into<I> + Rangeable<I>, I> RangeValue<T, I> {
             NumRange::new(U::from(self.range.min), U::from(self.range.max));
         RangeValue { value, range }
     }
+}
+
+/// Compare two `PartialOrd` values dangerously. If the partial comparison
+/// fails (returns `None`), this will panic. This is useful if you have floats
+/// that you know for a fact will not be `NaN`.
+pub fn cmp_unwrap<T: PartialOrd>(a: &T, b: &T) -> Ordering {
+    a.partial_cmp(b).unwrap()
 }

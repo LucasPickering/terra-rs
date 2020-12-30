@@ -2,7 +2,7 @@ mod basin;
 mod pattern;
 
 use crate::{
-    util::{Meter, Meter3},
+    util::{self, Meter, Meter3},
     world::{
         generate::{
             runoff::{
@@ -15,7 +15,7 @@ use crate::{
             HasHexPosition, HexDirection, HexPoint, HexPointIndexMap,
             HexPointMap,
         },
-        Tile, World, WorldConfig,
+        Tile, World,
     },
 };
 use fnv::FnvBuildHasher;
@@ -45,17 +45,14 @@ impl Generate for RunoffGenerator {
         // continent is independent, but skipping that for now cause Wasm.
         for continent in continents {
             let mut continent = Continent::new(continent.into_tiles());
-            continent.sim_continent_runoff(&world.config);
+            continent.sim_continent_runoff();
         }
     }
 }
 
 /// Compare two tiles by their elevation
 fn cmp_elev(a: &TileBuilder, b: &TileBuilder) -> Ordering {
-    a.elevation()
-        .unwrap()
-        .partial_cmp(&b.elevation().unwrap())
-        .unwrap()
+    util::cmp_unwrap(&a.elevation().unwrap(), &b.elevation().unwrap())
 }
 
 struct Continent<'a> {
@@ -106,7 +103,7 @@ impl<'a> Continent<'a> {
             // This is a map of direction:elevation_diff
             let recipients: Vec<(HexDirection, Meter)> = HexDirection::iter()
                 .filter_map(|dir| {
-                    let adj_pos = source_tile.position() + dir.offset();
+                    let adj_pos = source_tile.position() + dir.vec();
                     let adj_elev = match tiles.get(&adj_pos) {
                         // Adjacent tile isn't part of this continent, so assume
                         // it's ocean
@@ -135,7 +132,7 @@ impl<'a> Continent<'a> {
             // For each adjacent lower tile, mark it as an exit in the pattern
             let mut runoff_pattern = RunoffPattern::new(source_tile.position());
             for (dir, elev_diff) in recipients {
-                let adj_pos = source_tile.position() + dir.offset();
+                let adj_pos = source_tile.position() + dir.vec();
                 runoff_pattern.add_exit(
                     dir,
                     // This is why the tiles have to be ascending by elevation,
@@ -153,18 +150,18 @@ impl<'a> Continent<'a> {
     /// Simulate runoff for a single continent. Each continent is an independent
     /// system, meaning its runoff doesn't affect any other continents in any
     /// way.
-    fn sim_continent_runoff(&mut self, cfg: &WorldConfig) {
-        self.initialize_runoff(cfg.rainfall_scale);
+    fn sim_continent_runoff(&mut self) {
+        self.initialize_runoff();
         self.push_downhill();
         self.sim_backflow();
     }
 
     /// Generate an initial runoff level for every tile in a continent.
-    fn initialize_runoff(&mut self, rainfall_scale: f64) {
+    fn initialize_runoff(&mut self) {
         // Set initial runoff for each tile
         for tile in self.tiles.values_mut() {
             // Set initial runoff level
-            tile.set_runoff(Meter3(tile.humidity().unwrap() * rainfall_scale));
+            tile.set_runoff(tile.rainfall().unwrap());
         }
     }
 

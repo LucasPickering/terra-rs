@@ -74,7 +74,7 @@ function getWorldConfig(): Record<string, unknown> {
   };
 
   addQueryParam("seed");
-  addQueryParam("tile_radius");
+  addQueryParam("radius");
 
   return cfg;
 }

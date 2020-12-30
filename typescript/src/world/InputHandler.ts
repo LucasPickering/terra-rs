@@ -9,7 +9,7 @@ const INPUT_ACTIONS = [
   "toggleDebugOverlay",
   "lensBiome",
   "lensElevation",
-  "lensHumidity",
+  "lensRainfall",
   "lensRunoff",
 ] as const;
 type InputAction = typeof INPUT_ACTIONS[number];
@@ -33,7 +33,7 @@ const DEFAULT_INPUT_CONFIG: InputConfig = {
     toggleDebugOverlay: "`",
     lensBiome: "1",
     lensElevation: "2",
-    lensHumidity: "3",
+    lensRainfall: "3",
     lensRunoff: "4",
   },
 };
@@ -91,8 +91,8 @@ class InputHandler {
       case "lensElevation":
         this.scene.setTileLens(TileLens.Elevation);
         break;
-      case "lensHumidity":
-        this.scene.setTileLens(TileLens.Humidity);
+      case "lensRainfall":
+        this.scene.setTileLens(TileLens.Rainfall);
         break;
       case "lensRunoff":
         this.scene.setTileLens(TileLens.Runoff);

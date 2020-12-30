@@ -1,6 +1,6 @@
 //! This module holds basic types and data structures related to hexagon grids.
 
-use derive_more::{Add, Display};
+use derive_more::{Add, AddAssign, Display, Mul, MulAssign};
 use fnv::FnvBuildHasher;
 use indexmap::IndexMap;
 use std::{
@@ -8,13 +8,16 @@ use std::{
     collections::{HashMap, HashSet, VecDeque},
     fmt::Debug,
     hash::Hash,
+    iter, ops,
 };
 use strum::{EnumIter, IntoEnumIterator};
 use wasm_bindgen::prelude::*;
 
 /// A point in a hexagon-tiled world. Each point has an x, y, and z component.
-/// See this page for info on how the 3D system works:
-/// https://www.redblobgames.com/grids/hexagons/
+/// See this page for info on how the cube coordinate system works:
+/// https://www.redblobgames.com/grids/hexagons/#coordinates-cube
+///
+/// **In this page's vernacular, we use "flat topped" tiles.**
 ///
 /// This struct actually only needs to store x and y, since x+y+z=0 for all
 /// points, so z can be derived as necessary which means we can save 33% of
@@ -24,7 +27,7 @@ use wasm_bindgen::prelude::*;
 /// a radius of more than 32k (that'd be ~4 billion tiles), so this saves on
 /// memory a lot.
 #[wasm_bindgen]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Display, Add)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Display)]
 #[display(fmt = "({}, {}, {})", "self.x()", "self.y()", "self.z()")]
 pub struct HexPoint {
     x: i16,
@@ -64,16 +67,73 @@ impl HexPoint {
 impl HexPoint {
     pub const ORIGIN: Self = Self::new(0, 0);
 
+    /// Alias for [Self::new_xy]
+    pub const fn new(x: i16, y: i16) -> Self {
+        Self::new_xy(x, y)
+    }
+
     /// Construct a new hex point with the given x and y. Since x+y+z=0 for all
     /// points, we can derive z from x & y.
-    pub const fn new(x: i16, y: i16) -> Self {
+    pub const fn new_xy(x: i16, y: i16) -> Self {
         Self { x, y }
+    }
+
+    /// Construct a new hex point with the given x and z. Since x+y+z=0 for all
+    /// points, we can derive y from x & z.
+    pub const fn new_xz(x: i16, z: i16) -> Self {
+        Self::new(x, -x - z)
+    }
+
+    /// Construct a new hex point with the given y and z. Since x+y+z=0 for all
+    /// points, we can derive x from y & z.
+    pub const fn new_yz(y: i16, z: i16) -> Self {
+        Self::new(-y - z, y)
     }
 
     /// Get an iterator of all the points directly adjacent to this one. The
     /// iterator will always contain exactly 6 values.
     pub fn adjacents(self) -> impl Iterator<Item = HexPoint> {
-        HexDirection::iter().map(move |dir| self + dir.offset())
+        HexDirection::iter().map(move |dir| self + dir.vec())
+    }
+}
+
+impl ops::Add<HexVec> for HexPoint {
+    type Output = HexPoint;
+
+    fn add(self, rhs: HexVec) -> Self::Output {
+        Self::new(self.x + rhs.x(), self.y + rhs.y())
+    }
+}
+
+/// A vector in a hex world. This is an (x,y,z) kind of vector, not a list
+/// vector. This is essentially the same as a [HexPoint], but by denoting some
+/// values explicitly as vectors rather than points, it makes a bit clearer when
+/// shifting points around. Like [HexPoint], x+y+z will always equal 0 for all
+/// vectors.
+#[derive(Copy, Clone, Debug, Display, Add, Mul, AddAssign, MulAssign)]
+#[display(fmt = "({}, {}, {})", "self.x()", "self.y()", "self.z()")]
+pub struct HexVec {
+    x: i16,
+    y: i16,
+}
+
+impl HexVec {
+    pub const ZERO: Self = Self::new(0, 0);
+
+    pub const fn new(x: i16, y: i16) -> Self {
+        Self { x, y }
+    }
+
+    pub fn x(&self) -> i16 {
+        self.x
+    }
+
+    pub fn y(&self) -> i16 {
+        self.y
+    }
+
+    pub fn z(&self) -> i16 {
+        -(self.x + self.y)
     }
 }
 
@@ -89,10 +149,8 @@ pub struct WorldMap<T> {
     /// this as an `i16` as well, so this cannot exceed [std::isize::MAX]!
     /// If it does, we're gonna have bigger problems anyway...
     world_radius: u16,
-    /// Items get flattened into a vec. We can do this because we know the
-    /// exact x/y bounds of the world. Items are ordered by ascending y, then
-    /// ascending x. E.g. [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 0), ...]
-    vec: Vec<T>,
+    /// Each tile, keyed by its position.
+    map: HexPointMap<T>,
 }
 
 impl<T> WorldMap<T> {
@@ -106,7 +164,10 @@ impl<T> WorldMap<T> {
     ///   based on its position
     pub fn new(radius: u16, initializer: impl Fn(HexPoint) -> T) -> Self {
         let capacity = Self::world_size(radius);
-        let mut vec = Vec::with_capacity(capacity);
+        let mut map = HexPointMap::with_capacity_and_hasher(
+            capacity,
+            FnvBuildHasher::default(),
+        );
 
         // Initialize a set of tiles with no data
         let r = radius as i16;
@@ -118,14 +179,14 @@ impl<T> WorldMap<T> {
             let y_max = cmp::min(r, -x + r);
             for y in y_min..=y_max {
                 let pos = HexPoint::new(x, y);
-                vec.push(initializer(pos));
+                map.insert(pos, initializer(pos));
             }
         }
-        debug_assert_eq!(vec.len(), capacity, "expected 3r²+3r+1 tiles");
+        debug_assert_eq!(map.len(), capacity, "expected 3r²+3r+1 tiles");
 
         Self {
             world_radius: radius,
-            vec,
+            map,
         }
     }
 
@@ -139,12 +200,20 @@ impl<T> WorldMap<T> {
         3 * r * r + 3 * r + 1
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, T> {
-        self.vec.iter()
+    pub fn get(&self, pos: HexPoint) -> Option<&T> {
+        self.map.get(&pos)
     }
 
-    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, T> {
-        self.vec.iter_mut()
+    pub fn get_mut(&mut self, pos: HexPoint) -> Option<&mut T> {
+        self.map.get_mut(&pos)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.map.iter().map(|(_, v)| v)
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
+        self.map.iter_mut().map(|(_, v)| v)
     }
 
     /// Map this collection into a new collection by apply the given mapping
@@ -152,21 +221,17 @@ impl<T> WorldMap<T> {
     /// [std::iter::Iterator::map] because you can't collect an iterator into a
     /// [WorldMap].
     pub fn map<U>(self, f: impl Fn(T) -> U) -> WorldMap<U> {
-        let vec = self.vec.into_iter().map(f).collect();
+        let map = self.map.into_iter().map(|(k, v)| (k, f(v))).collect();
         WorldMap {
             world_radius: self.world_radius,
-            vec,
+            map,
         }
     }
 
     /// Get the number of items in the map
     pub fn len(&self) -> usize {
-        self.vec.len()
+        self.map.len()
     }
-
-    // Punting on implementing `get` and `get_mut` for now because the math is
-    // annoying after switching to super hexagon layout. Will figure it out
-    // at some point though if it's necessary.
 }
 
 impl<T: Debug + HasHexPosition> WorldMap<T> {
@@ -239,11 +304,15 @@ impl<T: Debug + HasHexPosition> WorldMap<T> {
 }
 
 impl<T> IntoIterator for WorldMap<T> {
-    type Item = <Vec<T> as IntoIterator>::Item;
-    type IntoIter = <Vec<T> as IntoIterator>::IntoIter;
+    type Item = T;
+    #[allow(clippy::type_complexity)]
+    type IntoIter = iter::Map<
+        <HexPointMap<T> as IntoIterator>::IntoIter,
+        fn((HexPoint, T)) -> T,
+    >;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.vec.into_iter()
+        self.map.into_iter().map(|(_, v)| v)
     }
 }
 
@@ -340,7 +409,13 @@ pub trait HasHexPosition: Sized {
     fn position(&self) -> HexPoint;
 }
 
-/// The 6 directions on the hex axes. Left/right is aligned with the x axis
+/// The 6 directions in which hexes can line up side-to-side. This is similar to
+/// [HexAxis], but while `HexAxis` is center-to-vertex, this enum denotes
+/// center-to-side directions. So each entry in this enum reprensents a line
+/// drawn from the center of a tile to the center of one side on that tile.
+///
+/// See this page for more info (we use "flat topped" tiles):
+/// https://www.redblobgames.com/grids/hexagons/#coordinates-cube
 #[derive(Copy, Clone, Debug, EnumIter, PartialEq, Eq, Hash)]
 pub enum HexDirection {
     Up,
@@ -352,15 +427,50 @@ pub enum HexDirection {
 }
 
 impl HexDirection {
-    /// Get an offset that would move a point in this direction
-    pub fn offset(self) -> HexPoint {
+    /// Get an vector offset that would move a point one tile in this direction
+    pub fn vec(self) -> HexVec {
         match self {
-            Self::Up => HexPoint::new(0, 1),
-            Self::UpRight => HexPoint::new(1, 0),
-            Self::DownRight => HexPoint::new(1, -1),
-            Self::Down => HexPoint::new(0, -1),
-            Self::DownLeft => HexPoint::new(-1, 0),
-            Self::UpLeft => HexPoint::new(-1, 1),
+            Self::Up => HexVec::new(0, 1),
+            Self::UpRight => HexVec::new(1, 0),
+            Self::DownRight => HexVec::new(1, -1),
+            Self::Down => HexVec::new(0, -1),
+            Self::DownLeft => HexVec::new(-1, 0),
+            Self::UpLeft => HexVec::new(-1, 1),
+        }
+    }
+}
+
+/// The 3 axes in our coordinate system.
+///
+/// See this page for more info (we use "flat topped" tiles):
+/// https://www.redblobgames.com/grids/hexagons/#coordinates-cube
+#[derive(Copy, Clone, Debug, EnumIter)]
+pub enum HexAxis {
+    X,
+    Y,
+    Z,
+}
+
+/// Similar to [HexDirection], but instead of denoting center-to-side
+/// directions, this denotes center-to-vertex axes. Each main axis is made by
+/// connecting two opposite vertices on the origin tile (3 vertex pairs = 3
+/// axes). This enum splits each axis into two segments (positive and negative)
+/// for ease of use.
+///
+/// See this page for more info (we use "flat topped" tiles):
+/// https://www.redblobgames.com/grids/hexagons/#coordinates-cube
+#[derive(Copy, Clone, Debug)]
+pub struct HexAxialDirection {
+    pub axis: HexAxis,
+    pub positive: bool,
+}
+
+impl HexAxialDirection {
+    pub fn signum(self) -> i16 {
+        if self.positive {
+            1
+        } else {
+            -1
         }
     }
 }

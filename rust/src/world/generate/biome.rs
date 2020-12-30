@@ -1,8 +1,8 @@
 use crate::{
-    util::NumRange,
+    util::{Meter3, NumRange},
     world::{
         generate::{Generate, WorldBuilder},
-        Biome, Meter, World,
+        Biome, World,
     },
 };
 
@@ -23,16 +23,17 @@ impl Generate for BiomePainter {
         // still give them a biome of some sort.
         let elev_input_range =
             NumRange::new(World::SEA_LEVEL, World::ELEVATION_RANGE.max);
+        let rainfall_input_range = NumRange::new(Meter3(0.0), Meter3(5.0));
 
         // Set the biome for each tile, but don't overwrite any existing biomes
         for tile in world.tiles.iter_mut().filter(|tile| tile.biome().is_none())
         {
             // Normalize these values so we don't have to update this code when
             // we change the elevation/humidity range bounds
-            let elevation =
-                elev_input_range.normalize(tile.elevation().unwrap());
-            let humidity =
-                World::HUMIDITY_RANGE.normalize(tile.humidity().unwrap());
+            let elevation: f64 =
+                elev_input_range.normalize(tile.elevation().unwrap()).0;
+            let humidity: f64 =
+                rainfall_input_range.normalize(tile.rainfall().unwrap()).0;
 
             // A piecewise function to map elevation/humidity to biome.
             // I swear there's logic behind this, I even drew a picture.
@@ -41,15 +42,15 @@ impl Generate for BiomePainter {
             // https://en.wikipedia.org/wiki/Phase_diagram#Pressure_vs_temperature
             // Each of these conditions is essentially a 2d function, either
             // x = c or y = mx+b, where elevation is y and humidity is x
-            let biome = if elevation >= Meter(-0.1 * humidity + 0.5) {
+            let biome = if elevation >= -0.1 * humidity + 0.5 {
                 Biome::Snow
             } else if humidity <= 0.15 {
                 Biome::Desert
-            } else if elevation >= Meter(-0.1 * humidity + 0.4) {
+            } else if elevation >= -0.1 * humidity + 0.4 {
                 Biome::Alpine
             } else if humidity >= 0.75 {
                 Biome::Jungle
-            } else if elevation >= Meter(-0.88 * humidity + 0.54) {
+            } else if elevation >= -0.88 * humidity + 0.54 {
                 Biome::Forest
             } else {
                 Biome::Plains

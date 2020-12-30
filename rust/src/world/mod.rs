@@ -116,9 +116,10 @@ impl World {
 pub struct Tile {
     position: HexPoint,
     elevation: Meter,
-    humidity: f64,
-    /// Amount of runoff water that this tile holds. This uses the same scale
-    /// as elevation.
+    /// Amount of rain that fell on this tile during rain simulation.
+    rainfall: Meter3,
+    /// Amount of runoff water that remains on the tile after runoff
+    /// simulation.
     runoff: Meter3,
     biome: Biome,
 }
@@ -150,8 +151,13 @@ impl Tile {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn humidity(&self) -> f64 {
-        self.humidity
+    pub fn rainfall(&self) -> Meter3 {
+        self.rainfall
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn runoff(&self) -> Meter3 {
+        self.runoff
     }
 
     #[wasm_bindgen(getter)]
@@ -172,12 +178,16 @@ impl Tile {
                 // 1 -> red
                 Color3::new(1.0, 1.0 - normal_elev, 1.0 - normal_elev)
             }
-            TileLens::Humidity => {
-                let normal_humidity =
-                    World::HUMIDITY_RANGE.normalize(self.humidity()) as f32;
+            TileLens::Rainfall => {
+                let normal_rainfall = NumRange::new(Meter3(0.0), Meter3(5.0))
+                    .value(self.rainfall())
+                    .normalize()
+                    .clamp()
+                    .convert::<f64>()
+                    .inner() as f32;
                 // 0 -> white
                 // 1 -> green
-                Color3::new(1.0 - normal_humidity, 1.0, 1.0 - normal_humidity)
+                Color3::new(1.0 - normal_rainfall, 1.0, 1.0 - normal_rainfall)
             }
             TileLens::Runoff => {
                 let normal_runoff = NumRange::new(Meter3(0.0), Meter3(5.0))
@@ -186,8 +196,8 @@ impl Tile {
                     // Runoff doesn't have a fixed range so we have to clamp
                     // this to make sure we don't overflow the color value
                     .clamp()
-                    .inner()
-                    .0 as f32;
+                    .convert::<f64>()
+                    .inner() as f32;
                 // 0 -> white
                 // 1 -> blue
                 Color3::new(1.0 - normal_runoff, 1.0 - normal_runoff, 1.0)
@@ -209,7 +219,7 @@ impl HasHexPosition for Tile {
 pub enum TileLens {
     Biome,
     Elevation,
-    Humidity,
+    Rainfall,
     Runoff,
 }
 

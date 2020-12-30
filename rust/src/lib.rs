@@ -1,6 +1,7 @@
+#![feature(cmp_min_max_by)]
 #![feature(const_fn)]
 
-use crate::world::World;
+use crate::{util::Meter3, world::World};
 use log::info;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
@@ -55,7 +56,6 @@ pub struct WorldConfig {
     /// ocean. This is included **as part of the radius**, and therefore must
     /// be less than the radius.
     pub edge_buffer_size: u16,
-
     /// Exponent to apply to the function that pushes down elevations in the
     /// buffer zone. An exponent of 1.0 will push them linearly. Sub-1.0
     /// exponents will have a smooth dropoff closer to the middle, then get
@@ -63,15 +63,37 @@ pub struct WorldConfig {
     /// (steep at first, then smooth out at the edge).
     pub edge_buffer_exponent: f64,
 
-    /// Ratio of humidity:initial_runoff. For example, if the scale is 0.5,
-    /// then a tile with 0.5 humidity will start with 0.25 m³ runoff on it.
-    pub rainfall_scale: f64,
+    /// The amount of evaporation that each tile provides under "default"
+    /// circumstances. ATM "default" means water, but that could be subject to
+    /// change. In general though, this is the base evaporation value we use,
+    /// and it can be modified under certain scenarios according to other
+    /// fields in this config.
+    pub evaporation_default: Meter3,
+    /// Scaling factor for evaporation from land tiles. Each land tile will
+    /// produce the default evaporation amount times this scaling factor.
+    /// Should probably be less than 1.
+    pub evaporation_land_scale: f64,
+    /// The distance (in tiles) that evaporation spreads, perpendicular to the
+    /// wind. E.g. if we consider the wind direction to be *forward*, then
+    /// this is the distance to the left and right that a particular tile's
+    /// evaporation will spread. This is a smoothing mechanism that makes
+    /// precipitation patterns appear smoother/more natural.
+    pub evaporation_spread_distance: u16,
+    /// Exponent to apply while calculating spread diminishment. If the
+    /// exponent is 1.0, then evaporation spread will be linear, meaning the
+    /// amount of evaporation that one tile will receive from another tile that
+    /// is `n` steps away will be proportional to `n`. If this is <1, then
+    /// spreading will be biased towards the center, and if >1 will be biased
+    /// towards the outer edges.
+    pub evaporation_spread_exponent: f64,
+    /// The maximum fraction of a cloud's rainfall that can be dropped on any
+    /// particular tile. E.g. if this is 0.01, then a cloud can drop at most 1%
+    /// of its held water on a single tile. This value should typically be
+    /// pretty small, to allow water spreading over large chunks of land.
+    pub rainfall_factor_limit: f64,
 
     /// Config for the noise function used to generate elevation values
     pub elevation: NoiseFnConfig,
-
-    /// Config for the noise function used to generate humidity values
-    pub humidity: NoiseFnConfig,
 }
 
 /// Top-level struct for a Terra instance. This holds every we need to render
