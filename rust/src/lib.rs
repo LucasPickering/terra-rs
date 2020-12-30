@@ -11,10 +11,15 @@ mod world;
 /// Config for a particular noise generation function
 #[derive(Copy, Clone, Debug, Deserialize)]
 pub struct NoiseFnConfig {
+    /// TODO
     pub octaves: usize,
+    /// TODO
     pub frequency: f64,
+    /// TODO
     pub lacunarity: f64,
+    /// TODO
     pub persistence: f64,
+    /// TODO
     pub exponent: f64,
 }
 
@@ -22,12 +27,18 @@ pub struct NoiseFnConfig {
 /// same config will always be identical.
 #[derive(Copy, Clone, Debug, Deserialize)]
 pub struct WorldConfig {
+    /// TODO
     pub seed: u64,
+    /// TODO
     pub tile_radius: u16,
+    /// TODO
+    pub tile_edge_buffer: u16,
     /// Ratio of humidity:initial_runoff. For example, if the scale is 0.5,
     /// then a tile with 0.5 humidity will start with 0.25 m³ runoff on it.
     pub rainfall_scale: f64,
+    /// TODO
     pub elevation: NoiseFnConfig,
+    /// TODO
     pub humidity: NoiseFnConfig,
 }
 

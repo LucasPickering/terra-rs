@@ -285,14 +285,14 @@ impl<T: Into<I> + Rangeable<I>, I> NumRange<T, I> {
     }
 
     /// Map a value from this range to the target range.
-    pub fn map(&self, dest_range: &Self, value: T) -> T {
+    pub fn map_to(&self, dest_range: &Self, value: T) -> T {
         let normalized = (value - self.min) / self.span().into();
         dest_range.min + (normalized * dest_range.span().into())
     }
 
     /// Map a value from this range to the range [0, 1]
     pub fn normalize(&self, value: T) -> T {
-        self.map(&Self::normal_range(), value)
+        self.map_to(&Self::normal_range(), value)
     }
 
     /// Force a value into this range. If it's already in the range, return
@@ -358,9 +358,19 @@ impl<T: Into<I> + Rangeable<I>, I> RangeValue<T, I> {
         self.map_to(<NumRange<T, I>>::normal_range())
     }
 
+    /// Invert this value in the range, so that its distance from the min
+    /// becomes its distance from the max, and vice versa. For example,
+    /// inverting `0.7` in the range `[0,1]` returns `0.3`.
+    pub fn invert(mut self) -> Self {
+        let min = self.range.max;
+        let max = self.range.min;
+        self.value = self.range.map_to(&NumRange::new(min, max), self.value);
+        self
+    }
+
     /// Map this value from the current range to a new range.
     pub fn map_to(self, range: NumRange<T, I>) -> Self {
-        let new_value = self.range.map(&range, self.value);
+        let new_value = self.range.map_to(&range, self.value);
         Self {
             range,
             value: new_value,

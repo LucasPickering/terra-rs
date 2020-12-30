@@ -111,10 +111,7 @@ impl<'a> Continent<'a> {
                     let adj_pos = source_tile.position() + dir.offset();
                     let adj_elev = match tiles.get(&adj_pos) {
                         // Adjacent tile isn't part of this continent, so assume
-                        // it's ocean. (Right now that isn't entirely true
-                        // because the map gets cut off,
-                        // but at some point we'll ensure that
-                        // the map always has a water boundary)
+                        // it's ocean
                         None => World::SEA_LEVEL,
                         Some(adj_tile) => adj_tile.elevation().unwrap(),
                     };

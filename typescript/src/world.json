@@ -1,5 +1,6 @@
 {
   "tile_radius": 300,
+  "tile_edge_buffer": 100,
   "rainfall_scale": 0.2,
   "elevation": {
     "octaves": 3,

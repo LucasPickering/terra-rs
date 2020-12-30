@@ -146,7 +146,7 @@ impl Tile {
     #[wasm_bindgen(getter)]
     pub fn height(&self) -> Meter {
         World::ELEVATION_RANGE
-            .map(&World::ELEVATION_RANGE.zeroed(), self.elevation)
+            .map_to(&World::ELEVATION_RANGE.zeroed(), self.elevation)
     }
 
     #[wasm_bindgen(getter)]
@@ -180,7 +180,7 @@ impl Tile {
                 Color3::new(1.0 - normal_humidity, 1.0, 1.0 - normal_humidity)
             }
             TileLens::Runoff => {
-                let normal_runoff = NumRange::new(Meter3(0.0), Meter3(1.0))
+                let normal_runoff = NumRange::new(Meter3(0.0), Meter3(5.0))
                     .value(self.runoff)
                     .normalize()
                     // Runoff doesn't have a fixed range so we have to clamp
