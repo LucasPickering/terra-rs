@@ -642,7 +642,7 @@ eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__
 /******/ 					promises.push(installedWasmModuleData);
 /******/ 				else {
 /******/ 					var importObject = wasmImportObjects[wasmModuleId]();
-/******/ 					var req = fetch(__webpack_require__.p + "" + {"rust_pkg_terra-wasm_js":{"../rust/pkg/terra-wasm_bg.wasm":"c5edf3a8d182a2a63cf9"}}[chunkId][wasmModuleId] + ".module.wasm");
+/******/ 					var req = fetch(__webpack_require__.p + "" + {"rust_pkg_terra-wasm_js":{"../rust/pkg/terra-wasm_bg.wasm":"611c75cd3740712bf24a"}}[chunkId][wasmModuleId] + ".module.wasm");
 /******/ 					var promise;
 /******/ 					if(importObject instanceof Promise && typeof WebAssembly.compileStreaming === 'function') {
 /******/ 						promise = Promise.all([WebAssembly.compileStreaming(req), importObject]).then(function(items) {
