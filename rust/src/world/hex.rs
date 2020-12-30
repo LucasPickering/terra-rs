@@ -2,8 +2,13 @@
 
 use derive_more::{Add, Display};
 use fnv::FnvBuildHasher;
-use indexmap::{IndexMap, IndexSet};
-use std::{cmp, collections::VecDeque, fmt::Debug, hash::Hash};
+use indexmap::IndexMap;
+use std::{
+    cmp,
+    collections::{HashMap, HashSet, VecDeque},
+    fmt::Debug,
+    hash::Hash,
+};
 use strum::{EnumIter, IntoEnumIterator};
 use wasm_bindgen::prelude::*;
 
@@ -188,7 +193,7 @@ impl<T: Debug + HasHexPosition> WorldMap<T> {
 
         // Copy our map into one that will hold the remaining items left to
         // check
-        let mut remaining: HexPointMap<&mut T> =
+        let mut remaining: HexPointIndexMap<&mut T> =
             self.iter_mut().map(|t| (t.position(), t)).collect();
         let mut clusters: Vec<Cluster<&mut T>> = Vec::new();
 
@@ -196,7 +201,7 @@ impl<T: Debug + HasHexPosition> WorldMap<T> {
         // This loop runs once per generated cluster, plus once per each failed
         // attempt at a cluster (where the first item fails the predicate)
         while let Some(first_entry) = remaining.pop() {
-            let mut cluster = HexPointMap::default();
+            let mut cluster = HexPointIndexMap::default();
             // Start our BFS. We'll use a queue of the next items to check, and
             // seed it with our first item. It doesn't seem to matter if we
             // allocate this on each loop or do it outside, so it's probably
@@ -242,20 +247,25 @@ impl<T> IntoIterator for WorldMap<T> {
     }
 }
 
-pub type HexPointSet = IndexSet<HexPoint, FnvBuildHasher>;
-pub type HexPointMap<T> = IndexMap<HexPoint, T, FnvBuildHasher>;
+/// A set of hex points
+pub type HexPointSet = HashSet<HexPoint, FnvBuildHasher>;
+/// A map of hex points to some `T`
+pub type HexPointMap<T> = HashMap<HexPoint, T, FnvBuildHasher>;
+/// An ORDERED map of hex points to some `T`. This has some extra memory
+/// overhead, so we should only use it when we actually need the ordering.
+pub type HexPointIndexMap<T> = IndexMap<HexPoint, T, FnvBuildHasher>;
 
 /// A cluster is a set of contiguous hex points. All items in a cluster are
 /// adjacent to at least one other item in the cluster (unless the cluster is a
 /// singular item).
 #[derive(Clone, Debug)]
 pub struct Cluster<T> {
-    tiles: HexPointMap<T>,
+    tiles: HexPointIndexMap<T>,
     adjacents: HexPointSet,
 }
 
 impl<T: Debug> Cluster<T> {
-    pub fn new(tiles: HexPointMap<T>) -> Self {
+    pub fn new(tiles: HexPointIndexMap<T>) -> Self {
         // Initialize the set of all tiles that are adjacent to (but not in) the
         // cluster
         let mut adjacents = HexPointSet::default();
@@ -270,12 +280,12 @@ impl<T: Debug> Cluster<T> {
     }
 
     /// A reference to the map of tiles in this cluster
-    pub fn tiles(&self) -> &HexPointMap<T> {
+    pub fn tiles(&self) -> &HexPointIndexMap<T> {
         &self.tiles
     }
 
     /// Move the tile map out of this struct
-    pub fn into_tiles(self) -> HexPointMap<T> {
+    pub fn into_tiles(self) -> HexPointIndexMap<T> {
         self.tiles
     }
 

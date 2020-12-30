@@ -11,7 +11,10 @@ use crate::{
             },
             Generate, TileBuilder,
         },
-        hex::{HasHexPosition, HexDirection, HexPoint, HexPointMap, WorldMap},
+        hex::{
+            HasHexPosition, HexDirection, HexPoint, HexPointIndexMap,
+            HexPointMap, WorldMap,
+        },
         Tile, World, WorldConfig,
     },
 };
@@ -64,17 +67,17 @@ struct Continent<'a> {
     /// All the tiles in this continent. After continent creation, this will
     /// not be added to or removed from, but it may be reoredered and the
     /// individual tiles may be mutated.
-    tiles: HexPointMap<&'a mut TileBuilder>,
+    tiles: HexPointIndexMap<&'a mut TileBuilder>,
     /// The runoff pattern of every tile in this continent. Once initialized,
     /// this map will corresponding 1:1 with `self.tiles`. That means they will
     /// have the same length **and** the same ordering. This makes lookups
     /// & iterating easier in some scenarios because we can zip the two
     /// together or do cross lookups based on index instead of key.
-    runoff_patterns: HexPointMap<RunoffPattern>,
+    runoff_patterns: HexPointIndexMap<RunoffPattern>,
 }
 
 impl<'a> Continent<'a> {
-    fn new(mut tiles: HexPointMap<&'a mut TileBuilder>) -> Self {
+    fn new(mut tiles: HexPointIndexMap<&'a mut TileBuilder>) -> Self {
         let runoff_patterns = Self::calc_runoff_patterns(&mut tiles);
         Self {
             tiles,
@@ -91,8 +94,8 @@ impl<'a> Continent<'a> {
     /// **This will reorder the input!** The continent needs to be sorted by
     /// ascending elevation to calculate runoff patterns.
     fn calc_runoff_patterns(
-        tiles: &mut HexPointMap<&mut TileBuilder>,
-    ) -> HexPointMap<RunoffPattern> {
+        tiles: &mut HexPointIndexMap<&mut TileBuilder>,
+    ) -> HexPointIndexMap<RunoffPattern> {
         // Sort tiles by ascending elevation. This is very important! Runoff
         // patterns have to be generated low->high so the patterns of their
         // lower neighbors. Once we have a pattern for each tile, we can
@@ -102,7 +105,7 @@ impl<'a> Continent<'a> {
         // Build a map of runoff patterns for each tile. IMPORTANT: this map has
         // the same ordering as self.tiles, which allows us to do index lookups
         // instead of key lookups later. gotta go fast
-        let mut runoff_patterns = HexPointMap::default();
+        let mut runoff_patterns = HexPointIndexMap::default();
         for source_tile in tiles.values() {
             // For each neighbor of this tile, determine how much water it gets.
             // This is a map of direction:elevation_diff

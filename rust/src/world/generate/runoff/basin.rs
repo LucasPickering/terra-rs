@@ -5,7 +5,7 @@ use crate::{
             runoff::pattern::{RunoffDestination, RunoffPattern},
             TileBuilder,
         },
-        hex::{Cluster, HasHexPosition, HexPoint, HexPointMap},
+        hex::{Cluster, HasHexPosition, HexPoint, HexPointIndexMap},
         Tile,
     },
 };
@@ -233,7 +233,7 @@ impl Basins {
     /// runoff data, we will assume that any tile with runoff on it is a
     /// terminal. As such, this should only be called **after** runoff has
     /// been pushed out to all the terminal tiles.
-    pub fn new(continent: &mut HexPointMap<&mut TileBuilder>) -> Self {
+    pub fn new(continent: &mut HexPointIndexMap<&mut TileBuilder>) -> Self {
         let basins = continent
             .values_mut()
             // This will give us all the terminal tiles, create one basin per
