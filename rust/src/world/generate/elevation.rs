@@ -1,28 +1,23 @@
 use crate::{
     util::{Meter, NumRange},
     world::{
-        generate::{Generate, TileBuilder, TileNoiseFn},
-        hex::{HasHexPosition, HexPoint, WorldMap},
-        World, WorldConfig,
+        generate::{Generate, TileNoiseFn, WorldBuilder},
+        hex::{HasHexPosition, HexPoint},
+        World,
     },
 };
 use noise::Fbm;
-use rand::Rng;
 
 /// Generate an elevation map using a noise function.
 #[derive(Debug)]
 pub struct ElevationGenerator;
 
 impl Generate for ElevationGenerator {
-    fn generate(
-        &self,
-        config: &WorldConfig,
-        rng: &mut impl Rng,
-        tiles: &mut WorldMap<TileBuilder>,
-    ) {
+    fn generate(&self, world: &mut WorldBuilder) {
+        let config = world.config;
         let normal_range = NumRange::normal_range();
         let noise_fn: TileNoiseFn<Fbm, Meter> =
-            TileNoiseFn::new(rng, &config.elevation, normal_range);
+            TileNoiseFn::new(&mut world.rng, &config.elevation, normal_range);
         if config.edge_buffer_size >= config.radius {
             panic!(
                 "config.edge_buffer_size ({}) \
@@ -35,7 +30,7 @@ impl Generate for ElevationGenerator {
             config.radius as f64,
         );
 
-        for tile in tiles.iter_mut() {
+        for tile in world.tiles.iter_mut() {
             let pos = tile.position();
             let d = pos.distance_to(HexPoint::ORIGIN) as f64;
 

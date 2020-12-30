@@ -9,17 +9,16 @@ use crate::{
                 basin::{Basin, Basins},
                 pattern::{RunoffDestination, RunoffPattern},
             },
-            Generate, TileBuilder,
+            Generate, TileBuilder, WorldBuilder,
         },
         hex::{
             HasHexPosition, HexDirection, HexPoint, HexPointIndexMap,
-            HexPointMap, WorldMap,
+            HexPointMap,
         },
         Tile, World, WorldConfig,
     },
 };
 use fnv::FnvBuildHasher;
-use rand::Rng;
 use std::{
     cmp::Ordering,
     collections::{HashMap, VecDeque},
@@ -39,18 +38,14 @@ use strum::IntoEnumIterator;
 pub struct RunoffGenerator;
 
 impl Generate for RunoffGenerator {
-    fn generate(
-        &self,
-        cfg: &WorldConfig,
-        _: &mut impl Rng,
-        tiles: &mut WorldMap<TileBuilder>,
-    ) {
-        let continents = tiles.clusters_predicate(|tile| !tile.is_water());
+    fn generate(&self, world: &mut WorldBuilder) {
+        let continents =
+            world.tiles.clusters_predicate(|tile| !tile.is_water());
         // Hypothetically we could run these simulations in parallel since each
         // continent is independent, but skipping that for now cause Wasm.
         for continent in continents {
             let mut continent = Continent::new(continent.into_tiles());
-            continent.sim_continent_runoff(cfg);
+            continent.sim_continent_runoff(&world.config);
         }
     }
 }

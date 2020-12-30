@@ -1,13 +1,10 @@
 use crate::{
     util::NumRange,
     world::{
-        generate::{Generate, TileBuilder},
-        hex::WorldMap,
+        generate::{Generate, WorldBuilder},
         Biome, Meter, World,
     },
-    WorldConfig,
 };
-use rand::Rng;
 
 /// A generator to apply a biome for each tile. The biome is calculated based
 /// on elevation and humidity. This won't overwrite any tiles that already have
@@ -16,24 +13,20 @@ use rand::Rng;
 pub struct BiomePainter;
 
 impl Generate for BiomePainter {
-    fn generate(
-        &self,
-        _: &WorldConfig,
-        _: &mut impl Rng,
-        tiles: &mut WorldMap<TileBuilder>,
-    ) {
+    fn generate(&self, world: &mut WorldBuilder) {
         // We're going to normalize all the elevations so we can use a
         // consistent set of coefficients below. We don't want to map from the
         // full range though, because 99% of the tiles below sea level we won't
         // be touching (since they're already set to ocean). So map from just
-        // above-sea-level elevations. We map end up with a few tiles outside
+        // above-sea-level elevations. We may end up with a few tiles outside
         // the target range of [0,1], but that's fine because the logic will
         // still give them a biome of some sort.
         let elev_input_range =
             NumRange::new(World::SEA_LEVEL, World::ELEVATION_RANGE.max);
 
         // Set the biome for each tile, but don't overwrite any existing biomes
-        for tile in tiles.iter_mut().filter(|tile| tile.biome().is_none()) {
+        for tile in world.tiles.iter_mut().filter(|tile| tile.biome().is_none())
+        {
             // Normalize these values so we don't have to update this code when
             // we change the elevation/humidity range bounds
             let elevation =

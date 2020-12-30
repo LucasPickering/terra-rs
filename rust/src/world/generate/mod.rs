@@ -26,7 +26,8 @@ use rand_pcg::Pcg64;
 use std::fmt::Debug;
 
 /// A container for generating a new world. This applies a series of generators
-/// in sequence to create the world.
+/// in sequence to create the world. These fields are public to allow for
+/// disjoint borrowing of multiple fields at once.
 ///
 /// In the generator code that this builder calls, you'll see a lot of
 /// algorithms that tend to generate new values in a separate map, then do a 2nd
@@ -36,9 +37,15 @@ use std::fmt::Debug;
 /// other items. But it turns out that doing it this way is usually a lot faster
 /// and simpler than using a hack like `Rc<RefCell<_>>`.
 pub struct WorldBuilder {
-    config: WorldConfig,
-    rng: Pcg64,
-    tiles: WorldMap<TileBuilder>,
+    /// This config determinisitically controls world config, meaning two
+    /// worlds with the same config will always be identical (provided they
+    /// were generated on the same version of the code).
+    ///
+    /// This is public to allow for disjoint borrowing, but please **do not
+    /// mutate the config**.
+    pub config: WorldConfig,
+    pub rng: Pcg64,
+    pub tiles: WorldMap<TileBuilder>,
 }
 
 impl WorldBuilder {
@@ -74,10 +81,7 @@ impl WorldBuilder {
 
     /// A helper to run a generation step on this builder.
     fn apply_generator(&mut self, generator: impl Debug + Generate) {
-        timed!(
-            &format!("{:?}", generator),
-            generator.generate(&self.config, &mut self.rng, &mut self.tiles)
-        );
+        timed!(&format!("{:?}", generator), generator.generate(self));
     }
 }
 
@@ -86,15 +90,10 @@ impl WorldBuilder {
 /// data. Generally there will be a series of generators chained together,
 /// where each one adds some more data until the world is complete.
 trait Generate {
-    /// Add new data to the existing tiles. The given map should never be
-    /// inserted into or removed from, and the keys should never be changed.
-    /// Only the values (tiles) should be mutated!
-    fn generate(
-        &self,
-        config: &WorldConfig,
-        rng: &mut impl Rng,
-        tiles: &mut WorldMap<TileBuilder>,
-    );
+    /// Apply some generation step to the given world. This can mutate the
+    /// world's tiles, but can never add/remove tiles, or change their positions
+    /// in any way.
+    fn generate(&self, world: &mut WorldBuilder);
 }
 
 /// A partially built [Tile]. This should only be used while the world is being

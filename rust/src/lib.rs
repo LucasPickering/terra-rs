@@ -15,17 +15,21 @@ pub struct NoiseFnConfig {
     /// octaves to build a set of curves, then add them together to get our
     /// final function.
     pub octaves: usize,
+
     /// The frequency of the first (lowest) octave.
     pub frequency: f64,
+
     /// Constant to add to the frequency for each octave. E.g. if we have 3
     /// octaves, a base frequency of 1.0, and a lacunarity of 2.0, then our
     /// 3 octaves will be at [1.0, 3.0, 5.0].
     pub lacunarity: f64,
+
     /// Amplification factor for each octave. The first amplitude is always
     /// 1.0, then is multiplied by the persistence for each octave. E.g. with 3
     /// octaves and a persistence of 0.5, your amplitudes will be `[1.0, 0.5,
     /// 0.25]`.
     pub persistence: f64,
+
     /// Exponent to apply to values after generation. This is applied to
     /// normalized composite values. "Normalized" means they're in the range
     /// [0,1] (meaning we can apply any exponent and the values remain in that
@@ -39,7 +43,8 @@ pub struct NoiseFnConfig {
 #[derive(Copy, Clone, Debug, Deserialize)]
 pub struct WorldConfig {
     /// RNG seed to use for all world gen. Two worlds generated with the same
-    /// seed will always be identical.
+    /// seed will always be identical (provided all other config params are the
+    /// same too).
     pub seed: u64,
 
     /// Distance from the center of the world to the edge (in tiles).

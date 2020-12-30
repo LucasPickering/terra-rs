@@ -1,11 +1,9 @@
 use crate::{
     util::{Meter, NumRange},
     world::{
-        generate::{Generate, TileBuilder},
-        hex::WorldMap,
+        generate::{Generate, WorldBuilder},
         Biome, World,
     },
-    WorldConfig,
 };
 use rand::Rng;
 
@@ -18,14 +16,9 @@ const MIN_COAST_ELEV: Meter = Meter(-3.0);
 pub struct OceanGenerator;
 
 impl Generate for OceanGenerator {
-    fn generate(
-        &self,
-        _: &WorldConfig,
-        rng: &mut impl Rng,
-        tiles: &mut WorldMap<TileBuilder>,
-    ) {
+    fn generate(&self, world: &mut WorldBuilder) {
         // Find all clusters of tiles that are entirely below sea level
-        let clusters = tiles.clusters_predicate(|tile| {
+        let clusters = world.tiles.clusters_predicate(|tile| {
             tile.elevation().unwrap() <= World::SEA_LEVEL
         });
 
@@ -34,7 +27,7 @@ impl Generate for OceanGenerator {
             // its size. Clusters below the min "maybe" size have a chance of 0.
             // Clusters at/above the max size have a chance of 1. Anything in
             // between is proportional to its size.
-            let threshold: f32 = rng.gen_range(MAYBE_OCEAN_SIZE_RANGE);
+            let threshold: f32 = world.rng.gen_range(MAYBE_OCEAN_SIZE_RANGE);
             if cluster.tiles().len() as f32 >= threshold {
                 // Update every tile in this cluster to be coast/ocean
                 for (_, tile) in cluster.into_tiles() {
