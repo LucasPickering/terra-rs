@@ -23,16 +23,16 @@ impl Generate for ElevationGenerator {
         let normal_range = NumRange::normal_range();
         let noise_fn: TileNoiseFn<Fbm, Meter> =
             TileNoiseFn::new(rng, &config.elevation, normal_range);
-        if config.tile_edge_buffer >= config.tile_radius {
+        if config.edge_buffer_size >= config.radius {
             panic!(
-                "config.tile_edge_buffer ({}) \
-                must be less than config.tile_radius ({})",
-                config.tile_edge_buffer, config.tile_radius
+                "config.edge_buffer_size ({}) \
+                must be less than config.radius ({})",
+                config.edge_buffer_size, config.radius
             );
         }
         let buffer_range = NumRange::new(
-            (config.tile_radius - config.tile_edge_buffer + 1) as f64,
-            config.tile_radius as f64,
+            (config.radius - config.edge_buffer_size + 1) as f64,
+            config.radius as f64,
         );
 
         for tile in tiles.iter_mut() {
@@ -53,7 +53,7 @@ impl Generate for ElevationGenerator {
                     .invert()
                     // We now have a value where 0 is the outermost ring and 1
                     // is the innermost ring OF THE BUFFER
-                    .apply(|v| v.powf(0.8)) // Use a smooth gradient
+                    .apply(|v| v.powf(config.edge_buffer_exponent)) // Use a smooth gradient
                     .convert::<Meter>()
                     .map_to(NumRange::new(
                         World::SEA_LEVEL,

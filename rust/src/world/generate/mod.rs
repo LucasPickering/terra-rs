@@ -45,7 +45,7 @@ impl WorldBuilder {
     pub fn new(config: WorldConfig) -> Self {
         // Initialize each tile
         let tiles = timed!("World initialization", {
-            WorldMap::new(config.tile_radius, TileBuilder::new)
+            WorldMap::new(config.radius, TileBuilder::new)
         });
 
         // The final count should always be `4r^2 + 2r + 1`, where r is radius

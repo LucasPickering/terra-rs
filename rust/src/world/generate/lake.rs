@@ -10,7 +10,7 @@ use crate::{
 use rand::Rng;
 
 /// Any tile with at least this amount of runoff on it will become a lake
-const LAKE_RUNOFF_THRESHOLD: Meter3 = Meter3(0.1);
+const LAKE_RUNOFF_THRESHOLD: Meter3 = Meter3(1.0);
 
 /// A generator that creates lakes based on runoff levels. This has to run AFTER
 /// runoff simulation.
