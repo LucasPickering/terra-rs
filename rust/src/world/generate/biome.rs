@@ -1,18 +1,48 @@
 use crate::{
-    util::{Meter3, NumRange},
+    util::{cmp_unwrap, Meter, NumRange},
     world::{
         generate::{Generate, WorldBuilder},
         Biome, World,
     },
 };
 
-/// A generator to apply a biome for each tile. The biome is calculated based
-/// on elevation and humidity. This won't overwrite any tiles that already have
-/// a biome set, so it can be called after other biome-related generators.
-#[derive(Debug)]
-pub struct BiomePainter;
+/// A benchmark point that defines what biome to use for a particular elevation
+/// and humidity. Elevation is first, humidity is second.
+struct BiomePoint(Biome, Meter, f64);
 
-impl Generate for BiomePainter {
+impl BiomePoint {
+    fn distance_to(&self, elevation_norm: Meter, humidity: f64) -> f64 {
+        (self.1 - elevation_norm).0.abs() + (self.2 - humidity).abs()
+    }
+}
+
+const POINTS: &[BiomePoint] = &[
+    // Desert
+    BiomePoint(Biome::Desert, Meter(0.25), 0.06),
+    BiomePoint(Biome::Desert, Meter(0.50), 0.06),
+    // Snow
+    BiomePoint(Biome::Snow, Meter(0.75), 0.25),
+    BiomePoint(Biome::Snow, Meter(0.55), 0.75),
+    // Alpine
+    BiomePoint(Biome::Alpine, Meter(0.60), 0.25),
+    BiomePoint(Biome::Alpine, Meter(0.50), 0.75),
+    // Plains
+    BiomePoint(Biome::Plains, Meter(0.20), 0.20),
+    // Forest
+    BiomePoint(Biome::Forest, Meter(0.25), 0.60),
+    // Jungle
+    BiomePoint(Biome::Jungle, Meter(0.25), 0.85),
+];
+
+/// Generate a biome for every tile that doesn't already have one. Biomes are
+/// defined based on elevation and humidity. In order to define the mapping,
+/// we turn each tile's elevation and humidity into a 2D point. Then we have a
+/// list of benchmark points that map to different biomes. For each tile, we
+/// find the closest benchmark point and use its biome.
+#[derive(Debug)]
+pub struct BiomeGenerator;
+
+impl Generate for BiomeGenerator {
     fn generate(&self, world: &mut WorldBuilder) {
         // We're going to normalize all the elevations so we can use a
         // consistent set of coefficients below. We don't want to map from the
@@ -23,39 +53,24 @@ impl Generate for BiomePainter {
         // still give them a biome of some sort.
         let elev_input_range =
             NumRange::new(World::SEA_LEVEL, World::ELEVATION_RANGE.max);
-        let rainfall_input_range = NumRange::new(Meter3(0.0), Meter3(5.0));
 
         // Set the biome for each tile, but don't overwrite any existing biomes
         for tile in world.tiles.iter_mut().filter(|tile| tile.biome().is_none())
         {
             // Normalize these values so we don't have to update this code when
             // we change the elevation/humidity range bounds
-            let elevation: f64 =
-                elev_input_range.normalize(tile.elevation().unwrap()).0;
-            let humidity: f64 =
-                rainfall_input_range.normalize(tile.rainfall().unwrap()).0;
+            let elevation_norm =
+                elev_input_range.normalize(tile.elevation().unwrap());
+            let humidity = tile.humidity().unwrap();
 
-            // A piecewise function to map elevation/humidity to biome.
-            // I swear there's logic behind this, I even drew a picture.
-            // It looks like a 2d graph with regions sliced out, like a
-            // phase diagram.
-            // https://en.wikipedia.org/wiki/Phase_diagram#Pressure_vs_temperature
-            // Each of these conditions is essentially a 2d function, either
-            // x = c or y = mx+b, where elevation is y and humidity is x
-            let biome = if elevation >= -0.1 * humidity + 0.5 {
-                Biome::Snow
-            } else if humidity <= 0.15 {
-                Biome::Desert
-            } else if elevation >= -0.1 * humidity + 0.4 {
-                Biome::Alpine
-            } else if humidity >= 0.75 {
-                Biome::Jungle
-            } else if elevation >= -0.88 * humidity + 0.54 {
-                Biome::Forest
-            } else {
-                Biome::Plains
-            };
-
+            // Do a naive search to find the nearest point. This is O(n) which
+            // isn't particularly efficient, but since the number of points is
+            // pretty low, it's fine.
+            let (biome, _) = POINTS
+                .iter()
+                .map(|p| (p.0, p.distance_to(elevation_norm, humidity)))
+                .min_by(|(_, d_a), (_, d_b)| cmp_unwrap(d_a, d_b))
+                .unwrap();
             tile.set_biome(biome);
         }
     }

@@ -405,6 +405,8 @@ impl<T: Debug> Cluster<T> {
     }
 }
 
+/// A trait that denotes any type that has a singular assigned position in the
+/// hex world.
 pub trait HasHexPosition: Sized {
     fn position(&self) -> HexPoint;
 }

@@ -11,13 +11,13 @@ use crate::{
     util::{Meter3, NumRange, Rangeable},
     world::{
         generate::{
-            biome::BiomePainter, elevation::ElevationGenerator,
+            biome::BiomeGenerator, elevation::ElevationGenerator,
             lake::LakeGenerator, ocean::OceanGenerator,
             rainfall::RainfallGenerator, runoff::RunoffGenerator,
             wind::WindGenerator,
         },
         hex::{HasHexPosition, HexAxialDirection, HexPoint, WorldMap},
-        Biome, BiomeType, Meter, Tile, WorldConfig,
+        Biome, BiomeType, Meter, Tile, World, WorldConfig,
     },
     NoiseFnConfig,
 };
@@ -86,7 +86,7 @@ impl WorldBuilder {
         self.apply_generator(RainfallGenerator);
         self.apply_generator(RunoffGenerator);
         self.apply_generator(LakeGenerator);
-        self.apply_generator(BiomePainter);
+        self.apply_generator(BiomeGenerator);
 
         // Build each tile into its final value
         self.tiles.map(TileBuilder::build)
@@ -146,7 +146,7 @@ impl TileBuilder {
         }
     }
 
-    /// Get this tile's elevation.
+    /// See [Tile::elevation]
     pub fn elevation(&self) -> Option<Meter> {
         self.elevation
     }
@@ -156,7 +156,7 @@ impl TileBuilder {
         self.elevation = Some(elevation);
     }
 
-    /// Get this tile's rainfall.
+    /// See [Tile::rainfall]
     pub fn rainfall(&self) -> Option<Meter3> {
         self.rainfall
     }
@@ -166,7 +166,19 @@ impl TileBuilder {
         self.rainfall = Some(rainfall);
     }
 
-    /// Get this tile's biome.
+    /// See [Tile::humidity]
+    pub fn humidity(&self) -> Option<f64> {
+        self.rainfall.map(|rainfall| {
+            World::RAINFALL_SOFT_RANGE
+                .value(rainfall)
+                .clamp()
+                .convert::<f64>()
+                .normalize()
+                .inner()
+        })
+    }
+
+    /// See [Tile::biome]
     pub fn biome(&self) -> Option<Biome> {
         self.biome
     }
@@ -176,8 +188,7 @@ impl TileBuilder {
         self.biome = Some(biome);
     }
 
-    /// Amount of runoff CURRENTLY on this tile (NOT the total amount that has
-    /// crossed over this tile).
+    /// See [Tile::runoff]
     pub fn runoff(&self) -> Option<Meter3> {
         self.runoff
     }

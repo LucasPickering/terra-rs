@@ -20,6 +20,12 @@ pub enum BiomeType {
     Land,
 }
 
+/// A biome is a large-scale classification of tile environment. Every tile can
+/// be assigned a single biome based on its characteristics.
+///
+/// https://en.wikipedia.org/wiki/Biome
+///
+/// TODO separate the concept of "biome" from "feature"?
 #[wasm_bindgen]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Biome {
@@ -78,9 +84,17 @@ impl World {
     /// at OR below _could_ be ocean, but the actual chance depends upon the
     /// ocean generation logic.
     pub const SEA_LEVEL: Meter = Meter(0.0);
+    /// The range of possible elevation values. We guarantee that every tile's
+    /// elevation will be in this range (inclusive on both ends).
     pub const ELEVATION_RANGE: NumRange<Meter, f64> =
         NumRange::new(Meter(-100.0), Meter(100.0));
-    pub const HUMIDITY_RANGE: NumRange<f64> = NumRange::new(0.0, 1.0);
+    /// A **soft** range that defines possible rainfall values. Soft means that
+    /// values can be outside this range! Specifically, they can be above the
+    /// max (you can't have negative rainfall). There is no hard limit on how
+    /// much rainfall a tile receives, so this range just defines "reasonable"
+    /// values. We use this range to map to humidity.
+    pub const RAINFALL_SOFT_RANGE: NumRange<Meter3, f64> =
+        NumRange::new(Meter3(0.0), Meter3(5.0));
 
     pub fn tiles(&self) -> &WorldMap<Tile> {
         &self.tiles
@@ -136,6 +150,8 @@ impl Tile {
         self.position
     }
 
+    /// Return the elevation of the top of this tile, relative to sea level.
+    /// This value is guaranteed to be in the range [Self::ELEVATION_RANGE].
     #[wasm_bindgen(getter)]
     pub fn elevation(&self) -> Meter {
         self.elevation
@@ -150,16 +166,42 @@ impl Tile {
             .map_to(&World::ELEVATION_RANGE.zeroed(), self.elevation)
     }
 
+    /// Total amount of water that fell on this tile during rain simulation.
+    /// This value is guaranteed to be non-negative, but has no hard maximum.
+    /// If you need to map a rainfall value to some bounded range, you can use
+    /// [Self::RAINFALL_SOFT_RANGE] for a soft maximum.
     #[wasm_bindgen(getter)]
     pub fn rainfall(&self) -> Meter3 {
         self.rainfall
     }
 
+    /// A normalized (meaning [0,1]) proxy for rainfall. Since rainfall is an
+    /// unbounded range, we define an arbitrary soft maximum for it, and
+    /// anything at/above that max will map to 1.0 humidity. Anything between
+    /// the min (0) and the soft max will map proportionally to [0,1] to
+    /// determine humidity.
+    ///
+    /// This function will **always** return a value in [0,1].
+    #[wasm_bindgen(getter)]
+    pub fn humidity(&self) -> f64 {
+        World::RAINFALL_SOFT_RANGE
+            .value(self.rainfall)
+            .clamp()
+            .convert::<f64>()
+            .normalize()
+            .inner()
+    }
+
+    /// The amount of water runoff that collected on this tile. This is the
+    /// amount of runoff **currently** on the tile after runoff simulation,
+    /// **not** the amount of total runoff that passed over the tile.
     #[wasm_bindgen(getter)]
     pub fn runoff(&self) -> Meter3 {
         self.runoff
     }
 
+    /// Get the tile's biome. Every tile will have exactly on biome assigned.
+    /// See [Biome] for more info.
     #[wasm_bindgen(getter)]
     pub fn biome(&self) -> Biome {
         self.biome
@@ -178,16 +220,11 @@ impl Tile {
                 // 1 -> red
                 Color3::new(1.0, 1.0 - normal_elev, 1.0 - normal_elev)
             }
-            TileLens::Rainfall => {
-                let normal_rainfall = NumRange::new(Meter3(0.0), Meter3(5.0))
-                    .value(self.rainfall())
-                    .normalize()
-                    .clamp()
-                    .convert::<f64>()
-                    .inner() as f32;
+            TileLens::Humidity => {
+                let humidity = self.humidity() as f32;
                 // 0 -> white
                 // 1 -> green
-                Color3::new(1.0 - normal_rainfall, 1.0, 1.0 - normal_rainfall)
+                Color3::new(1.0 - humidity, 1.0, 1.0 - humidity)
             }
             TileLens::Runoff => {
                 let normal_runoff = NumRange::new(Meter3(0.0), Meter3(5.0))
@@ -219,7 +256,7 @@ impl HasHexPosition for Tile {
 pub enum TileLens {
     Biome,
     Elevation,
-    Rainfall,
+    Humidity,
     Runoff,
 }
 

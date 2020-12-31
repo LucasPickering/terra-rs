@@ -13,12 +13,5 @@
     "lacunarity": 3.0,
     "persistence": 0.3,
     "exponent": 0.9
-  },
-  "humidity": {
-    "octaves": 1,
-    "frequency": 0.7,
-    "lacunarity": 2.0,
-    "persistence": 1.0,
-    "exponent": 1.0
   }
 }
