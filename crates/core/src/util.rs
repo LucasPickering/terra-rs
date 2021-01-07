@@ -15,11 +15,30 @@ use std::{
     marker::PhantomData,
     ops,
 };
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
 /// A macro to measure the evaluation time of an expression. Wraps an
 /// expression, and outputs a tuple of the value of the expression with the
 /// elapsed time, as a [Duration](std::time::Duration).
+#[cfg(not(target_arch = "wasm32"))]
+#[macro_export]
+macro_rules! timed {
+    ($label:expr, $ex:expr) => {{
+        use log::info;
+        use std::time::Instant;
+
+        let now = Instant::now();
+        let value = $ex;
+        let elapsed = now.elapsed();
+        info!("{} took {} ms", $label, elapsed.as_millis());
+        value
+    }};
+}
+
+/// Re-implementation of the above macro for wasm
+#[cfg(target_arch = "wasm32")]
+#[doc(hidden)]
 #[macro_export]
 macro_rules! timed {
     ($label:expr, $ex:expr) => {{
@@ -34,7 +53,7 @@ macro_rules! timed {
 }
 
 /// Unit used for elevation
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(
     Copy,
     Clone,
@@ -70,7 +89,7 @@ pub struct Meter2(pub f64);
 /// 1 volumetric meter. See caveat on [Meter2], this may not actually appear
 /// to be 1m*1m*1m when compared to elevation, depending on what ratios the
 /// renderer uses.
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(
     Copy,
     Clone,
@@ -122,7 +141,7 @@ impl ops::Div<Meter2> for Meter3 {
 
 /// An RGB color. Values are stored as floats between 0 and 1 (inclusive).
 /// This uses f32 because the extra precision from f64 is pointless.
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, PartialEq, Serialize)]
 pub struct Color3 {
     pub red: f32,

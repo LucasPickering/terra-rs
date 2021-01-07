@@ -7,6 +7,7 @@ mod runoff;
 mod wind;
 
 use crate::{
+    config::NoiseFnConfig,
     timed,
     util::{Meter3, NumRange, Rangeable},
     world::{
@@ -19,7 +20,6 @@ use crate::{
         hex::{HasHexPosition, HexAxialDirection, HexPoint, WorldMap},
         Biome, BiomeType, Meter, Tile, World, WorldConfig,
     },
-    NoiseFnConfig,
 };
 use log::info;
 use noise::{MultiFractal, NoiseFn, Seedable};

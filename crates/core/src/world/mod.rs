@@ -10,8 +10,8 @@ use crate::{
     },
     WorldConfig,
 };
-use js_sys::Array;
 use log::info;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::{prelude::*, JsCast};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -24,9 +24,8 @@ pub enum BiomeType {
 /// be assigned a single biome based on its characteristics.
 ///
 /// https://en.wikipedia.org/wiki/Biome
-///
-/// TODO separate the concept of "biome" from "feature"?
-#[wasm_bindgen]
+// TODO separate the concept of "biome" from "feature"?
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Biome {
     // Water
@@ -72,7 +71,7 @@ impl Biome {
     }
 }
 
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Clone, Debug)]
 pub struct World {
     config: WorldConfig,
@@ -96,12 +95,15 @@ impl World {
     pub const RAINFALL_SOFT_RANGE: NumRange<Meter3, f64> =
         NumRange::new(Meter3(0.0), Meter3(5.0));
 
+    /// Get a reference to the map of tiles that make up this world.
     pub fn tiles(&self) -> &WorldMap<Tile> {
         &self.tiles
     }
 
+    /// Generate a new world with the given config. This operation could take
+    /// several seconds, depending on the world size and complexity.
     pub fn generate(config: WorldConfig) -> Self {
-        info!("Generating world");
+        info!("Generating world with config {:#?}", config);
         let tiles = timed!(
             "World generation",
             WorldBuilder::new(config).generate_world()
@@ -110,12 +112,16 @@ impl World {
     }
 }
 
+// Wasm-only functions
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 impl World {
-    /// A type-hacked accessor to get all tiles in the world for Wasm. This
+    /// A type-hacked accessor to get all tiles in the world from Wasm. This
     /// typing can be cleaned up after https://github.com/rustwasm/wasm-bindgen/issues/111
     #[wasm_bindgen]
-    pub fn tiles_array(&self) -> TileArray {
+    pub fn wasm_tiles(&self) -> TileArray {
+        use js_sys::Array;
+
         self.tiles
             .iter()
             .copied()
@@ -125,7 +131,7 @@ impl World {
     }
 }
 
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug)]
 pub struct Tile {
     position: HexPoint,
@@ -143,16 +149,16 @@ impl Tile {
     pub const AREA: Meter2 = Meter2(1.0);
 }
 
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl Tile {
-    #[wasm_bindgen(getter)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn pos(&self) -> HexPoint {
         self.position
     }
 
     /// Return the elevation of the top of this tile, relative to sea level.
     /// This value is guaranteed to be in the range [Self::ELEVATION_RANGE].
-    #[wasm_bindgen(getter)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn elevation(&self) -> Meter {
         self.elevation
     }
@@ -160,7 +166,7 @@ impl Tile {
     /// Tile elevation, but mapped to a zero-based range so the value is
     /// guaranteed to be non-negative. This makes it safe to use for vertical
     /// scaling during rendering.
-    #[wasm_bindgen(getter)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn height(&self) -> Meter {
         World::ELEVATION_RANGE
             .map_to(&World::ELEVATION_RANGE.zeroed(), self.elevation)
@@ -170,7 +176,7 @@ impl Tile {
     /// This value is guaranteed to be non-negative, but has no hard maximum.
     /// If you need to map a rainfall value to some bounded range, you can use
     /// [Self::RAINFALL_SOFT_RANGE] for a soft maximum.
-    #[wasm_bindgen(getter)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn rainfall(&self) -> Meter3 {
         self.rainfall
     }
@@ -182,7 +188,7 @@ impl Tile {
     /// determine humidity.
     ///
     /// This function will **always** return a value in [0,1].
-    #[wasm_bindgen(getter)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn humidity(&self) -> f64 {
         World::RAINFALL_SOFT_RANGE
             .value(self.rainfall)
@@ -195,21 +201,21 @@ impl Tile {
     /// The amount of water runoff that collected on this tile. This is the
     /// amount of runoff **currently** on the tile after runoff simulation,
     /// **not** the amount of total runoff that passed over the tile.
-    #[wasm_bindgen(getter)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn runoff(&self) -> Meter3 {
         self.runoff
     }
 
     /// Get the tile's biome. Every tile will have exactly on biome assigned.
     /// See [Biome] for more info.
-    #[wasm_bindgen(getter)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn biome(&self) -> Biome {
         self.biome
     }
 
     /// Compute the color of a tile based on the lens being viewed. The lens
     /// controls what data the color is derived from.
-    #[wasm_bindgen]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
     pub fn color(&self, lens: TileLens) -> Color3 {
         match lens {
             TileLens::Biome => Ok(self.biome.color()),
@@ -251,7 +257,7 @@ impl HasHexPosition for Tile {
 }
 
 /// A definition of what data is used to compute a tile's color.
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug)]
 pub enum TileLens {
     Biome,
@@ -263,6 +269,7 @@ pub enum TileLens {
 // Types that we can't natively return. These are assigned TS types, but
 // these types aren't actually verified by the compiler. Be careful
 // here!
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 extern "C" {
 

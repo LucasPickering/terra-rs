@@ -1,0 +1,14 @@
+[workspace]
+members = [
+  "crates/*",
+]
+
+# wasm-pack-plugin doesn't allow us to set the mode to 'profiling', so we have
+# to turn dev into profiling (optimized, but with debug symbols)
+# https://github.com/wasm-tool/wasm-pack-plugin/issues/86
+# TODO figure out how to make this only apply when compiling for wasm. We can
+# use [profile.dev.package.terra-wasm], but that seems to only optimize the
+# code in that crate (not the code in the terra crate or others), so it's
+# still super slow.
+[profile.dev]
+opt-level = 3

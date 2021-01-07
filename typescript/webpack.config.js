@@ -4,7 +4,7 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 // const CopyPlugin = require("copy-webpack-plugin");
 const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 
-const wasmDir = path.resolve(__dirname, "../rust");
+const wasmDir = path.resolve(__dirname, "../crates/wasm");
 
 module.exports = {
   mode: "development",

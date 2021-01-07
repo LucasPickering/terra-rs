@@ -11,6 +11,7 @@ use std::{
     iter, ops,
 };
 use strum::{EnumIter, IntoEnumIterator};
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
 /// A point in a hexagon-tiled world. Each point has an x, y, and z component.
@@ -26,7 +27,7 @@ use wasm_bindgen::prelude::*;
 /// The x and y coordinates are stored as `i16`s. We'll never have a world with
 /// a radius of more than 32k (that'd be ~4 billion tiles), so this saves on
 /// memory a lot.
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Display)]
 #[display(fmt = "({}, {}, {})", "self.x()", "self.y()", "self.z()")]
 pub struct HexPoint {
@@ -34,24 +35,24 @@ pub struct HexPoint {
     y: i16,
 }
 
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl HexPoint {
-    #[wasm_bindgen(getter)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn x(&self) -> i16 {
         self.x
     }
 
-    #[wasm_bindgen(getter)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn y(&self) -> i16 {
         self.y
     }
 
-    #[wasm_bindgen(getter)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn z(&self) -> i16 {
         -(self.x + self.y)
     }
 
-    #[wasm_bindgen]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
     pub fn distance_to(&self, other: HexPoint) -> usize {
         *[
             (self.x() - other.x()).abs(),

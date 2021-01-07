@@ -43,7 +43,7 @@ class WorldRenderer {
 
     // This call allocates a whole new array, so we store the array instead of
     // the full world object.
-    const tiles = world.tiles_array();
+    const tiles = world.wasm_tiles();
 
     this.tiles = tiles.map((tile, i) => {
       // Convert hex coords to pixel coords

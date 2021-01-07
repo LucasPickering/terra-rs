@@ -1,13 +1,6 @@
-#![feature(cmp_min_max_by)]
-#![feature(const_fn)]
-
-use crate::{util::Meter3, world::World};
-use log::info;
 use serde::Deserialize;
-use wasm_bindgen::prelude::*;
 
-mod util;
-mod world;
+use crate::Meter3;
 
 /// Config for a particular noise generation function
 #[derive(Copy, Clone, Debug, Deserialize)]
@@ -43,9 +36,7 @@ pub struct NoiseFnConfig {
 /// same config will always be identical.
 #[derive(Copy, Clone, Debug, Deserialize)]
 pub struct WorldConfig {
-    /// RNG seed to use for all world gen. Two worlds generated with the same
-    /// seed will always be identical (provided all other config params are the
-    /// same too).
+    /// RNG seed to use for all randomized processes during world gen.
     pub seed: u64,
 
     /// Distance from the center of the world to the edge (in tiles).
@@ -94,32 +85,4 @@ pub struct WorldConfig {
 
     /// Config for the noise function used to generate elevation values
     pub elevation: NoiseFnConfig,
-}
-
-/// Top-level struct for a Terra instance. This holds every we need to render
-/// and interact with Terra from the outside. All interaction to/from wasm
-/// should go through this struct.
-#[wasm_bindgen]
-pub struct Terra;
-
-#[wasm_bindgen]
-impl Terra {
-    /// Initialize global state needed for world generation. Should be called
-    /// once per app instance.
-    #[wasm_bindgen(constructor)]
-    pub fn initialize() -> Self {
-        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-        wasm_logger::init(wasm_logger::Config::default());
-        Self
-    }
-
-    /// Generate a new world with the given config.
-    #[wasm_bindgen]
-    pub fn generate_world(&self, config: JsValue) -> Result<World, JsValue> {
-        info!("Loading config");
-        let config: WorldConfig = serde_wasm_bindgen::from_value(config)?;
-        info!("Loaded config: {:#?}", &config);
-
-        Ok(World::generate(config))
-    }
 }
