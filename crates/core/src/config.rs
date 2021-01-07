@@ -37,6 +37,7 @@ pub struct NoiseFnConfig {
 #[derive(Copy, Clone, Debug, Deserialize)]
 pub struct WorldConfig {
     /// RNG seed to use for all randomized processes during world gen.
+    #[serde(default = "rand::random")]
     pub seed: u64,
 
     /// Distance from the center of the world to the edge (in tiles).

@@ -25,13 +25,13 @@ use wasm_bindgen::prelude::*;
 #[macro_export]
 macro_rules! timed {
     ($label:expr, $ex:expr) => {{
-        use log::info;
+        use log::debug;
         use std::time::Instant;
 
         let now = Instant::now();
         let value = $ex;
         let elapsed = now.elapsed();
-        info!("{} took {} ms", $label, elapsed.as_millis());
+        debug!("{} took {} ms", $label, elapsed.as_millis());
         value
     }};
 }
