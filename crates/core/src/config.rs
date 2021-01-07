@@ -1,9 +1,9 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::Meter3;
 
 /// Config for a particular noise generation function
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct NoiseFnConfig {
     /// Number of different frequencies to add together. We can use multiple
     /// octaves to build a set of curves, then add them together to get our
@@ -34,7 +34,7 @@ pub struct NoiseFnConfig {
 
 /// Configuration that defines a world gen process. Two worlds generated with
 /// same config will always be identical.
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct WorldConfig {
     /// RNG seed to use for all randomized processes during world gen.
     #[serde(default = "rand::random")]

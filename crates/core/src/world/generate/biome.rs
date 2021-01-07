@@ -55,7 +55,10 @@ impl Generate for BiomeGenerator {
             NumRange::new(World::SEA_LEVEL, World::ELEVATION_RANGE.max);
 
         // Set the biome for each tile, but don't overwrite any existing biomes
-        for tile in world.tiles.iter_mut().filter(|tile| tile.biome().is_none())
+        for tile in world
+            .tiles
+            .values_mut()
+            .filter(|tile| tile.biome().is_none())
         {
             // Normalize these values so we don't have to update this code when
             // we change the elevation/humidity range bounds

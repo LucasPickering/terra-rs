@@ -6,11 +6,12 @@ use crate::{
     util::{Color3, Meter, Meter2, Meter3, NumRange},
     world::{
         generate::WorldBuilder,
-        hex::{HasHexPosition, HexPoint, WorldMap},
+        hex::{HasHexPosition, HexPoint, HexPointMap},
     },
     WorldConfig,
 };
 use log::info;
+use serde::Serialize;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::{prelude::*, JsCast};
 
@@ -26,7 +27,7 @@ pub enum BiomeType {
 /// https://en.wikipedia.org/wiki/Biome
 // TODO separate the concept of "biome" from "feature"?
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize)]
 pub enum Biome {
     // Water
     Ocean,
@@ -72,10 +73,10 @@ impl Biome {
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct World {
     config: WorldConfig,
-    tiles: WorldMap<Tile>,
+    tiles: HexPointMap<Tile>,
 }
 
 impl World {
@@ -96,7 +97,7 @@ impl World {
         NumRange::new(Meter3(0.0), Meter3(5.0));
 
     /// Get a reference to the map of tiles that make up this world.
-    pub fn tiles(&self) -> &WorldMap<Tile> {
+    pub fn tiles(&self) -> &HexPointMap<Tile> {
         &self.tiles
     }
 
@@ -132,7 +133,7 @@ impl World {
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Serialize)]
 pub struct Tile {
     position: HexPoint,
     elevation: Meter,

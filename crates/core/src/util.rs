@@ -23,15 +23,13 @@ use wasm_bindgen::prelude::*;
 /// elapsed time, as a [Duration](std::time::Duration).
 #[cfg(not(target_arch = "wasm32"))]
 #[macro_export]
+// TODO make this accept an optional arg for setting logging level
 macro_rules! timed {
     ($label:expr, $ex:expr) => {{
-        use log::debug;
-        use std::time::Instant;
-
-        let now = Instant::now();
+        let now = std::time::Instant::now();
         let value = $ex;
         let elapsed = now.elapsed();
-        debug!("{} took {} ms", $label, elapsed.as_millis());
+        log::debug!("{} took {} ms", $label, elapsed.as_millis());
         value
     }};
 }
@@ -72,6 +70,8 @@ macro_rules! timed {
     MulAssign,
     DivAssign,
     Sum,
+    Serialize,
+    Deserialize,
 )]
 #[display(fmt = "{} m", "self.0")]
 pub struct Meter(pub f64);
@@ -81,7 +81,27 @@ pub struct Meter(pub f64);
 /// **Note:** Tiles may not actually be rendered such that the area is exactly
 /// 1m^2 with reference to the elevation, but that's fine. This is just a nice
 /// simplification that makes math easier.
-#[derive(Copy, Clone, Debug, Display, From, Add, Sub, Mul, Div)]
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    Display,
+    PartialEq,
+    PartialOrd,
+    From,
+    Into,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    AddAssign,
+    SubAssign,
+    MulAssign,
+    DivAssign,
+    Sum,
+    Serialize,
+    Deserialize,
+)]
 #[display(fmt = "{} m²", "self.0")]
 pub struct Meter2(pub f64);
 
@@ -436,4 +456,27 @@ impl<T: Into<I> + Rangeable<I>, I> RangeValue<T, I> {
 /// that you know for a fact will not be `NaN`.
 pub fn cmp_unwrap<T: PartialOrd>(a: &T, b: &T) -> Ordering {
     a.partial_cmp(b).unwrap()
+}
+
+/// Calculate the length of a world (the number of tiles it contains) based on
+/// its radius. Radius 0 means 1 tile, 1 is 7 tiles, 2 is 19, etc.
+pub fn world_len(radius: u16) -> usize {
+    // We'll always have 3r^2+3r+1 tiles (a reduction of a geometric sum).
+    // f(0) = 1, and we add 6r tiles for every step after that, so:
+    // 1, (+6) 7, (+12) 19, (+18) 37, ...
+    let r = radius as usize;
+    3 * r * r + 3 * r + 1
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_world_size() {
+        assert_eq!(<WorldMap<()>>::world_size(0), 1);
+        assert_eq!(<WorldMap<()>>::world_size(1), 7);
+        assert_eq!(<WorldMap<()>>::world_size(2), 19);
+        assert_eq!(<WorldMap<()>>::world_size(3), 37);
+    }
 }

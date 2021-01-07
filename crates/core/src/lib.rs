@@ -15,7 +15,6 @@
 //! See [WorldConfig] for details on how the world generation can be customized.
 
 #![feature(const_fn)]
-#![feature(stmt_expr_attributes)]
 
 mod config;
 mod util;

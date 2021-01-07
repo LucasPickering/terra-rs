@@ -9,7 +9,7 @@ mod wind;
 use crate::{
     config::NoiseFnConfig,
     timed,
-    util::{Meter3, NumRange, Rangeable},
+    util::{self, Meter3, NumRange, Rangeable},
     world::{
         generate::{
             biome::BiomeGenerator, elevation::ElevationGenerator,
@@ -17,15 +17,16 @@ use crate::{
             rainfall::RainfallGenerator, runoff::RunoffGenerator,
             wind::WindGenerator,
         },
-        hex::{HasHexPosition, HexAxialDirection, HexPoint, WorldMap},
+        hex::{HasHexPosition, HexAxialDirection, HexPoint, HexPointMap},
         Biome, BiomeType, Meter, Tile, World, WorldConfig,
     },
 };
+use fnv::FnvBuildHasher;
 use log::info;
 use noise::{MultiFractal, NoiseFn, Seedable};
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
-use std::fmt::Debug;
+use std::{cmp, fmt::Debug};
 
 /// A container for generating a new world. This applies a series of generators
 /// in sequence to create the world. These fields are public to allow for
@@ -52,7 +53,7 @@ pub struct WorldBuilder {
 
     /// All the tiles in the world. These individual tiles will be mutated
     /// during world generation, but tiles can never be added/removed/moved!
-    pub tiles: WorldMap<TileBuilder>,
+    pub tiles: HexPointMap<TileBuilder>,
 
     /// Direction of the world's prevailing wind. Initialized by
     /// [WindGenerator], and is guaranteed to be populated after that.
@@ -63,7 +64,28 @@ impl WorldBuilder {
     pub fn new(config: WorldConfig) -> Self {
         // Initialize each tile
         let tiles = timed!("World initialization", {
-            WorldMap::new(config.radius, TileBuilder::new)
+            let capacity = util::world_len(config.radius);
+            let mut map = HexPointMap::with_capacity_and_hasher(
+                capacity,
+                FnvBuildHasher::default(),
+            );
+
+            // Initialize a set of tiles with no data
+            let r = config.radius as i16;
+            for x in -r..=r {
+                // If we just do [-r,r] for y as well, then we end up with a
+                // diamond pattern instead of a super hexagon
+                // https://www.redblobgames.com/grids/hexagons/#range
+                let y_min = cmp::max(-r, -x - r);
+                let y_max = cmp::min(r, -x + r);
+                for y in y_min..=y_max {
+                    let pos = HexPoint::new(x, y);
+                    map.insert(pos, TileBuilder::new(pos));
+                }
+            }
+
+            debug_assert_eq!(map.len(), capacity, "expected 3r²+3r+1 tiles");
+            map
         });
 
         // The final count should always be `4r^2 + 2r + 1`, where r is radius
@@ -78,7 +100,7 @@ impl WorldBuilder {
 
     /// Generate a world by running a series of generation steps sequentially.
     /// Must be run from a blank slate. Outputs the finalized set of tiles.
-    pub fn generate_world(mut self) -> WorldMap<Tile> {
+    pub fn generate_world(mut self) -> HexPointMap<Tile> {
         // Run each generation step. The order is very important!
         self.apply_generator(ElevationGenerator);
         self.apply_generator(WindGenerator);
@@ -89,7 +111,10 @@ impl WorldBuilder {
         self.apply_generator(BiomeGenerator);
 
         // Build each tile into its final value
-        self.tiles.map(TileBuilder::build)
+        self.tiles
+            .into_iter()
+            .map(|(pos, tile)| (pos, tile.build()))
+            .collect()
     }
 
     /// A helper to run a generation step on this builder.

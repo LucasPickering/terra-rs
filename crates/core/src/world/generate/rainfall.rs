@@ -2,7 +2,7 @@ use crate::{
     util::{Meter3, NumRange},
     world::{
         generate::{Generate, TileBuilder, WorldBuilder},
-        hex::{HexAxialDirection, HexAxis, HexPoint, WorldMap},
+        hex::{HexAxialDirection, HexAxis, HexPoint, HexPointMap},
         World,
     },
     WorldConfig,
@@ -119,7 +119,10 @@ impl<'a> CloudLine<'a> {
     /// Simulation precipitation on the current line, then simulation
     /// evaporation. It's easiest to do this all together so we only have to
     /// each tile lookup once.
-    fn precipitate_and_evaporate(&mut self, tiles: &mut WorldMap<TileBuilder>) {
+    fn precipitate_and_evaporate(
+        &mut self,
+        tiles: &mut HexPointMap<TileBuilder>,
+    ) {
         let mut evaporation: Vec<Meter3> = iter::repeat(Meter3(0.0))
             .take(self.cloud_volumes.len())
             .collect();
@@ -128,7 +131,7 @@ impl<'a> CloudLine<'a> {
         #[allow(clippy::needless_range_loop)]
         for i in 0..self.cloud_volumes.len() {
             let pos = self.index_to_pos(i);
-            if let Some(tile) = tiles.get_mut(pos) {
+            if let Some(tile) = tiles.get_mut(&pos) {
                 evaporation[i] = self.calc_evaporation(tile);
                 // Each tile receives some fraction of the current water
                 // available in the cloud

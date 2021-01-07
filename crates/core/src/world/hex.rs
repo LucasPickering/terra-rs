@@ -3,12 +3,12 @@
 use derive_more::{Add, AddAssign, Display, Mul, MulAssign};
 use fnv::FnvBuildHasher;
 use indexmap::IndexMap;
+use serde::Serialize;
 use std::{
-    cmp,
     collections::{HashMap, HashSet, VecDeque},
     fmt::Debug,
     hash::Hash,
-    iter, ops,
+    ops,
 };
 use strum::{EnumIter, IntoEnumIterator};
 #[cfg(target_arch = "wasm32")]
@@ -28,7 +28,7 @@ use wasm_bindgen::prelude::*;
 /// a radius of more than 32k (that'd be ~4 billion tiles), so this saves on
 /// memory a lot.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Display)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Display, Serialize)]
 #[display(fmt = "({}, {}, {})", "self.x()", "self.y()", "self.z()")]
 pub struct HexPoint {
     x: i16,
@@ -138,115 +138,31 @@ impl HexVec {
     }
 }
 
-/// A map of tiles keyed by hex point, in a super hexagon pattern (the tiles
-/// make up the shape of a larger hexagon). For a world of radius `r`, the
-/// furthest tiles are all `r` steps from the center. This restriction is very
-/// important because it allows us to optimize a lot by storing all the items in
-/// a flat vector.
-#[derive(Clone, Debug, Default)]
-pub struct WorldMap<T> {
-    /// Distance from the center of the world to the edge. 0 means the world is
-    /// exactly 1 tile. 1 means 7 tiles, and so on. We frequently need to treat
-    /// this as an `i16` as well, so this cannot exceed [std::isize::MAX]!
-    /// If it does, we're gonna have bigger problems anyway...
-    world_radius: u16,
-    /// Each tile, keyed by its position.
-    map: HexPointMap<T>,
+/// A set of hex points
+pub type HexPointSet = HashSet<HexPoint, FnvBuildHasher>;
+/// A map of hex points to some `T`
+pub type HexPointMap<T> = HashMap<HexPoint, T, FnvBuildHasher>;
+/// An ORDERED map of hex points to some `T`. This has some extra memory
+/// overhead, so we should only use it when we actually need the ordering.
+pub type HexPointIndexMap<T> = IndexMap<HexPoint, T, FnvBuildHasher>;
+
+/// A cluster is a set of contiguous hex points. All items in a cluster are
+/// adjacent to at least one other item in the cluster (unless the cluster is a
+/// singular item).
+#[derive(Clone, Debug)]
+pub struct Cluster<T> {
+    tiles: HexPointIndexMap<T>,
+    adjacents: HexPointSet,
 }
 
-impl<T> WorldMap<T> {
-    /// Initialize a new world with the given radius.
-    ///
-    /// ## Arguments
-    ///
-    /// - `radius`: Distance from the origin to the edge of the world, in all
-    ///   directions. 0 means a world of 1 tile, 1 is 7 tiles, 2 => 19, etc.
-    /// - `initializer`: Function called to initialize each item in the world,
-    ///   based on its position
-    pub fn new(radius: u16, initializer: impl Fn(HexPoint) -> T) -> Self {
-        let capacity = Self::world_size(radius);
-        let mut map = HexPointMap::with_capacity_and_hasher(
-            capacity,
-            FnvBuildHasher::default(),
-        );
-
-        // Initialize a set of tiles with no data
-        let r = radius as i16;
-        for x in -r..=r {
-            // If we just do [-r,r] for y as well, then we end up with a diamond
-            // pattern instead of a super hexagon
-            // https://www.redblobgames.com/grids/hexagons/#range
-            let y_min = cmp::max(-r, -x - r);
-            let y_max = cmp::min(r, -x + r);
-            for y in y_min..=y_max {
-                let pos = HexPoint::new(x, y);
-                map.insert(pos, initializer(pos));
-            }
-        }
-        debug_assert_eq!(map.len(), capacity, "expected 3r²+3r+1 tiles");
-
-        Self {
-            world_radius: radius,
-            map,
-        }
-    }
-
-    /// Calculate the size of a world (the number of tiles it contains) based on
-    /// its radius. Radius 0 means 1 tile, 1 is 7 tiles, 2 is 19, etc.
-    fn world_size(radius: u16) -> usize {
-        // We'll always have 3r^2+3r+1 tiles (a reduction of a geometric sum).
-        // f(0) = 1, and we add 6r tiles for every step after that, so:
-        // 1, (+6) 7, (+12) 19, (+18) 37, ...
-        let r = radius as usize;
-        3 * r * r + 3 * r + 1
-    }
-
-    pub fn get(&self, pos: HexPoint) -> Option<&T> {
-        self.map.get(&pos)
-    }
-
-    pub fn get_mut(&mut self, pos: HexPoint) -> Option<&mut T> {
-        self.map.get_mut(&pos)
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = &T> {
-        self.map.iter().map(|(_, v)| v)
-    }
-
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
-        self.map.iter_mut().map(|(_, v)| v)
-    }
-
-    /// Map this collection into a new collection by apply the given mapping
-    /// function over each element. We need this instead of just relying on
-    /// [std::iter::Iterator::map] because you can't collect an iterator into a
-    /// [WorldMap].
-    pub fn map<U>(self, f: impl Fn(T) -> U) -> WorldMap<U> {
-        let map = self.map.into_iter().map(|(k, v)| (k, f(v))).collect();
-        WorldMap {
-            world_radius: self.world_radius,
-            map,
-        }
-    }
-
-    /// Get the number of items in the map
-    pub fn len(&self) -> usize {
-        self.map.len()
-    }
-}
-
-impl<T: Debug + HasHexPosition> WorldMap<T> {
-    /// Locate clusters of points within this map according to a predicate. All
-    /// items that satisfy the predicate will be clustered such that any two
-    /// satisfactory tiles that are adjacent to each other will be in a cluster
-    /// together. The returned cluster holds mutables references to the
-    /// items in this map, so they can be modified after clustering.
-    ///
-    /// Potential optimization: we could definitely improve this by leveraging
-    /// the full world map to do lookups faster. The lifetimes are a bit of
-    /// a bitch but it would save a lot on hash lookups.
-    pub fn clusters_predicate<P: Fn(&T) -> bool>(
-        &mut self,
+impl<T: Debug> Cluster<T> {
+    /// Locate clusters of points within a map of tilesaccording to a predicate.
+    /// All items that satisfy the predicate will be clustered such that any
+    /// two satisfactory tiles that are adjacent to each other will be in a
+    /// cluster together. The returned clusters hold mutables references to
+    /// the items in this map, so they can be modified after clustering.
+    pub fn predicate<P: Fn(&T) -> bool>(
+        tiles: &mut HexPointMap<T>,
         predicate: P,
     ) -> Vec<Cluster<&'_ mut T>> {
         // Here's our algorithm:
@@ -260,7 +176,7 @@ impl<T: Debug + HasHexPosition> WorldMap<T> {
         // Copy our map into one that will hold the remaining items left to
         // check
         let mut remaining: HexPointIndexMap<&mut T> =
-            self.iter_mut().map(|t| (t.position(), t)).collect();
+            tiles.iter_mut().map(|(pos, t)| (*pos, t)).collect();
         let mut clusters: Vec<Cluster<&mut T>> = Vec::new();
 
         // Grab the first unchecked item and start building a cluster around it.
@@ -302,39 +218,7 @@ impl<T: Debug + HasHexPosition> WorldMap<T> {
 
         clusters
     }
-}
 
-impl<T> IntoIterator for WorldMap<T> {
-    type Item = T;
-    #[allow(clippy::type_complexity)]
-    type IntoIter = iter::Map<
-        <HexPointMap<T> as IntoIterator>::IntoIter,
-        fn((HexPoint, T)) -> T,
-    >;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.map.into_iter().map(|(_, v)| v)
-    }
-}
-
-/// A set of hex points
-pub type HexPointSet = HashSet<HexPoint, FnvBuildHasher>;
-/// A map of hex points to some `T`
-pub type HexPointMap<T> = HashMap<HexPoint, T, FnvBuildHasher>;
-/// An ORDERED map of hex points to some `T`. This has some extra memory
-/// overhead, so we should only use it when we actually need the ordering.
-pub type HexPointIndexMap<T> = IndexMap<HexPoint, T, FnvBuildHasher>;
-
-/// A cluster is a set of contiguous hex points. All items in a cluster are
-/// adjacent to at least one other item in the cluster (unless the cluster is a
-/// singular item).
-#[derive(Clone, Debug)]
-pub struct Cluster<T> {
-    tiles: HexPointIndexMap<T>,
-    adjacents: HexPointSet,
-}
-
-impl<T: Debug> Cluster<T> {
     pub fn new(tiles: HexPointIndexMap<T>) -> Self {
         // Initialize the set of all tiles that are adjacent to (but not in) the
         // cluster
@@ -499,21 +383,5 @@ mod tests {
         assert_eq!(p1.distance_to(p2), 3);
         assert_eq!(p1.distance_to(p3), 4);
         assert_eq!(p2.distance_to(p3), 2);
-    }
-
-    #[test]
-    fn test_world_size() {
-        assert_eq!(<WorldMap<()>>::world_size(0), 1);
-        assert_eq!(<WorldMap<()>>::world_size(1), 7);
-        assert_eq!(<WorldMap<()>>::world_size(2), 19);
-        assert_eq!(<WorldMap<()>>::world_size(3), 37);
-    }
-
-    #[test]
-    fn test_world_map_len() {
-        assert_eq!(WorldMap::new(0, |_| ()).len(), 1);
-        assert_eq!(WorldMap::new(1, |_| ()).len(), 7);
-        assert_eq!(WorldMap::new(2, |_| ()).len(), 19);
-        assert_eq!(WorldMap::new(3, |_| ()).len(), 37);
     }
 }

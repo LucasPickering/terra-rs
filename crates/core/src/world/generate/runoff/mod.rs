@@ -12,7 +12,7 @@ use crate::{
             Generate, TileBuilder, WorldBuilder,
         },
         hex::{
-            HasHexPosition, HexDirection, HexPoint, HexPointIndexMap,
+            Cluster, HasHexPosition, HexDirection, HexPoint, HexPointIndexMap,
             HexPointMap,
         },
         Tile, World,
@@ -40,7 +40,7 @@ pub struct RunoffGenerator;
 impl Generate for RunoffGenerator {
     fn generate(&self, world: &mut WorldBuilder) {
         let continents =
-            world.tiles.clusters_predicate(|tile| !tile.is_water());
+            Cluster::predicate(&mut world.tiles, |tile| !tile.is_water());
         // Hypothetically we could run these simulations in parallel since each
         // continent is independent, but skipping that for now cause Wasm.
         for continent in continents {

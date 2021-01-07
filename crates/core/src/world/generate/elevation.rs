@@ -30,7 +30,7 @@ impl Generate for ElevationGenerator {
             config.radius as f64,
         );
 
-        for tile in world.tiles.iter_mut() {
+        for tile in world.tiles.values_mut() {
             let pos = tile.position();
             let d = pos.distance_to(HexPoint::ORIGIN) as f64;
 

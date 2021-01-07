@@ -2,6 +2,7 @@ use crate::{
     util::{Meter, NumRange},
     world::{
         generate::{Generate, WorldBuilder},
+        hex::Cluster,
         Biome, World,
     },
 };
@@ -18,7 +19,7 @@ pub struct OceanGenerator;
 impl Generate for OceanGenerator {
     fn generate(&self, world: &mut WorldBuilder) {
         // Find all clusters of tiles that are entirely below sea level
-        let clusters = world.tiles.clusters_predicate(|tile| {
+        let clusters = Cluster::predicate(&mut world.tiles, |tile| {
             tile.elevation().unwrap() <= World::SEA_LEVEL
         });
 
