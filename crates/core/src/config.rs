@@ -87,3 +87,30 @@ pub struct WorldConfig {
     /// Config for the noise function used to generate elevation values
     pub elevation: NoiseFnConfig,
 }
+
+impl Default for WorldConfig {
+    fn default() -> Self {
+        // This should be the general source of truth for a "nice world", but
+        // doesn't need to be kept 100% up to date. But we want to make sure
+        // that whenever someone generates a world with the default config,
+        // it looks pretty good.
+        WorldConfig {
+            seed: 0, // You'll probably want to override this with rand::random
+            radius: 100,
+            edge_buffer_size: 25,
+            edge_buffer_exponent: 0.7,
+            evaporation_default: Meter3(3.0),
+            evaporation_land_scale: 0.22,
+            evaporation_spread_distance: 50,
+            evaporation_spread_exponent: 0.6,
+            rainfall_factor_limit: 0.03,
+            elevation: NoiseFnConfig {
+                octaves: 3,
+                frequency: 0.5,
+                lacunarity: 3.0,
+                persistence: 0.3,
+                exponent: 0.9,
+            },
+        }
+    }
+}

@@ -380,7 +380,10 @@ impl<T: Rangeable + SampleUniform + PartialOrd> SampleRange<T> for NumRange<T> {
 
 /// An alternative interface for [NumRange] that makes it easy to chain
 /// operations on a single value.
+///
 /// ```
+/// use terra::NumRange;
+///
 /// let range: NumRange<f32> = NumRange::new(10.0, 20.0);
 /// let value = range.value(15.0).normalize().apply(|x| x + 1.0).inner();
 /// assert_eq!(value, 1.5);
@@ -480,10 +483,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_world_size() {
-        assert_eq!(<WorldMap<()>>::world_size(0), 1);
-        assert_eq!(<WorldMap<()>>::world_size(1), 7);
-        assert_eq!(<WorldMap<()>>::world_size(2), 19);
-        assert_eq!(<WorldMap<()>>::world_size(3), 37);
+    fn test_world_len() {
+        assert_eq!(world_len(0), 1);
+        assert_eq!(world_len(1), 7);
+        assert_eq!(world_len(2), 19);
+        assert_eq!(world_len(3), 37);
     }
 }

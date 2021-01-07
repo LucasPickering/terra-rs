@@ -217,10 +217,10 @@ pub struct Basins {
     /// always work since we always insert entries as alias->resolved. BUT that
     /// can break in situations like so:
     ///
-    ///     - Join a+b
-    ///         - Insert alias for b->a
-    ///     - Join c+a
-    ///         - Insert alias for a->c
+    /// - Join a+b
+    ///     - Insert alias for b->a
+    /// - Join c+a
+    ///     - Insert alias for a->c
     ///
     /// Now `b` points to `a`, which is no longer a valid primary key. So this
     /// map has to allow n levels of indirection.

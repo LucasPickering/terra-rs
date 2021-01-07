@@ -8,7 +8,7 @@
 //!
 //! let config = WorldConfig::default();
 //! let world = World::generate(config);
-//! println!(world.tiles().len());
+//! println!("{}", world.tiles().len());
 //! // From here you can display/use the world however you like.
 //! ```
 //!
@@ -21,7 +21,7 @@ mod util;
 mod world;
 
 pub use crate::{
-    config::WorldConfig,
-    util::{Meter, Meter2, Meter3},
+    config::{NoiseFnConfig, WorldConfig},
+    util::{Meter, Meter2, Meter3, NumRange, RangeValue},
     world::World,
 };

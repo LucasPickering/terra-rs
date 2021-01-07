@@ -279,8 +279,8 @@ impl<'a> Continent<'a> {
     /// grows out from a singular terminal tile. This will start the cluster
     /// off as just that tile, and will grow it out until we either:
     ///
-    ///     1. Run out of water to keep spreading
-    ///     2. Overflow into the ocean/another basin
+    /// 1. Run out of water to keep spreading
+    /// 2. Overflow into the ocean/another basin
     ///
     /// The return value is the amount of runoff that has overflowed, and the
     /// target(s) that it's overflowed to. The sum of the return map's values
