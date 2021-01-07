@@ -25,11 +25,14 @@ use wasm_bindgen::prelude::*;
 #[macro_export]
 // TODO make this accept an optional arg for setting logging level
 macro_rules! timed {
-    ($label:expr, $ex:expr) => {{
+    ($label:expr, $ex:expr) => {
+        timed!($label, log::Level::Debug, $ex)
+    };
+    ($label:expr, $log_level:expr, $ex:expr) => {{
         let now = std::time::Instant::now();
         let value = $ex;
         let elapsed = now.elapsed();
-        log::debug!("{} took {} ms", $label, elapsed.as_millis());
+        log::log!($log_level, "{} took {} ms", $label, elapsed.as_millis());
         value
     }};
 }
@@ -39,7 +42,11 @@ macro_rules! timed {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! timed {
-    ($label:expr, $ex:expr) => {{
+    ($label:expr, $ex:expr) => {
+        // log level does nothing on the wasm version
+        timed!($label, log::Level::Debug, $ex)
+    };
+    ($label:expr, $log_level:expr, $ex:expr) => {{
         use web_sys::console;
 
         // https://developer.mozilla.org/en-US/docs/Web/API/console/time

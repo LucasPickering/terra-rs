@@ -10,7 +10,7 @@ use crate::{
     },
     WorldConfig,
 };
-use log::info;
+use log::{info, Level};
 use serde::Serialize;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::{prelude::*, JsCast};
@@ -107,6 +107,7 @@ impl World {
         info!("Generating world with config {:#?}", config);
         let tiles = timed!(
             "World generation",
+            Level::Info,
             WorldBuilder::new(config).generate_world()
         );
         Self { config, tiles }
@@ -124,7 +125,7 @@ impl World {
         use js_sys::Array;
 
         self.tiles
-            .iter()
+            .values()
             .copied()
             .map(JsValue::from)
             .collect::<Array>()
