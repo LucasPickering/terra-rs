@@ -16,7 +16,7 @@
   \**********************/
 /***/ ((module, __webpack_exports__, __webpack_require__) => {
 
-eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"App\": () => /* binding */ App\n/* harmony export */ });\n/* harmony import */ var _babylonjs_core_Debug_debugLayer__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core/Debug/debugLayer */ \"./node_modules/@babylonjs/core/Debug/debugLayer.js\");\n/* harmony import */ var _babylonjs_inspector__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @babylonjs/inspector */ \"./node_modules/@babylonjs/inspector/babylon.inspector.bundle.max.js\");\n/* harmony import */ var _babylonjs_inspector__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_babylonjs_inspector__WEBPACK_IMPORTED_MODULE_1__);\n/* harmony import */ var _babylonjs_loaders_glTF__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @babylonjs/loaders/glTF */ \"./node_modules/@babylonjs/loaders/glTF/index.js\");\n/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @babylonjs/core */ \"./node_modules/@babylonjs/core/index.js\");\n/* harmony import */ var _world_WorldScene__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./world/WorldScene */ \"./src/world/WorldScene.ts\");\n_world_WorldScene__WEBPACK_IMPORTED_MODULE_4__ = await Promise.resolve(_world_WorldScene__WEBPACK_IMPORTED_MODULE_4__);\n\n\n\n\n\nconst { Terra } = await __webpack_require__.e(/*! import() */ \"rust_pkg_terra-wasm_js\").then(__webpack_require__.bind(__webpack_require__, /*! ./wasm */ \"../rust/pkg/terra-wasm.js\"));\nconst CANVAS_ID = \"game-canvas\";\n/**\n * Top-level game class\n */\nclass App {\n    constructor() {\n        const canvas = document.getElementById(CANVAS_ID);\n        if (!canvas) {\n            throw new Error(`Could not find canvas by ID: ${CANVAS_ID}`);\n        }\n        // Initialize Terra once, which will let us generate worlds\n        const terra = new Terra();\n        // initialize babylon scene and engine\n        const engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.Engine(canvas, true, { audioEngine: false }, false);\n        const scene = new _world_WorldScene__WEBPACK_IMPORTED_MODULE_4__.default(terra, engine);\n        // run the main render loop\n        engine.runRenderLoop(() => {\n            scene.render();\n        });\n    }\n}\nnew App();\n\nreturn __webpack_exports__;\n})();\n\n//# sourceURL=webpack://terra/./src/index.ts?");
+eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"App\": () => /* binding */ App\n/* harmony export */ });\n/* harmony import */ var _babylonjs_core_Debug_debugLayer__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core/Debug/debugLayer */ \"./node_modules/@babylonjs/core/Debug/debugLayer.js\");\n/* harmony import */ var _babylonjs_inspector__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @babylonjs/inspector */ \"./node_modules/@babylonjs/inspector/babylon.inspector.bundle.max.js\");\n/* harmony import */ var _babylonjs_inspector__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_babylonjs_inspector__WEBPACK_IMPORTED_MODULE_1__);\n/* harmony import */ var _babylonjs_loaders_glTF__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @babylonjs/loaders/glTF */ \"./node_modules/@babylonjs/loaders/glTF/index.js\");\n/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @babylonjs/core */ \"./node_modules/@babylonjs/core/index.js\");\n/* harmony import */ var _world_WorldScene__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./world/WorldScene */ \"./src/world/WorldScene.ts\");\n_world_WorldScene__WEBPACK_IMPORTED_MODULE_4__ = await Promise.resolve(_world_WorldScene__WEBPACK_IMPORTED_MODULE_4__);\n\n\n\n\n\nconst { Terra } = await __webpack_require__.e(/*! import() */ \"crates_wasm_pkg_terra-wasm_js\").then(__webpack_require__.bind(__webpack_require__, /*! ./wasm */ \"../crates/wasm/pkg/terra-wasm.js\"));\nconst CANVAS_ID = \"game-canvas\";\n/**\n * Top-level game class\n */\nclass App {\n    constructor() {\n        const canvas = document.getElementById(CANVAS_ID);\n        if (!canvas) {\n            throw new Error(`Could not find canvas by ID: ${CANVAS_ID}`);\n        }\n        // Initialize Terra once, which will let us generate worlds\n        const terra = new Terra();\n        // initialize babylon scene and engine\n        const engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.Engine(canvas, true, { audioEngine: false }, false);\n        const scene = new _world_WorldScene__WEBPACK_IMPORTED_MODULE_4__.default(terra, engine);\n        // run the main render loop\n        engine.runRenderLoop(() => {\n            scene.render();\n        });\n    }\n}\nnew App();\n\nreturn __webpack_exports__;\n})();\n\n//# sourceURL=webpack://terra/./src/index.ts?");
 
 /***/ }),
 
@@ -36,7 +36,7 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
   \***********************************/
 /***/ ((module, __webpack_exports__, __webpack_require__) => {
 
-eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => __WEBPACK_DEFAULT_EXPORT__\n/* harmony export */ });\n/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ \"./node_modules/@babylonjs/core/index.js\");\n/* harmony import */ var _util__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../util */ \"./src/util.ts\");\n\n\nconst config = await __webpack_require__.e(/*! import() */ \"src_input_json\").then(__webpack_require__.t.bind(__webpack_require__, /*! ../input.json */ \"./src/input.json\", 19));\nconst { TileLens } = await __webpack_require__.e(/*! import() */ \"rust_pkg_terra-wasm_js\").then(__webpack_require__.bind(__webpack_require__, /*! ../wasm */ \"../rust/pkg/terra-wasm.js\"));\nconst INPUT_ACTIONS = [\n    \"pause\",\n    \"toggleDebugOverlay\",\n    \"lensBiome\",\n    \"lensElevation\",\n    \"lensHumidity\",\n    \"lensRunoff\",\n];\nfunction isInputAction(s) {\n    return INPUT_ACTIONS.includes(s);\n}\nconst DEFAULT_INPUT_CONFIG = {\n    bindings: {\n        pause: \"ESCAPE\",\n        toggleDebugOverlay: \"`\",\n        lensBiome: \"1\",\n        lensElevation: \"2\",\n        lensHumidity: \"3\",\n        lensRunoff: \"4\",\n    },\n};\nclass InputHandler {\n    constructor(scene) {\n        this.config = Object.assign(Object.assign(Object.assign({}, DEFAULT_INPUT_CONFIG), config), { bindings: Object.assign(Object.assign({}, DEFAULT_INPUT_CONFIG.bindings), config === null || config === void 0 ? void 0 : config.bindings) });\n        this.scene = scene;\n        this.keyToEvent = new Map();\n        Object.entries(this.config.bindings).forEach(([key, value]) => {\n            // We could potentially get garbage actions from the user's config, so\n            // validate each action here\n            if (isInputAction(key)) {\n                this.keyToEvent.set(value.toUpperCase(), key);\n            }\n            else {\n                // eslint-disable-next-line no-console\n                console.warn(\"Unknown input action:\", key);\n            }\n        });\n    }\n    handleKeyEvent(kbInfo) {\n        if (kbInfo.type === _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.KeyboardEventTypes.KEYDOWN) {\n            // Map the keyboard key to a known action\n            const action = this.keyToEvent.get(kbInfo.event.key.toUpperCase());\n            if (action) {\n                this.handleAction(action);\n            }\n        }\n    }\n    handleAction(action) {\n        switch (action) {\n            case \"pause\":\n                this.scene.setPaused(true);\n                break;\n            case \"toggleDebugOverlay\":\n                this.scene.toggleDebugOverlay();\n                break;\n            case \"lensBiome\":\n                this.scene.setTileLens(TileLens.Biome);\n                break;\n            case \"lensElevation\":\n                this.scene.setTileLens(TileLens.Elevation);\n                break;\n            case \"lensHumidity\":\n                this.scene.setTileLens(TileLens.Humidity);\n                break;\n            case \"lensRunoff\":\n                this.scene.setTileLens(TileLens.Runoff);\n                break;\n            // Make sure this switch is exhaustive\n            default:\n                (0,_util__WEBPACK_IMPORTED_MODULE_1__.assertUnreachable)(action);\n        }\n    }\n}\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (InputHandler);\n\nreturn __webpack_exports__;\n})();\n\n//# sourceURL=webpack://terra/./src/world/InputHandler.ts?");
+eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => __WEBPACK_DEFAULT_EXPORT__\n/* harmony export */ });\n/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ \"./node_modules/@babylonjs/core/index.js\");\n/* harmony import */ var _util__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../util */ \"./src/util.ts\");\n\n\nconst config = await __webpack_require__.e(/*! import() */ \"src_input_json\").then(__webpack_require__.t.bind(__webpack_require__, /*! ../input.json */ \"./src/input.json\", 19));\nconst { TileLens } = await __webpack_require__.e(/*! import() */ \"crates_wasm_pkg_terra-wasm_js\").then(__webpack_require__.bind(__webpack_require__, /*! ../wasm */ \"../crates/wasm/pkg/terra-wasm.js\"));\nconst INPUT_ACTIONS = [\n    \"pause\",\n    \"toggleDebugOverlay\",\n    \"lensBiome\",\n    \"lensElevation\",\n    \"lensHumidity\",\n    \"lensRunoff\",\n];\nfunction isInputAction(s) {\n    return INPUT_ACTIONS.includes(s);\n}\nconst DEFAULT_INPUT_CONFIG = {\n    bindings: {\n        pause: \"ESCAPE\",\n        toggleDebugOverlay: \"`\",\n        lensBiome: \"1\",\n        lensElevation: \"2\",\n        lensHumidity: \"3\",\n        lensRunoff: \"4\",\n    },\n};\nclass InputHandler {\n    constructor(scene) {\n        this.config = Object.assign(Object.assign(Object.assign({}, DEFAULT_INPUT_CONFIG), config), { bindings: Object.assign(Object.assign({}, DEFAULT_INPUT_CONFIG.bindings), config === null || config === void 0 ? void 0 : config.bindings) });\n        this.scene = scene;\n        this.keyToEvent = new Map();\n        Object.entries(this.config.bindings).forEach(([key, value]) => {\n            // We could potentially get garbage actions from the user's config, so\n            // validate each action here\n            if (isInputAction(key)) {\n                this.keyToEvent.set(value.toUpperCase(), key);\n            }\n            else {\n                // eslint-disable-next-line no-console\n                console.warn(\"Unknown input action:\", key);\n            }\n        });\n    }\n    handleKeyEvent(kbInfo) {\n        if (kbInfo.type === _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.KeyboardEventTypes.KEYDOWN) {\n            // Map the keyboard key to a known action\n            const action = this.keyToEvent.get(kbInfo.event.key.toUpperCase());\n            if (action) {\n                this.handleAction(action);\n            }\n        }\n    }\n    handleAction(action) {\n        switch (action) {\n            case \"pause\":\n                this.scene.setPaused(true);\n                break;\n            case \"toggleDebugOverlay\":\n                this.scene.toggleDebugOverlay();\n                break;\n            case \"lensBiome\":\n                this.scene.setTileLens(TileLens.Biome);\n                break;\n            case \"lensElevation\":\n                this.scene.setTileLens(TileLens.Elevation);\n                break;\n            case \"lensHumidity\":\n                this.scene.setTileLens(TileLens.Humidity);\n                break;\n            case \"lensRunoff\":\n                this.scene.setTileLens(TileLens.Runoff);\n                break;\n            // Make sure this switch is exhaustive\n            default:\n                (0,_util__WEBPACK_IMPORTED_MODULE_1__.assertUnreachable)(action);\n        }\n    }\n}\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (InputHandler);\n\nreturn __webpack_exports__;\n})();\n\n//# sourceURL=webpack://terra/./src/world/InputHandler.ts?");
 
 /***/ }),
 
@@ -56,7 +56,7 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
   \************************************/
 /***/ ((module, __webpack_exports__, __webpack_require__) => {
 
-eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => __WEBPACK_DEFAULT_EXPORT__\n/* harmony export */ });\n/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ \"./node_modules/@babylonjs/core/index.js\");\n\nconst { TileLens } = await __webpack_require__.e(/*! import() */ \"rust_pkg_terra-wasm_js\").then(__webpack_require__.bind(__webpack_require__, /*! ../wasm */ \"../rust/pkg/terra-wasm.js\"));\n/**\n * The length of one side of each tile. This is also the center-to-vertex\n * radius, because each tile is 6 equilateral triangles.\n */\nconst TILE_SIDE_LENGTH = 1.0;\n/**\n * Distance between two opposite vertices.\n */\nconst TILE_VERTEX_DIAM = TILE_SIDE_LENGTH * 2;\n/**\n * Util class for rendering a world of tiles\n */\nclass WorldRenderer {\n    constructor(scene, world) {\n        // We use \"thin instances\" here for the tiles cause #performance\n        // https://doc.babylonjs.com/divingDeeper/mesh/copies/thinInstances\n        // TODO there's a section on that page called \"Faster thin instances\", use\n        // that to speed up initialization\n        this.mesh = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder(\"tile\", {\n            diameter: TILE_VERTEX_DIAM,\n            tessellation: 6,\n            cap: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.CAP_END,\n        }, scene);\n        this.mesh.convertToUnIndexedMesh();\n        this.mesh.thinInstanceRegisterAttribute(\"color\", 4);\n        // This call allocates a whole new array, so we store the array instead of\n        // the full world object.\n        const tiles = world.tiles_array();\n        this.tiles = tiles.map((tile, i) => {\n            // Convert hex coords to pixel coords\n            // https://www.redblobgames.com/grids/hexagons/#coordinates-cube\n            const pos = tile.pos;\n            const transformMatrix = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Translation(pos.x * 0.75 * TILE_VERTEX_DIAM, tile.height[0], (pos.x / 2 + pos.y) * -(Math.sqrt(3) / 2) * TILE_VERTEX_DIAM\n            // I'm not entirely sure why this scaling works, but it does\n            ).add(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Scaling(0, tile.height[0], 0));\n            // Refresh meshes if this is the last tile in the list\n            const isLastTile = i === tiles.length - 1;\n            const idx = this.mesh.thinInstanceAdd(transformMatrix, isLastTile);\n            return [tile, idx];\n        });\n        this.tileLens = TileLens.Biome;\n        this.updateTileColors(this.tileLens);\n    }\n    updateTileColors(lens) {\n        this.tileLens = lens;\n        this.tiles.forEach(([tile, instanceIdx], i) => {\n            const isLastTile = i === this.tiles.length - 1;\n            const color = tile.color(this.tileLens);\n            this.mesh.thinInstanceSetAttributeAt(\"color\", instanceIdx, [color.red, color.green, color.blue, 1.0], \n            // Refresh meshes if this is the last tile in the list\n            isLastTile);\n        });\n    }\n}\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (WorldRenderer);\n\nreturn __webpack_exports__;\n})();\n\n//# sourceURL=webpack://terra/./src/world/WorldRenderer.ts?");
+eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => __WEBPACK_DEFAULT_EXPORT__\n/* harmony export */ });\n/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ \"./node_modules/@babylonjs/core/index.js\");\n\nconst { TileLens } = await __webpack_require__.e(/*! import() */ \"crates_wasm_pkg_terra-wasm_js\").then(__webpack_require__.bind(__webpack_require__, /*! ../wasm */ \"../crates/wasm/pkg/terra-wasm.js\"));\n/**\n * The length of one side of each tile. This is also the center-to-vertex\n * radius, because each tile is 6 equilateral triangles.\n */\nconst TILE_SIDE_LENGTH = 1.0;\n/**\n * Distance between two opposite vertices.\n */\nconst TILE_VERTEX_DIAM = TILE_SIDE_LENGTH * 2;\n/**\n * Util class for rendering a world of tiles\n */\nclass WorldRenderer {\n    constructor(scene, world) {\n        // We use \"thin instances\" here for the tiles cause #performance\n        // https://doc.babylonjs.com/divingDeeper/mesh/copies/thinInstances\n        // TODO there's a section on that page called \"Faster thin instances\", use\n        // that to speed up initialization\n        this.mesh = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder(\"tile\", {\n            diameter: TILE_VERTEX_DIAM,\n            tessellation: 6,\n            cap: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.CAP_END,\n        }, scene);\n        this.mesh.convertToUnIndexedMesh();\n        this.mesh.thinInstanceRegisterAttribute(\"color\", 4);\n        // This call allocates a whole new array, so we store the array instead of\n        // the full world object.\n        const tiles = world.wasm_tiles();\n        this.tiles = tiles.map((tile, i) => {\n            // Convert hex coords to pixel coords\n            // https://www.redblobgames.com/grids/hexagons/#coordinates-cube\n            const pos = tile.pos;\n            const transformMatrix = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Translation(pos.x * 0.75 * TILE_VERTEX_DIAM, tile.height[0], (pos.x / 2 + pos.y) * -(Math.sqrt(3) / 2) * TILE_VERTEX_DIAM\n            // I'm not entirely sure why this scaling works, but it does\n            ).add(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Scaling(0, tile.height[0], 0));\n            // Refresh meshes if this is the last tile in the list\n            const isLastTile = i === tiles.length - 1;\n            const idx = this.mesh.thinInstanceAdd(transformMatrix, isLastTile);\n            return [tile, idx];\n        });\n        this.tileLens = TileLens.Biome;\n        this.updateTileColors(this.tileLens);\n    }\n    updateTileColors(lens) {\n        this.tileLens = lens;\n        this.tiles.forEach(([tile, instanceIdx], i) => {\n            const isLastTile = i === this.tiles.length - 1;\n            const color = tile.color(this.tileLens);\n            this.mesh.thinInstanceSetAttributeAt(\"color\", instanceIdx, [color.red, color.green, color.blue, 1.0], \n            // Refresh meshes if this is the last tile in the list\n            isLastTile);\n        });\n    }\n}\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (WorldRenderer);\n\nreturn __webpack_exports__;\n})();\n\n//# sourceURL=webpack://terra/./src/world/WorldRenderer.ts?");
 
 /***/ }),
 
@@ -467,153 +467,198 @@ eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__
 /******/ 		var wasmImportedFuncCache33;
 /******/ 		var wasmImportedFuncCache34;
 /******/ 		var wasmImportedFuncCache35;
+/******/ 		var wasmImportedFuncCache36;
+/******/ 		var wasmImportedFuncCache37;
+/******/ 		var wasmImportedFuncCache38;
+/******/ 		var wasmImportedFuncCache39;
+/******/ 		var wasmImportedFuncCache40;
+/******/ 		var wasmImportedFuncCache41;
+/******/ 		var wasmImportedFuncCache42;
+/******/ 		var wasmImportedFuncCache43;
+/******/ 		var wasmImportedFuncCache44;
 /******/ 		var wasmImportObjects = {
-/******/ 			"../rust/pkg/terra-wasm_bg.wasm": function() {
+/******/ 			"../crates/wasm/pkg/terra-wasm_bg.wasm": function() {
 /******/ 				return {
 /******/ 					"./terra-wasm_bg.js": {
-/******/ 						"__wbg_tile_new": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache0 === undefined) wasmImportedFuncCache0 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache0["__wbg_tile_new"](p0i32);
-/******/ 						},
 /******/ 						"__wbindgen_object_drop_ref": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache1 === undefined) wasmImportedFuncCache1 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache1["__wbindgen_object_drop_ref"](p0i32);
+/******/ 							if(wasmImportedFuncCache0 === undefined) wasmImportedFuncCache0 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache0["__wbindgen_object_drop_ref"](p0i32);
 /******/ 						},
 /******/ 						"__wbindgen_string_new": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache2 === undefined) wasmImportedFuncCache2 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache2["__wbindgen_string_new"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache1 === undefined) wasmImportedFuncCache1 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache1["__wbindgen_string_new"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbindgen_object_clone_ref": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache3 === undefined) wasmImportedFuncCache3 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache3["__wbindgen_object_clone_ref"](p0i32);
+/******/ 							if(wasmImportedFuncCache2 === undefined) wasmImportedFuncCache2 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache2["__wbindgen_object_clone_ref"](p0i32);
 /******/ 						},
 /******/ 						"__wbindgen_is_null": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache4 === undefined) wasmImportedFuncCache4 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache4["__wbindgen_is_null"](p0i32);
+/******/ 							if(wasmImportedFuncCache3 === undefined) wasmImportedFuncCache3 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache3["__wbindgen_is_null"](p0i32);
 /******/ 						},
 /******/ 						"__wbindgen_is_undefined": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache5 === undefined) wasmImportedFuncCache5 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache5["__wbindgen_is_undefined"](p0i32);
+/******/ 							if(wasmImportedFuncCache4 === undefined) wasmImportedFuncCache4 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache4["__wbindgen_is_undefined"](p0i32);
 /******/ 						},
 /******/ 						"__wbg_new_59cb74e423758ede": function() {
-/******/ 							if(wasmImportedFuncCache6 === undefined) wasmImportedFuncCache6 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache6["__wbg_new_59cb74e423758ede"]();
+/******/ 							if(wasmImportedFuncCache5 === undefined) wasmImportedFuncCache5 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache5["__wbg_new_59cb74e423758ede"]();
 /******/ 						},
 /******/ 						"__wbg_stack_558ba5917b466edd": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache7 === undefined) wasmImportedFuncCache7 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache7["__wbg_stack_558ba5917b466edd"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache6 === undefined) wasmImportedFuncCache6 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache6["__wbg_stack_558ba5917b466edd"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbg_error_4bb6c2a97407129a": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache8 === undefined) wasmImportedFuncCache8 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache8["__wbg_error_4bb6c2a97407129a"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache7 === undefined) wasmImportedFuncCache7 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache7["__wbg_error_4bb6c2a97407129a"](p0i32,p1i32);
+/******/ 						},
+/******/ 						"__wbg_tile_new": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache8 === undefined) wasmImportedFuncCache8 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache8["__wbg_tile_new"](p0i32);
 /******/ 						},
 /******/ 						"__wbg_debug_9f067aefe2ceaadd": function(p0i32,p1i32,p2i32,p3i32) {
-/******/ 							if(wasmImportedFuncCache9 === undefined) wasmImportedFuncCache9 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							if(wasmImportedFuncCache9 === undefined) wasmImportedFuncCache9 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
 /******/ 							return wasmImportedFuncCache9["__wbg_debug_9f067aefe2ceaadd"](p0i32,p1i32,p2i32,p3i32);
 /******/ 						},
 /******/ 						"__wbg_error_e325755affc8634b": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache10 === undefined) wasmImportedFuncCache10 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							if(wasmImportedFuncCache10 === undefined) wasmImportedFuncCache10 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
 /******/ 							return wasmImportedFuncCache10["__wbg_error_e325755affc8634b"](p0i32);
 /******/ 						},
 /******/ 						"__wbg_error_7bb15b842d5b0ddb": function(p0i32,p1i32,p2i32,p3i32) {
-/******/ 							if(wasmImportedFuncCache11 === undefined) wasmImportedFuncCache11 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							if(wasmImportedFuncCache11 === undefined) wasmImportedFuncCache11 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
 /******/ 							return wasmImportedFuncCache11["__wbg_error_7bb15b842d5b0ddb"](p0i32,p1i32,p2i32,p3i32);
 /******/ 						},
 /******/ 						"__wbg_info_1b9fdabaafc8f4cb": function(p0i32,p1i32,p2i32,p3i32) {
-/******/ 							if(wasmImportedFuncCache12 === undefined) wasmImportedFuncCache12 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							if(wasmImportedFuncCache12 === undefined) wasmImportedFuncCache12 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
 /******/ 							return wasmImportedFuncCache12["__wbg_info_1b9fdabaafc8f4cb"](p0i32,p1i32,p2i32,p3i32);
 /******/ 						},
 /******/ 						"__wbg_log_37120b26fb738792": function(p0i32,p1i32,p2i32,p3i32) {
-/******/ 							if(wasmImportedFuncCache13 === undefined) wasmImportedFuncCache13 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							if(wasmImportedFuncCache13 === undefined) wasmImportedFuncCache13 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
 /******/ 							return wasmImportedFuncCache13["__wbg_log_37120b26fb738792"](p0i32,p1i32,p2i32,p3i32);
 /******/ 						},
 /******/ 						"__wbg_time_7b20e0fb24128e35": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache14 === undefined) wasmImportedFuncCache14 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							if(wasmImportedFuncCache14 === undefined) wasmImportedFuncCache14 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
 /******/ 							return wasmImportedFuncCache14["__wbg_time_7b20e0fb24128e35"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbg_timeEnd_533927dc25d673d0": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache15 === undefined) wasmImportedFuncCache15 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							if(wasmImportedFuncCache15 === undefined) wasmImportedFuncCache15 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
 /******/ 							return wasmImportedFuncCache15["__wbg_timeEnd_533927dc25d673d0"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbg_warn_6add4f04160cdbba": function(p0i32,p1i32,p2i32,p3i32) {
-/******/ 							if(wasmImportedFuncCache16 === undefined) wasmImportedFuncCache16 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
+/******/ 							if(wasmImportedFuncCache16 === undefined) wasmImportedFuncCache16 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
 /******/ 							return wasmImportedFuncCache16["__wbg_warn_6add4f04160cdbba"](p0i32,p1i32,p2i32,p3i32);
 /******/ 						},
+/******/ 						"__wbg_getRandomValues_c73f06b5ed8b878d": function(p0i32,p1i32) {
+/******/ 							if(wasmImportedFuncCache17 === undefined) wasmImportedFuncCache17 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache17["__wbg_getRandomValues_c73f06b5ed8b878d"](p0i32,p1i32);
+/******/ 						},
+/******/ 						"__wbg_randomFillSync_5fa0a72035c7bfd9": function(p0i32,p1i32,p2i32) {
+/******/ 							if(wasmImportedFuncCache18 === undefined) wasmImportedFuncCache18 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache18["__wbg_randomFillSync_5fa0a72035c7bfd9"](p0i32,p1i32,p2i32);
+/******/ 						},
+/******/ 						"__wbg_self_23b14d60c8dbf9da": function() {
+/******/ 							if(wasmImportedFuncCache19 === undefined) wasmImportedFuncCache19 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache19["__wbg_self_23b14d60c8dbf9da"]();
+/******/ 						},
+/******/ 						"__wbg_static_accessor_MODULE_ff1e47f7076e0ee1": function() {
+/******/ 							if(wasmImportedFuncCache20 === undefined) wasmImportedFuncCache20 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache20["__wbg_static_accessor_MODULE_ff1e47f7076e0ee1"]();
+/******/ 						},
+/******/ 						"__wbg_require_1dab18ea211c4fa1": function(p0i32,p1i32,p2i32) {
+/******/ 							if(wasmImportedFuncCache21 === undefined) wasmImportedFuncCache21 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache21["__wbg_require_1dab18ea211c4fa1"](p0i32,p1i32,p2i32);
+/******/ 						},
+/******/ 						"__wbg_crypto_df96f3577c8a9bae": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache22 === undefined) wasmImportedFuncCache22 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache22["__wbg_crypto_df96f3577c8a9bae"](p0i32);
+/******/ 						},
+/******/ 						"__wbg_msCrypto_331efcdb9be40d7c": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache23 === undefined) wasmImportedFuncCache23 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache23["__wbg_msCrypto_331efcdb9be40d7c"](p0i32);
+/******/ 						},
 /******/ 						"__wbg_get_85e0a3b459845fe2": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache17 === undefined) wasmImportedFuncCache17 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache17["__wbg_get_85e0a3b459845fe2"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache24 === undefined) wasmImportedFuncCache24 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache24["__wbg_get_85e0a3b459845fe2"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbg_new_9dff83a08f5994f3": function() {
-/******/ 							if(wasmImportedFuncCache18 === undefined) wasmImportedFuncCache18 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache18["__wbg_new_9dff83a08f5994f3"]();
+/******/ 							if(wasmImportedFuncCache25 === undefined) wasmImportedFuncCache25 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache25["__wbg_new_9dff83a08f5994f3"]();
 /******/ 						},
 /******/ 						"__wbg_push_3ddd8187ff2ff82d": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache19 === undefined) wasmImportedFuncCache19 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache19["__wbg_push_3ddd8187ff2ff82d"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache26 === undefined) wasmImportedFuncCache26 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache26["__wbg_push_3ddd8187ff2ff82d"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbg_instanceof_ArrayBuffer_3a0fa134e6809d57": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache20 === undefined) wasmImportedFuncCache20 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache20["__wbg_instanceof_ArrayBuffer_3a0fa134e6809d57"](p0i32);
+/******/ 							if(wasmImportedFuncCache27 === undefined) wasmImportedFuncCache27 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache27["__wbg_instanceof_ArrayBuffer_3a0fa134e6809d57"](p0i32);
 /******/ 						},
 /******/ 						"__wbg_new_94a7dfa9529ec6e8": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache21 === undefined) wasmImportedFuncCache21 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache21["__wbg_new_94a7dfa9529ec6e8"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache28 === undefined) wasmImportedFuncCache28 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache28["__wbg_new_94a7dfa9529ec6e8"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbg_isSafeInteger_ca75f5e5231bd3c7": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache22 === undefined) wasmImportedFuncCache22 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache22["__wbg_isSafeInteger_ca75f5e5231bd3c7"](p0i32);
+/******/ 							if(wasmImportedFuncCache29 === undefined) wasmImportedFuncCache29 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache29["__wbg_isSafeInteger_ca75f5e5231bd3c7"](p0i32);
 /******/ 						},
 /******/ 						"__wbg_buffer_3f12a1c608c6d04e": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache23 === undefined) wasmImportedFuncCache23 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache23["__wbg_buffer_3f12a1c608c6d04e"](p0i32);
+/******/ 							if(wasmImportedFuncCache30 === undefined) wasmImportedFuncCache30 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache30["__wbg_buffer_3f12a1c608c6d04e"](p0i32);
 /******/ 						},
 /******/ 						"__wbg_new_c6c0228e6d22a2f9": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache24 === undefined) wasmImportedFuncCache24 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache24["__wbg_new_c6c0228e6d22a2f9"](p0i32);
+/******/ 							if(wasmImportedFuncCache31 === undefined) wasmImportedFuncCache31 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache31["__wbg_new_c6c0228e6d22a2f9"](p0i32);
 /******/ 						},
 /******/ 						"__wbg_set_b91afac9fd216d99": function(p0i32,p1i32,p2i32) {
-/******/ 							if(wasmImportedFuncCache25 === undefined) wasmImportedFuncCache25 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache25["__wbg_set_b91afac9fd216d99"](p0i32,p1i32,p2i32);
+/******/ 							if(wasmImportedFuncCache32 === undefined) wasmImportedFuncCache32 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache32["__wbg_set_b91afac9fd216d99"](p0i32,p1i32,p2i32);
 /******/ 						},
 /******/ 						"__wbg_length_c645e7c02233b440": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache26 === undefined) wasmImportedFuncCache26 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache26["__wbg_length_c645e7c02233b440"](p0i32);
+/******/ 							if(wasmImportedFuncCache33 === undefined) wasmImportedFuncCache33 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache33["__wbg_length_c645e7c02233b440"](p0i32);
 /******/ 						},
 /******/ 						"__wbg_instanceof_Uint8Array_fda7b6a64c667462": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache27 === undefined) wasmImportedFuncCache27 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache27["__wbg_instanceof_Uint8Array_fda7b6a64c667462"](p0i32);
+/******/ 							if(wasmImportedFuncCache34 === undefined) wasmImportedFuncCache34 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache34["__wbg_instanceof_Uint8Array_fda7b6a64c667462"](p0i32);
+/******/ 						},
+/******/ 						"__wbg_newwithlength_a429e08f8a8fe4b3": function(p0i32) {
+/******/ 							if(wasmImportedFuncCache35 === undefined) wasmImportedFuncCache35 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache35["__wbg_newwithlength_a429e08f8a8fe4b3"](p0i32);
+/******/ 						},
+/******/ 						"__wbg_subarray_02e2fcfa6b285cb2": function(p0i32,p1i32,p2i32) {
+/******/ 							if(wasmImportedFuncCache36 === undefined) wasmImportedFuncCache36 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache36["__wbg_subarray_02e2fcfa6b285cb2"](p0i32,p1i32,p2i32);
 /******/ 						},
 /******/ 						"__wbg_byteLength_11e6bdc2fac53a3c": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache28 === undefined) wasmImportedFuncCache28 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache28["__wbg_byteLength_11e6bdc2fac53a3c"](p0i32);
+/******/ 							if(wasmImportedFuncCache37 === undefined) wasmImportedFuncCache37 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache37["__wbg_byteLength_11e6bdc2fac53a3c"](p0i32);
 /******/ 						},
 /******/ 						"__wbindgen_number_get": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache29 === undefined) wasmImportedFuncCache29 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache29["__wbindgen_number_get"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache38 === undefined) wasmImportedFuncCache38 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache38["__wbindgen_number_get"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbindgen_string_get": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache30 === undefined) wasmImportedFuncCache30 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache30["__wbindgen_string_get"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache39 === undefined) wasmImportedFuncCache39 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache39["__wbindgen_string_get"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbindgen_boolean_get": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache31 === undefined) wasmImportedFuncCache31 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache31["__wbindgen_boolean_get"](p0i32);
+/******/ 							if(wasmImportedFuncCache40 === undefined) wasmImportedFuncCache40 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache40["__wbindgen_boolean_get"](p0i32);
 /******/ 						},
 /******/ 						"__wbindgen_debug_string": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache32 === undefined) wasmImportedFuncCache32 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache32["__wbindgen_debug_string"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache41 === undefined) wasmImportedFuncCache41 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache41["__wbindgen_debug_string"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbindgen_throw": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache33 === undefined) wasmImportedFuncCache33 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache33["__wbindgen_throw"](p0i32,p1i32);
+/******/ 							if(wasmImportedFuncCache42 === undefined) wasmImportedFuncCache42 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache42["__wbindgen_throw"](p0i32,p1i32);
 /******/ 						},
 /******/ 						"__wbindgen_rethrow": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache34 === undefined) wasmImportedFuncCache34 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache34["__wbindgen_rethrow"](p0i32);
+/******/ 							if(wasmImportedFuncCache43 === undefined) wasmImportedFuncCache43 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache43["__wbindgen_rethrow"](p0i32);
 /******/ 						},
 /******/ 						"__wbindgen_memory": function() {
-/******/ 							if(wasmImportedFuncCache35 === undefined) wasmImportedFuncCache35 = __webpack_require__.c["../rust/pkg/terra-wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache35["__wbindgen_memory"]();
+/******/ 							if(wasmImportedFuncCache44 === undefined) wasmImportedFuncCache44 = __webpack_require__.c["../crates/wasm/pkg/terra-wasm_bg.js"].exports;
+/******/ 							return wasmImportedFuncCache44["__wbindgen_memory"]();
 /******/ 						}
 /******/ 					}
 /******/ 				};
@@ -621,8 +666,8 @@ eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__
 /******/ 		};
 /******/ 		
 /******/ 		var wasmModuleMap = {
-/******/ 			"rust_pkg_terra-wasm_js": [
-/******/ 				"../rust/pkg/terra-wasm_bg.wasm"
+/******/ 			"crates_wasm_pkg_terra-wasm_js": [
+/******/ 				"../crates/wasm/pkg/terra-wasm_bg.wasm"
 /******/ 			]
 /******/ 		};
 /******/ 		
@@ -642,7 +687,7 @@ eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__
 /******/ 					promises.push(installedWasmModuleData);
 /******/ 				else {
 /******/ 					var importObject = wasmImportObjects[wasmModuleId]();
-/******/ 					var req = fetch(__webpack_require__.p + "" + {"rust_pkg_terra-wasm_js":{"../rust/pkg/terra-wasm_bg.wasm":"f1074eb11b76e1c1118c"}}[chunkId][wasmModuleId] + ".module.wasm");
+/******/ 					var req = fetch(__webpack_require__.p + "" + {"crates_wasm_pkg_terra-wasm_js":{"../crates/wasm/pkg/terra-wasm_bg.wasm":"532edc18faacb01f5702"}}[chunkId][wasmModuleId] + ".module.wasm");
 /******/ 					var promise;
 /******/ 					if(importObject instanceof Promise && typeof WebAssembly.compileStreaming === 'function') {
 /******/ 						promise = Promise.all([WebAssembly.compileStreaming(req), importObject]).then(function(items) {
