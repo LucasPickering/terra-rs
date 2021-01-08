@@ -687,7 +687,7 @@ eval("module.exports = (async () => {\n__webpack_require__.r(__webpack_exports__
 /******/ 					promises.push(installedWasmModuleData);
 /******/ 				else {
 /******/ 					var importObject = wasmImportObjects[wasmModuleId]();
-/******/ 					var req = fetch(__webpack_require__.p + "" + {"crates_wasm_pkg_terra-wasm_js":{"../crates/wasm/pkg/terra-wasm_bg.wasm":"532edc18faacb01f5702"}}[chunkId][wasmModuleId] + ".module.wasm");
+/******/ 					var req = fetch(__webpack_require__.p + "" + {"crates_wasm_pkg_terra-wasm_js":{"../crates/wasm/pkg/terra-wasm_bg.wasm":"2b91920a6c3bb2d247d4"}}[chunkId][wasmModuleId] + ".module.wasm");
 /******/ 					var promise;
 /******/ 					if(importObject instanceof Promise && typeof WebAssembly.compileStreaming === 'function') {
 /******/ 						promise = Promise.all([WebAssembly.compileStreaming(req), importObject]).then(function(items) {
