@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use terra::{Meter3, NoiseFnConfig, World, WorldConfig};
+use terra::{World, WorldConfig};
 
 fn criterion_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("world-generation");

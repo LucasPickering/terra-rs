@@ -11,6 +11,7 @@ use crate::{
 };
 use derive_more::{Display, From, Into};
 use fnv::FnvBuildHasher;
+use log::trace;
 use std::{
     collections::{HashMap, HashSet},
     default::Default,
@@ -210,6 +211,7 @@ impl Basin {
 /// to point to their new parents. This is all handled transparently within
 /// this struct, so all the external methods on this struct support both alias
 /// and primary keys.
+#[derive(Debug)]
 pub struct Basins {
     basins: HashMap<ResolvedBasinKey, Basin, FnvBuildHasher>,
     /// Mapping of alias->aliased key. You may be tempted to change this map
@@ -311,6 +313,7 @@ impl Basins {
     ) -> &Basin {
         let a: BasinKey = a.into();
         let b: BasinKey = b.into();
+        trace!("Joining basin {} into basin {}", b, a);
         // Either key could be an alias, resolve both to get the actual keys
         let a_res = self.resolve(a);
         let b_res = self.resolve(b);
@@ -326,9 +329,21 @@ impl Basins {
             let b_basin = self.basins.remove(&b_res).unwrap_or_else(|| {
                 panic!("unknown basin: {} (resolved from {})", b_res, b)
             });
-            // Store an alias for b->a. Use the resolved version of a to try to
-            // reduce the number of lookups required later
-            self.aliases.insert(b, a_res.downgrade());
+            // Store an alias for b->a. For b, we have to use the resolved
+            // version, so that if b is already an alias, we add a new alias to
+            // the end of its alias chain. For a, we could hypothetically use
+            // the unresolved version, but using the resolved key will reduce
+            // alias lookups later on.
+            let existing =
+                self.aliases.insert(b_res.downgrade(), a_res.downgrade());
+            // Sanity check that we didn't overwrite an existing alias
+            debug_assert!(
+                existing.is_none(),
+                "Overwrote alias for existing key {} (was pointing to {:?})",
+                b_res.downgrade(),
+                existing
+            );
+
             Some(b_basin)
         } else {
             None

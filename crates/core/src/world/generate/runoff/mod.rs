@@ -19,6 +19,7 @@ use crate::{
     },
 };
 use fnv::FnvBuildHasher;
+use log::trace;
 use std::{
     cmp::Ordering,
     collections::{HashMap, VecDeque},
@@ -151,6 +152,10 @@ impl<'a> Continent<'a> {
     /// system, meaning its runoff doesn't affect any other continents in any
     /// way.
     fn sim_continent_runoff(&mut self) {
+        trace!(
+            "Simulating runoff for continent [first_tile={}]",
+            self.tiles.first().unwrap().0
+        );
         self.initialize_runoff();
         self.push_downhill();
         self.sim_backflow();
@@ -249,8 +254,11 @@ impl<'a> Continent<'a> {
                     } else {
                         // The other basin has never donated to us, which means
                         // we can safely overflow into them
-                        let other_basin =
-                            basins.get_mut(other_basin_key).unwrap();
+                        let other_basin = basins
+                            .get_mut(other_basin_key)
+                            .unwrap_or_else(|| {
+                                panic!("unknown basin key: {}", other_basin_key)
+                            });
                         other_basin.overflow(basin_key, overflow_vol);
 
                         // Re-queue the receiving basin (if it isn't already)
