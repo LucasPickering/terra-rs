@@ -7,6 +7,7 @@ use crate::{
 };
 
 /// Any tile with at least this amount of runoff on it will become a lake
+/// TODO move this into the config
 const LAKE_RUNOFF_THRESHOLD: Meter3 = Meter3(10.0);
 
 /// A generator that creates lakes based on runoff levels. This has to run AFTER
@@ -15,14 +16,12 @@ const LAKE_RUNOFF_THRESHOLD: Meter3 = Meter3(10.0);
 pub struct LakeGenerator;
 
 impl Generate for LakeGenerator {
-    fn generate(&self, world: &mut WorldBuilder) {
+    fn generate(&self, world: &mut WorldBuilder) -> anyhow::Result<()> {
         for tile in world.tiles.values_mut() {
-            match tile.runoff() {
-                Some(runoff) if runoff >= LAKE_RUNOFF_THRESHOLD => {
-                    tile.set_biome(Biome::Lake);
-                }
-                _ => {}
+            if tile.runoff()? >= LAKE_RUNOFF_THRESHOLD {
+                tile.set_biome(Biome::Lake);
             }
         }
+        Ok(())
     }
 }

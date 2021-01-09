@@ -224,7 +224,9 @@ impl ops::Mul<f32> for Color3 {
         let red = Self::COMPONENT_RANGE.clamp(self.red * rhs);
         let green = Self::COMPONENT_RANGE.clamp(self.green * rhs);
         let blue = Self::COMPONENT_RANGE.clamp(self.blue * rhs);
-        Self::new(red, green, blue).unwrap()
+        // It's safe to bypass the constructor here because we just clamped
+        // all 3 components to the valid range
+        Self { red, green, blue }
     }
 }
 
@@ -237,6 +239,7 @@ impl ops::Mul<f32> for Color3 {
 pub trait Rangeable<I = Self>:
     Copy
     + Debug
+    + Display
     + PartialOrd
     + From<I>
     + Into<I>
@@ -290,7 +293,8 @@ impl Rangeable<f64> for Meter3 {
 }
 
 /// A range between two numeric values, inclusive on both ends.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Display)]
+#[display(fmt = "[{}, {}]", min, max)]
 pub struct NumRange<T: Rangeable<I>, I = T> {
     pub min: T,
     pub max: T,
@@ -333,6 +337,15 @@ impl<T: Into<I> + Rangeable<I>, I> NumRange<T, I> {
         self.min <= value && value <= self.max
     }
 
+    /// Checks if the value is in this range. If it isn't, return an error.
+    pub fn ensure_contains(&self, value: T) -> anyhow::Result<()> {
+        if self.contains(value) {
+            Ok(())
+        } else {
+            Err(anyhow!("value {} is not in range {}", value, self))
+        }
+    }
+
     /// Map a value from this range to the target range.
     pub fn map_to(&self, dest_range: &Self, value: T) -> T {
         let normalized = (value - self.min) / self.span().into();
@@ -355,13 +368,6 @@ impl<T: Into<I> + Rangeable<I>, I> NumRange<T, I> {
         } else {
             value
         }
-    }
-}
-
-// pretty print!
-impl<T: Rangeable + Display> Display for NumRange<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{}, {}]", self.min, self.max)
     }
 }
 

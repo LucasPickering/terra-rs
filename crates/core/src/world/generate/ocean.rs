@@ -5,6 +5,7 @@ use crate::{
         hex::Cluster,
         Biome, World,
     },
+    Meter3,
 };
 use rand::Rng;
 
@@ -17,11 +18,11 @@ const MIN_COAST_ELEV: Meter = Meter(-3.0);
 pub struct OceanGenerator;
 
 impl Generate for OceanGenerator {
-    fn generate(&self, world: &mut WorldBuilder) {
+    fn generate(&self, world: &mut WorldBuilder) -> anyhow::Result<()> {
         // Find all clusters of tiles that are entirely below sea level
         let clusters = Cluster::predicate(&mut world.tiles, |tile| {
-            tile.elevation().unwrap() <= World::SEA_LEVEL
-        });
+            Ok(tile.elevation()? <= World::SEA_LEVEL)
+        })?;
 
         for cluster in clusters {
             // The odds of this cluster becoming an ocean are proportional to
@@ -32,14 +33,20 @@ impl Generate for OceanGenerator {
             if cluster.tiles().len() as f32 >= threshold {
                 // Update every tile in this cluster to be coast/ocean
                 for (_, tile) in cluster.into_tiles() {
-                    let biome = if tile.elevation().unwrap() >= MIN_COAST_ELEV {
+                    let biome = if tile.elevation()? >= MIN_COAST_ELEV {
                         Biome::Coast
                     } else {
                         Biome::Ocean
                     };
                     tile.set_biome(biome);
+                    // Initialize runoff tiles now, since this tile won't
+                    // participate in runoff simulation later (because it's
+                    // water)
+                    tile.set_runoff(Meter3(0.0))?;
                 }
             }
         }
+
+        Ok(())
     }
 }

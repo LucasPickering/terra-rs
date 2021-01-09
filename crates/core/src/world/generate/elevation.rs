@@ -6,6 +6,7 @@ use crate::{
         World,
     },
 };
+use anyhow::bail;
 use noise::Fbm;
 
 /// Generate an elevation map using a noise function.
@@ -13,16 +14,17 @@ use noise::Fbm;
 pub struct ElevationGenerator;
 
 impl Generate for ElevationGenerator {
-    fn generate(&self, world: &mut WorldBuilder) {
+    fn generate(&self, world: &mut WorldBuilder) -> anyhow::Result<()> {
         let config = world.config;
         let normal_range = NumRange::normal_range();
         let noise_fn: TileNoiseFn<Fbm, Meter> =
             TileNoiseFn::new(&mut world.rng, &config.elevation, normal_range);
         if config.edge_buffer_size >= config.radius {
-            panic!(
+            bail!(
                 "config.edge_buffer_size ({}) \
                 must be less than config.radius ({})",
-                config.edge_buffer_size, config.radius
+                config.edge_buffer_size,
+                config.radius
             );
         }
         let buffer_range = NumRange::new(
@@ -67,7 +69,9 @@ impl Generate for ElevationGenerator {
                 .convert::<Meter>()
                 .map_to(elev_range)
                 .inner();
-            tile.set_elevation(elev);
+            tile.set_elevation(elev)?;
         }
+
+        Ok(())
     }
 }
