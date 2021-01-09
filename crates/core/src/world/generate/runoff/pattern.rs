@@ -1,10 +1,16 @@
-use crate::world::hex::{HexDirection, HexPoint};
+use crate::{
+    world::hex::{HasHexPosition, HexDirection, HexPoint, HexPointMap},
+    Meter3,
+};
 use fnv::FnvBuildHasher;
 use std::collections::HashMap;
 
-/// Runoff can terminate at either the ocean (`None`) or a specific tile
-/// (`Some`).
-pub type RunoffDestination = Option<HexPoint>;
+/// Runoff can terminate at either the ocean or at specific tile.
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+pub enum RunoffDestination {
+    Ocean,
+    Terminal(HexPoint),
+}
 
 /// A runoff pattern is essentially a way of memoizing parts of the runoff
 /// generation process. When we calculate runoff, we start at the lowest tiles
@@ -38,6 +44,28 @@ pub struct RunoffPattern {
     /// this map is empty, the tile is a terminal.
     exits: HashMap<HexDirection, f64, FnvBuildHasher>,
 
+    /// A map that tracks every tile that runoff passes over after leaving this
+    /// tile. This **doesn't** track where the runoff _ends up_ (that's what
+    /// `terminals` is for). These numbers represent the fraction of runoff
+    /// from this origin tile that passes over each descendent. E.g. if
+    /// this tile starts with 1.0 m³ of runoff, and the map looks like
+    /// this:
+    ///
+    /// ```text
+    /// {
+    ///     (1, 1, -2) => 0.3,
+    ///     (-1, 1, 0) => 0.7,
+    ///     (-1, 2, -1) => 0.4,
+    ///     (-1, 0, 1) => 0.3,
+    /// }
+    /// ```
+    ///
+    /// Then 30% of our runoff passes over (1, 1, -2), 70% over (-1, 1, 0), and
+    /// so on. Notice that the values **do not add up to 1.0**. The same blob
+    /// of runoff will run over many tiles, so 1.0 m³ of runoff can account for
+    /// much more than 1.0 m³ of traversal.
+    traversals: HexPointMap<f64>,
+
     /// A terminal is a tile with no exits. The terminal map shows where runoff
     /// from this will end up. Each key is a terminal tile (or `None`) and the
     /// value is a fraction [0, 1] denoting how much of the source's runoff
@@ -55,6 +83,7 @@ impl RunoffPattern {
         Self {
             position,
             exits: HashMap::default(),
+            traversals: HexPointMap::default(),
             terminals: HashMap::default(),
         }
     }
@@ -68,6 +97,21 @@ impl RunoffPattern {
     /// Is this tile a terminal? A terminal is a tile with no exits.
     pub fn is_terminal(&self) -> bool {
         self.exits.is_empty()
+    }
+
+    /// Distribute the given runoff quantity to each of this pattern's exits.
+    /// The returned map determines how much runoff each exit direction
+    /// receives. The values of the returned map will always sum to 1,
+    /// **unless** this tile is a terminal. In that case, it has no exits,
+    /// so the returned map will be empty.
+    pub fn distribute_exits(
+        &self,
+        runoff: Meter3,
+    ) -> HashMap<HexDirection, Meter3, FnvBuildHasher> {
+        self.exits
+            .iter()
+            .map(|(dir, f)| (*dir, runoff * f))
+            .collect()
     }
 
     /// Add a new exit to this pattern. The exit has a specific direction and
@@ -87,11 +131,11 @@ impl RunoffPattern {
                 // This exit is a terminal itself, so add/update it to our map
                 *self
                     .terminals
-                    .entry(Some(other_pattern.position))
-                    .or_insert(0.0) += factor;
+                    .entry(RunoffDestination::Terminal(other_pattern.position))
+                    .or_default() += factor;
             } else {
                 // This exit is NOT a terminal, so add all its terminals to us
-                for (p, f) in &other_pattern.terminals {
+                for (d, f) in &other_pattern.terminals {
                     // We want to add the other tile's terminal, but with one
                     // more degree of separation, like so: us->other->term
                     // f is the amt of water that goes other->term, so we want
@@ -99,12 +143,19 @@ impl RunoffPattern {
                     let term_factor = f * factor;
                     // If we're already sending some runoff to this terminal,
                     // make sure we update that value instead of overwriting
-                    *self.terminals.entry(*p).or_insert(0.0) += term_factor;
+                    *self.terminals.entry(*d).or_default() += term_factor;
                 }
             }
         } else {
             // The exit is an ocean tile, so denote that with the None key
-            *self.terminals.entry(None).or_insert(0.0) += factor;
+            *self.terminals.entry(RunoffDestination::Ocean).or_default() +=
+                factor;
         }
+    }
+}
+
+impl HasHexPosition for RunoffPattern {
+    fn position(&self) -> HexPoint {
+        self.position
     }
 }

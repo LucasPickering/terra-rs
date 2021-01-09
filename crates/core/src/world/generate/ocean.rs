@@ -43,6 +43,7 @@ impl Generate for OceanGenerator {
                     // participate in runoff simulation later (because it's
                     // water)
                     tile.set_runoff(Meter3(0.0))?;
+                    tile.set_runoff_egress(Default::default());
                 }
             }
         }

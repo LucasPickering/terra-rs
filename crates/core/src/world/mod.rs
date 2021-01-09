@@ -1,15 +1,18 @@
 mod generate;
 pub mod hex;
 
+use std::collections::HashMap;
+
 use crate::{
     timed,
     util::{Color3, Meter, Meter2, Meter3, NumRange},
     world::{
         generate::WorldBuilder,
-        hex::{HasHexPosition, HexPoint, HexPointMap},
+        hex::{HasHexPosition, HexDirection, HexPoint, HexPointMap},
     },
     WorldConfig,
 };
+use fnv::FnvBuildHasher;
 use log::{info, Level};
 use serde::Serialize;
 #[cfg(target_arch = "wasm32")]
@@ -113,7 +116,7 @@ impl World {
         match tiles {
             Ok(tiles) => Self { config, tiles },
             Err(err) => panic!(
-                "Error during world generation: {}\n{}",
+                "Error during world generation: {:?}\n{}\n",
                 err,
                 err.backtrace()
             ),
@@ -133,7 +136,7 @@ impl World {
 
         self.tiles
             .values()
-            .copied()
+            .cloned()
             .map(JsValue::from)
             .collect::<Array>()
             .unchecked_into()
@@ -141,15 +144,26 @@ impl World {
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Tile {
+    /// The location of this tile in the world. See [HexPoint] for a
+    /// description of the coordinate system. Every tile in the world has a
+    /// unique position.
     position: HexPoint,
+    /// The elevation of this tile, relative to sea level.
     elevation: Meter,
     /// Amount of rain that fell on this tile during rain simulation.
     rainfall: Meter3,
     /// Amount of runoff water that remains on the tile after runoff
     /// simulation.
     runoff: Meter3,
+    /// Amount of runoff that **exited** this tile in each direction. This map
+    /// will only contain entries for non-zero egress directions, meaning
+    /// any direction for which the adjacent tile is uphill (higher elevation)
+    /// will *not* have an entry here.
+    runoff_egress: HashMap<HexDirection, Meter3, FnvBuildHasher>,
+    /// The biome for this tile. Every tile exists in a single biome, which
+    /// describes its climate characteristics. See [Biome] for more info.
     biome: Biome,
 }
 
@@ -242,17 +256,36 @@ impl Tile {
                 Color3::new(1.0 - humidity, 1.0, 1.0 - humidity)
             }
             TileLens::Runoff => {
-                let normal_runoff = NumRange::new(Meter3(0.0), Meter3(5.0))
-                    .value(self.runoff)
-                    .normalize()
-                    // Runoff doesn't have a fixed range so we have to clamp
-                    // this to make sure we don't overflow the color value
-                    .clamp()
-                    .convert::<f64>()
-                    .inner() as f32;
-                // 0 -> white
-                // 1 -> blue
-                Color3::new(1.0 - normal_runoff, 1.0 - normal_runoff, 1.0)
+                // This coloring is based on two aspects: runoff (how much water
+                // collected on the tile) AND runoff egress (how much water
+                // flowed over the tile without staying there). Runoff controls
+                // blue, runoff egress controls green.
+                if self.biome == Biome::Ocean || self.biome == Biome::Coast {
+                    Color3::new(0.5, 0.5, 0.5)
+                } else {
+                    let normal_runoff = NumRange::new(Meter3(0.0), Meter3(5.0))
+                        .value(self.runoff)
+                        .normalize()
+                        // Runoff doesn't have a fixed range so we have to clamp
+                        // this to make sure we don't overflow the color value
+                        .clamp()
+                        .convert::<f64>()
+                        .inner() as f32;
+
+                    let normal_runoff_egress =
+                        NumRange::new(Meter3(0.0), Meter3(1000.0))
+                            .value(self.runoff_egress.values().copied().sum())
+                            .normalize()
+                            .clamp()
+                            .convert::<f64>()
+                            .inner() as f32;
+
+                    // (0,0) -> black
+                    // (1,0) -> blue
+                    // (0,1) -> green
+                    // (1,1) -> cyan
+                    Color3::new(0.0, normal_runoff_egress, normal_runoff)
+                }
             }
         }
         // this is hard to remove because we can't pass an anyhow result to wasm

@@ -2,6 +2,7 @@ mod basin;
 mod pattern;
 
 use crate::{
+    unwrap_or_bail,
     util::{self, Meter, Meter3},
     world::{
         generate::{
@@ -18,7 +19,7 @@ use crate::{
         Tile, World,
     },
 };
-use anyhow::{bail, Context};
+use anyhow::{ensure, Context};
 use fnv::FnvBuildHasher;
 use log::trace;
 use std::{
@@ -56,7 +57,6 @@ impl Generate for RunoffGenerator {
 
 /// Compare two tiles by their elevation
 fn cmp_elev(a: &TileBuilder, b: &TileBuilder) -> Ordering {
-    // TODO remove unwraps
     util::cmp_unwrap(&a.elevation().unwrap(), &b.elevation().unwrap())
 }
 
@@ -83,10 +83,10 @@ impl<'a> Continent<'a> {
     fn new(
         mut tiles: HexPointIndexMap<&'a mut TileBuilder>,
     ) -> anyhow::Result<Self> {
-        let id = match tiles.first() {
-            Some((pos, _)) => *pos,
-            None => bail!("cannot initialize empty continent"),
-        };
+        let (&id, _) = unwrap_or_bail!(
+            tiles.first(),
+            "cannot initialize empty continent",
+        );
         let runoff_patterns = Self::calc_runoff_patterns(&mut tiles)?;
         Ok(Self {
             id,
@@ -186,40 +186,105 @@ impl<'a> Continent<'a> {
     /// Push all runoff on the continent downhill, so that it all ends up in
     /// just two places: terminal tiles and the ocean. Must runoff will end
     /// up in the ocean, but basins inside the continent will collect runoff
-    /// at the terminals. Each dip will only have a single terminal though,
-    /// so after this step we will still need to simulate "backflow".
+    /// at the terminals. Each basin will push all its runoff to only the single
+    /// terminal tile though, so after this we will still have to simulate
+    /// "backflow" to form lakes.
+    ///
+    /// This function tracks TWO stats: egress (for each tile, how much runoff
+    /// exited in each direction?) and collected runoff (how much runoff remains
+    /// on this tile after the downhill flow?).
     fn push_downhill(&mut self) -> anyhow::Result<()> {
-        // Now that we have our runoff patterns, we can figure out how much
-        // water ends up going to each terminal. We have to do this in
-        // two steps because borrow checking.
-        let mut terminal_runoffs: HexPointMap<Meter3> = HexPointMap::default();
-        for (source_tile, source_pattern) in
-            self.tiles.values_mut().zip(self.runoff_patterns.values())
+        // Important notes for this func:
+        // Ingress - total runoff that has ENTERED a tile
+        // Egress - total runoff that has EXITED a tile
+        // Runoff - runoff that remains on a tile at the end of this func
+        //      i.e. ingress-egress
+        // For a given tile, ingress and egress can only ever increase!
+
+        // Step 1 - Initialize a map that tracks ingress for each tile. We
+        // initialize it by MOVING all the runoff from each tile into
+        // this map. That means during the next step, this map is the only
+        // source of truth for how much runoff is in the system!
+        //
+        // This is slightly hacky since tracking ingress actually means we
+        // duplicate runoff at each step, but it works out because in
+        // the end the only runoff remaining in the system is what collects in
+        // the terminals, and for a terminal tile, runoff=ingress (because
+        // egress is always 0).
+        let mut total_ingress: HexPointMap<Meter3> = self
+            .tiles
+            .values_mut()
+            .map(|tile| Ok((tile.position(), tile.clear_runoff()?)))
+            .collect::<anyhow::Result<_>>()?;
+
+        // Step 2 - Starting at the top, calculate how much runoff each tile
+        // pushes to its neighbors.
+        for (source_tile, source_pattern) in self
+            .tiles
+            .values_mut()
+            .zip(self.runoff_patterns.values())
+            // Very important - tiles are sorted low-to-high, so flip it
+            .rev()
         {
-            let to_distribute = source_tile.clear_runoff()?;
-            // Add the appropriate amount of water to each terminal. For most
-            // tiles, the terminals' factors don't add up to 1, so
-            // some or all of the water gets deleted from the system
-            // (i.e. flows to the ocean).
-            for (term_pos, factor) in source_pattern.terminals().iter() {
-                match term_pos {
-                    None => {
-                        // This runoff flows to the ocean, so nothing to do here
-                    }
-                    Some(term_pos) => {
-                        *terminal_runoffs
-                            .entry(*term_pos)
-                            .or_insert(Meter3(0.0)) += to_distribute * factor;
-                    }
-                }
+            let source_pos = source_tile.position();
+
+            // Sanity check to make sure our maps line up
+            ensure!(
+                source_pos == source_pattern.position(),
+                "source tile has position {}, \
+                    but corresponding runoff pattern has position {} \
+                    (in continent {})",
+                source_pos,
+                source_pattern.position(),
+                self.id
+            );
+
+            // This value will be whatever we started with (based on rainfall)
+            // plus whatever total our neighbors have pushed down to us
+            let source_ingress = *unwrap_or_bail!(
+                total_ingress.get(&source_pos),
+                "no runoff ingress for {}",
+                source_pos
+            );
+
+            // Whatever ingress enters this tile will get egressed to our lower
+            // neighbors, which have been pre-calculated in the runoff pattern.
+            for (dir, adj_ingress) in
+                source_pattern.distribute_exits(source_ingress)
+            {
+                let adj_pos = source_pos + dir.vec();
+                *total_ingress.entry(adj_pos).or_default() += adj_ingress;
             }
         }
-        for (pos, runoff) in terminal_runoffs {
-            match self.tiles.get_mut(&pos) {
-                Some(tile) => tile.add_runoff(runoff)?,
-                None => bail!("unknown tile {} in continent {}", pos, self.id),
-            };
+
+        // Step 3 - Now that we know how much runoff has entered each tile,
+        // then for each tile we can calculate the egress (for non-terminal
+        // tiles) or how much collected on the tile (for terminals)
+        for (pos, tile) in self.tiles.iter_mut() {
+            // Defensive coding! thanks Bryan
+            let runoff_pattern = unwrap_or_bail!(
+                self.runoff_patterns.get_mut(pos),
+                "no runoff pattern for tile {}",
+                pos
+            );
+            let tile_ingress = *unwrap_or_bail!(
+                total_ingress.get(&pos),
+                "no runoff ingress value for tile {}",
+                pos
+            );
+
+            let runoff_egress = runoff_pattern.distribute_exits(tile_ingress);
+            let is_terminal = runoff_egress.is_empty();
+            tile.set_runoff_egress(runoff_egress);
+
+            // If this tile has no egress, that means it's a terminal. In that
+            // case, whatever ingress we get remains here, so add it back to
+            // the tile as collected runoff
+            if is_terminal {
+                tile.add_runoff(tile_ingress)?;
+            }
         }
+
         Ok(())
     }
 
@@ -246,7 +311,9 @@ impl<'a> Continent<'a> {
             for (overflow_dest, overflow_vol) in overflow_distribution {
                 // If the overflow destination is a terminal tile (as opposed to
                 // ocean), then push the overflow runoff into that basin
-                if let Some(other_basin_key) = overflow_dest {
+                if let RunoffDestination::Terminal(other_basin_key) =
+                    overflow_dest
+                {
                     if basins
                         .has_previously_overflowed(other_basin_key, basin_key)?
                     {
@@ -291,12 +358,12 @@ impl<'a> Continent<'a> {
         for basin in basins.into_basins() {
             let runoff_elev = basin.runoff_elevation();
             for pos in basin.tiles().tiles().keys() {
-                let tile = match self.tiles.get_mut(pos) {
-                    Some(tile) => tile,
-                    None => {
-                        bail!("unknown tile {} in continent {}", pos, self.id)
-                    }
-                };
+                let tile = unwrap_or_bail!(
+                    self.tiles.get_mut(pos),
+                    "unknown tile {} in continent {}",
+                    pos,
+                    self.id
+                );
                 let runoff_height = runoff_elev - tile.elevation()?;
                 // Convert Meter -> Meter3
                 tile.set_runoff(runoff_height * Tile::AREA)?;
@@ -345,12 +412,11 @@ impl<'a> Continent<'a> {
             // Just a sanity check. We expect every tile that's not a terminal
             // to have no runoff on it. (and all terminals are initialized to
             // be in a basin, so none of them should ever become candidates).
-            if candidate_tile.runoff()? != Meter3(0.0) {
-                bail!(
-                    "encountered candidate tile with non-zero runoff {:?}",
-                    candidate_tile
-                );
-            }
+            ensure!(
+                candidate_tile.runoff()? == Meter3(0.0),
+                "encountered candidate tile with non-zero runoff {:?}",
+                candidate_tile
+            );
 
             // If the candidate is higher than our current water level, then
             // we can't reach it so the runoff stops spreading.
@@ -364,15 +430,12 @@ impl<'a> Continent<'a> {
             // into those other target(s) before we can grow this basin anymore.
             // You can think of this as the water level of the basin rising up
             // until it starts to leak out at the lowest opening.
-            let candidate_pattern =
-                match self.runoff_patterns.get(&candidate_tile.position()) {
-                    Some(pattern) => pattern,
-                    None => bail!(
-                        "no runoff pattern found for {} in continent {}",
-                        candidate_tile.position(),
-                        self.id
-                    ),
-                };
+            let candidate_pattern = unwrap_or_bail!(
+                self.runoff_patterns.get(&candidate_tile.position()),
+                "no runoff pattern found for {} in continent {}",
+                candidate_tile.position(),
+                self.id
+            );
             let overflow_vol: Meter3 = (basin.runoff_elevation()
                 - candidate_elev)
                 * Tile::AREA
