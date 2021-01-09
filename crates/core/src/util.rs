@@ -18,6 +18,22 @@ use std::{
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
+/// A macro to unwrap an option to its `Some` value, and bail out of the current
+/// function with an [anyhow::Error] if not. Can only be used in functions that
+/// return an [anyhow::Result].
+#[macro_export]
+macro_rules! unwrap_or_bail {
+    // ($msg:literal $(,)?) => { ... };
+    // ($err:expr $(,)?) => { ... };
+    ($opt:expr, $fmt:expr, $($arg:tt)*) => {
+        match $opt {
+            Some(v) => v,
+            // None => bail!($fmt, $($arg)*)
+            None => return Err(anyhow::anyhow!($fmt, $($arg)*)),
+        }
+    };
+}
+
 /// A macro to measure the evaluation time of an expression. Wraps an
 /// expression, and outputs a tuple of the value of the expression with the
 /// elapsed time, as a [Duration](std::time::Duration).
@@ -63,6 +79,7 @@ macro_rules! timed {
     Copy,
     Clone,
     Debug,
+    Default,
     Display,
     PartialEq,
     PartialOrd,
@@ -92,6 +109,7 @@ pub struct Meter(pub f64);
     Copy,
     Clone,
     Debug,
+    Default,
     Display,
     PartialEq,
     PartialOrd,
@@ -121,6 +139,7 @@ pub struct Meter2(pub f64);
     Copy,
     Clone,
     Debug,
+    Default,
     Display,
     PartialEq,
     PartialOrd,

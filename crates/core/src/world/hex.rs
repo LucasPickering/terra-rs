@@ -53,16 +53,16 @@ impl HexPoint {
         -(self.x + self.y)
     }
 
+    /// Calculate the path distance between two points, meaning the number of
+    /// hops it takes to get from one to the other. 0 if the points are equal,
+    /// 1 if they are adjacent, 2 if there is 1 point between them, etc.
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
     pub fn distance_to(&self, other: HexPoint) -> usize {
-        *[
-            (self.x() - other.x()).abs(),
-            (self.y() - other.y()).abs(),
-            (self.z() - other.z()).abs(),
-        ]
-        .iter()
-        .max()
-        .unwrap() as usize // safe since we know the iter is never empty
+        // https://www.redblobgames.com/grids/hexagons/#distances
+        ((self.x() - other.x()).abs()
+            + (self.y() - other.y()).abs()
+            + (self.z() - other.z()).abs()) as usize
+            / 2
     }
 }
 
@@ -320,7 +320,7 @@ pub trait HasHexPosition: Sized {
 ///
 /// See this page for more info (we use "flat topped" tiles):
 /// https://www.redblobgames.com/grids/hexagons/#coordinates-cube
-#[derive(Copy, Clone, Debug, EnumIter, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, EnumIter, PartialEq, Eq, Hash, Serialize)]
 pub enum HexDirection {
     Up,
     UpRight,

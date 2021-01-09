@@ -37,6 +37,10 @@ module.exports = {
     new WasmPackPlugin({
       outName: "terra-wasm",
       crateDirectory: wasmDir,
+      watchDirectories: [
+        path.resolve(__dirname, "../crates/core"),
+        path.resolve(wasmDir, "src"), // make sure not to include the pkg dir
+      ],
       outDir: path.resolve(wasmDir, "pkg"),
     }),
   ],

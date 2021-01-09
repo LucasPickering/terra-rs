@@ -17,7 +17,10 @@ use crate::{
             rainfall::RainfallGenerator, runoff::RunoffGenerator,
             wind::WindGenerator,
         },
-        hex::{HasHexPosition, HexAxialDirection, HexPoint, HexPointMap},
+        hex::{
+            HasHexPosition, HexAxialDirection, HexDirection, HexPoint,
+            HexPointMap,
+        },
         Biome, BiomeType, Meter, Tile, World, WorldConfig,
     },
 };
@@ -27,7 +30,7 @@ use log::info;
 use noise::{MultiFractal, NoiseFn, Seedable};
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
-use std::{cmp, fmt::Debug};
+use std::{cmp, collections::HashMap, fmt::Debug};
 
 /// A container for generating a new world. This applies a series of generators
 /// in sequence to create the world. These fields are public to allow for
@@ -63,6 +66,8 @@ pub struct WorldBuilder {
 
 impl WorldBuilder {
     pub fn new(config: WorldConfig) -> Self {
+        // TODO config validation
+
         // Initialize each tile
         let tiles = timed!("World initialization", {
             let capacity = util::world_len(config.radius);
@@ -156,13 +161,14 @@ trait Generate {
 /// Since the fields may not be defined, the getters all return results that
 /// error if the field hasn't been set. This makes it easy to catch bugs where
 /// we're trying to use world values that haven't been generated yet.
-#[derive(Clone, Debug)] // intentionally omit Copy because it may not be possible in the future
+#[derive(Clone, Debug)]
 pub struct TileBuilder {
     position: HexPoint,
     elevation: Option<Meter>,
     rainfall: Option<Meter3>,
     biome: Option<Biome>,
     runoff: Option<Meter3>,
+    runoff_egress: Option<HashMap<HexDirection, Meter3, FnvBuildHasher>>,
 }
 
 impl TileBuilder {
@@ -171,20 +177,25 @@ impl TileBuilder {
             position,
             elevation: None,
             rainfall: None,
-            biome: None,
             runoff: None,
+            runoff_egress: None,
+            biome: None,
         }
     }
 
     /// Finalize this builder to create a [Tile]. Returns an error if any fields
     /// on this builder are uninitialized.
     pub fn build(self) -> anyhow::Result<Tile> {
+        let position = self.position;
         Ok(Tile {
-            position: self.position,
+            position,
             elevation: self.elevation()?,
             rainfall: self.rainfall()?,
-            biome: self.biome()?,
             runoff: self.runoff()?,
+            biome: self.biome()?,
+            runoff_egress: self.runoff_egress.ok_or_else(|| {
+                anyhow!("runoff_egress not initialized for {}", position)
+            })?,
         })
     }
 
@@ -234,28 +245,6 @@ impl TileBuilder {
             .inner())
     }
 
-    /// See [Tile::biome]. Returns an error if biome is unset.
-    pub fn biome(&self) -> anyhow::Result<Biome> {
-        self.biome.ok_or_else(|| {
-            anyhow!("biome not initialized for {}", self.position)
-        })
-    }
-
-    /// Get this tile's biome as an `Option`, meaning if the biome is unset, we
-    /// return `None` (as opposed to [Self::biome], which returns an error).
-    pub fn biome_opt(&self) -> Option<Biome> {
-        self.biome
-    }
-
-    /// Convenience method to check if this tile is water. Will return false if
-    /// the tile is land OR has no biome set.
-    pub fn is_water(&self) -> bool {
-        match self.biome {
-            Some(biome) => biome.biome_type() == BiomeType::Water,
-            None => false,
-        }
-    }
-
     /// Set the biome for this tile.
     pub fn set_biome(&mut self, biome: Biome) {
         self.biome = Some(biome);
@@ -291,11 +280,42 @@ impl TileBuilder {
     }
 
     /// Reset the runoff on this tile to 0 and return whatever amount was here.
-    /// Panics if runoff is uninitialized.
+    /// Returns an error if runoff is unset.
     pub fn clear_runoff(&mut self) -> anyhow::Result<Meter3> {
         let runoff = self.runoff()?;
         self.runoff = Some(Meter3(0.0));
         Ok(runoff)
+    }
+
+    /// Set the runoff_egress map, which tells us how much runoff this tile
+    /// pushed out to each of its neighbors.
+    pub fn set_runoff_egress(
+        &mut self,
+        runoff_egress: HashMap<HexDirection, Meter3, FnvBuildHasher>,
+    ) {
+        self.runoff_egress = Some(runoff_egress);
+    }
+
+    /// See [Tile::biome]. Returns an error if biome is unset.
+    pub fn biome(&self) -> anyhow::Result<Biome> {
+        self.biome.ok_or_else(|| {
+            anyhow!("biome not initialized for {}", self.position)
+        })
+    }
+
+    /// Get this tile's biome as an `Option`, meaning if the biome is unset, we
+    /// return `None` (as opposed to [Self::biome], which returns an error).
+    pub fn biome_opt(&self) -> Option<Biome> {
+        self.biome
+    }
+
+    /// Convenience method to check if this tile is water. Will return false if
+    /// the tile is land OR has no biome set.
+    pub fn is_water(&self) -> bool {
+        match self.biome {
+            Some(biome) => biome.biome_type() == BiomeType::Water,
+            None => false,
+        }
     }
 }
 

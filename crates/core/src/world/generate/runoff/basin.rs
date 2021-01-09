@@ -1,4 +1,5 @@
 use crate::{
+    unwrap_or_bail,
     util::{Meter, Meter3},
     world::{
         generate::{
@@ -9,7 +10,7 @@ use crate::{
         Tile,
     },
 };
-use anyhow::{anyhow, bail};
+use anyhow::anyhow;
 use derive_more::{Display, From, Into};
 use fnv::FnvBuildHasher;
 use log::trace;
@@ -185,7 +186,7 @@ impl Basin {
         let excl_sum: f64 = self
             .terminals
             .iter()
-            .filter_map(|pos| terminals.get(&Some(*pos)))
+            .filter_map(|pos| terminals.get(&RunoffDestination::Terminal(*pos)))
             .sum();
         let total_sum: f64 = terminals.values().sum();
         let scale = total_sum / (total_sum - excl_sum);
@@ -194,9 +195,11 @@ impl Basin {
             .iter()
             .filter(|(term_pos, _)| match term_pos {
                 // Always distribute to the ocean
-                None => true,
+                RunoffDestination::Ocean => true,
                 // Distribute to this terminal iff it isn't in this basin
-                Some(term_pos) => !self.terminals.contains(term_pos),
+                RunoffDestination::Terminal(term_pos) => {
+                    !self.terminals.contains(term_pos)
+                }
             })
             .map(|(term_pos, factor)| (*term_pos, runoff * factor * scale))
             .collect()
@@ -339,10 +342,12 @@ impl Basins {
         // mostly a no-op (we just need to add in the overflow we were given
         // still).
         let b_basin = if a_res != b_res {
-            let b_basin = match self.basins.remove(&b_res) {
-                Some(b_basin) => b_basin,
-                None => bail!("unknown basin: {} (resolved from {})", b_res, b),
-            };
+            let b_basin = unwrap_or_bail!(
+                self.basins.remove(&b_res),
+                "unknown basin: {} (resolved from {})",
+                b_res,
+                b
+            );
             // Store an alias for b->a. For b, we have to use the resolved
             // version, so that if b is already an alias, we add a new alias to
             // the end of its alias chain. For a, we could hypothetically use
@@ -363,10 +368,13 @@ impl Basins {
             None
         };
 
-        let basin = match self.basins.get_mut(&a_res) {
-            Some(basin) => basin,
-            None => bail!("unknown basin: {} (resolved from {})", a_res, a),
-        };
+        let basin = unwrap_or_bail!(
+            self.basins.get_mut(&a_res),
+            "unknown basin: {} (resolved from {})",
+            a_res,
+            a
+        );
+
         // If we actually have two basins, join them
         if let Some(b_basin) = b_basin {
             basin.join(b_basin);

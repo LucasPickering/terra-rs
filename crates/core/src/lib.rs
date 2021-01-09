@@ -14,6 +14,7 @@
 //!
 //! See [WorldConfig] for details on how the world generation can be customized.
 
+#![feature(cmp_min_max_by)]
 #![feature(const_fn)]
 
 mod config;
