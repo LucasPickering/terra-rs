@@ -1,8 +1,9 @@
 //! This module holds basic types and data structures related to hexagon grids.
 
+use anyhow::bail;
 use derive_more::{Add, AddAssign, Display, Mul, MulAssign};
 use fnv::FnvBuildHasher;
-use indexmap::IndexMap;
+use indexmap::{map::Entry, IndexMap};
 use serde::Serialize;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
@@ -61,7 +62,7 @@ impl HexPoint {
         ]
         .iter()
         .max()
-        .unwrap() as usize
+        .unwrap() as usize // safe since we know the iter is never empty
     }
 }
 
@@ -156,15 +157,20 @@ pub struct Cluster<T> {
 }
 
 impl<T: Debug> Cluster<T> {
-    /// Locate clusters of points within a map of tilesaccording to a predicate.
-    /// All items that satisfy the predicate will be clustered such that any
-    /// two satisfactory tiles that are adjacent to each other will be in a
-    /// cluster together. The returned clusters hold mutables references to
-    /// the items in this map, so they can be modified after clustering.
-    pub fn predicate<P: Fn(&T) -> bool>(
+    /// Locate clusters of points within a map of tiles according to a
+    /// predicate. All items that satisfy the predicate will be clustered
+    /// such that any two satisfactory tiles that are adjacent to each other
+    /// will be in a cluster together. The returned clusters hold mutables
+    /// references to the items in this map, so they can be modified after
+    /// clustering.
+    ///
+    /// The predicate returns a result, to allow for fallible operations during
+    /// the check. If any predicate returns an error, the function will abort
+    /// and return an error.
+    pub fn predicate<P: Fn(&T) -> anyhow::Result<bool>>(
         tiles: &mut HexPointMap<T>,
         predicate: P,
-    ) -> Vec<Cluster<&'_ mut T>> {
+    ) -> anyhow::Result<Vec<Cluster<&'_ mut T>>> {
         // Here's our algorithm:
         // - Create a pool of items that have yet to be clustered
         // - Grab a random item from the pool
@@ -195,7 +201,7 @@ impl<T: Debug> Cluster<T> {
 
             // Grab the next item off the queue and check it
             while let Some((pos, item)) = bfs_queue.pop_front() {
-                if predicate(&item) {
+                if predicate(&item)? {
                     // If it passes the pred, then add it to the cluster and add
                     // its neighbors to the queue
                     cluster.insert(pos, item);
@@ -216,7 +222,7 @@ impl<T: Debug> Cluster<T> {
             }
         }
 
-        clusters
+        Ok(clusters)
     }
 
     pub fn new(tiles: HexPointIndexMap<T>) -> Self {
@@ -252,25 +258,36 @@ impl<T: Debug> Cluster<T> {
         &self.adjacents
     }
 
-    /// Add a new tile to the cluster
-    pub fn insert(&mut self, pos: HexPoint, tile: T) {
+    /// Add a new tile to the cluster. Returns an error if there is already a
+    /// tile at that position, or if the new tile isn't contiguous to the
+    /// cluster.
+    pub fn insert(&mut self, pos: HexPoint, tile: T) -> anyhow::Result<()> {
         // Any tile we add in should already be a neighbor of the cluster. If
         // it isn't that means it's discontiguous which breaks the cardinal rule
         if !self.adjacents.remove(&pos) {
-            panic!(
-                "Cannot add tile at {} to cluster {:?}, it is not adjacent!",
-                pos, self
+            bail!(
+                "cannot add tile at {} to cluster {:?}, it is not adjacent!",
+                pos,
+                self
             );
         }
 
         // Add the tile to the map, and add its neighbors to our set of
         // neighbors
-        self.tiles.insert(pos, tile);
+        match self.tiles.entry(pos) {
+            Entry::Vacant(entry) => {
+                entry.insert(tile);
+            }
+            Entry::Occupied(_) => {
+                bail!("tile {} is already in cluster {:?}", pos, self);
+            }
+        }
         let tiles = &self.tiles; // cause closure capturing is kinda dumb
         let new_neighbors = pos
             .adjacents()
             .filter(|adj_pos| !tiles.contains_key(adj_pos));
         self.adjacents.extend(new_neighbors);
+        Ok(())
     }
 
     /// Join this cluster with the other one. This assumes that the two clusters

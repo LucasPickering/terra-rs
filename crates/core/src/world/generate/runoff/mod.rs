@@ -18,6 +18,7 @@ use crate::{
         Tile, World,
     },
 };
+use anyhow::{bail, Context};
 use fnv::FnvBuildHasher;
 use log::trace;
 use std::{
@@ -39,24 +40,33 @@ use strum::IntoEnumIterator;
 pub struct RunoffGenerator;
 
 impl Generate for RunoffGenerator {
-    fn generate(&self, world: &mut WorldBuilder) {
+    fn generate(&self, world: &mut WorldBuilder) -> anyhow::Result<()> {
         let continents =
-            Cluster::predicate(&mut world.tiles, |tile| !tile.is_water());
+            Cluster::predicate(&mut world.tiles, |tile| Ok(!tile.is_water()))?;
         // Hypothetically we could run these simulations in parallel since each
         // continent is independent, but skipping that for now cause Wasm.
         for continent in continents {
-            let mut continent = Continent::new(continent.into_tiles());
-            continent.sim_continent_runoff();
+            let mut continent = Continent::new(continent.into_tiles())?;
+            continent.sim_continent_runoff()?;
         }
+
+        Ok(())
     }
 }
 
 /// Compare two tiles by their elevation
 fn cmp_elev(a: &TileBuilder, b: &TileBuilder) -> Ordering {
+    // TODO remove unwraps
     util::cmp_unwrap(&a.elevation().unwrap(), &b.elevation().unwrap())
 }
 
+/// A cluster of land tiles. One tile cannot belong to more than one continent.
 struct Continent<'a> {
+    /// A point that unique identifies this continent. This point should be any
+    /// tile within the continent, since each tile cannot belong to any other
+    /// continent. Exactly which tile it is isn't important, since it isn't
+    /// used for calculations, just as a unique ID.
+    id: HexPoint,
     /// All the tiles in this continent. After continent creation, this will
     /// not be added to or removed from, but it may be reoredered and the
     /// individual tiles may be mutated.
@@ -70,12 +80,19 @@ struct Continent<'a> {
 }
 
 impl<'a> Continent<'a> {
-    fn new(mut tiles: HexPointIndexMap<&'a mut TileBuilder>) -> Self {
-        let runoff_patterns = Self::calc_runoff_patterns(&mut tiles);
-        Self {
+    fn new(
+        mut tiles: HexPointIndexMap<&'a mut TileBuilder>,
+    ) -> anyhow::Result<Self> {
+        let id = match tiles.first() {
+            Some((pos, _)) => *pos,
+            None => bail!("cannot initialize empty continent"),
+        };
+        let runoff_patterns = Self::calc_runoff_patterns(&mut tiles)?;
+        Ok(Self {
+            id,
             tiles,
             runoff_patterns,
-        }
+        })
     }
 
     /// For each tile, calculate its runoff pattern. This pattern makes it easy
@@ -88,7 +105,7 @@ impl<'a> Continent<'a> {
     /// ascending elevation to calculate runoff patterns.
     fn calc_runoff_patterns(
         tiles: &mut HexPointIndexMap<&mut TileBuilder>,
-    ) -> HexPointIndexMap<RunoffPattern> {
+    ) -> anyhow::Result<HexPointIndexMap<RunoffPattern>> {
         // Sort tiles by ascending elevation. This is very important! Runoff
         // patterns have to be generated low->high so the patterns of their
         // lower neighbors. Once we have a pattern for each tile, we can
@@ -101,26 +118,23 @@ impl<'a> Continent<'a> {
         let mut runoff_patterns = HexPointIndexMap::default();
         for source_tile in tiles.values() {
             // For each neighbor of this tile, determine how much water it gets.
-            // This is a map of direction:elevation_diff
-            let recipients: Vec<(HexDirection, Meter)> = HexDirection::iter()
-                .filter_map(|dir| {
-                    let adj_pos = source_tile.position() + dir.vec();
-                    let adj_elev = match tiles.get(&adj_pos) {
-                        // Adjacent tile isn't part of this continent, so assume
-                        // it's ocean
-                        None => World::SEA_LEVEL,
-                        Some(adj_tile) => adj_tile.elevation().unwrap(),
-                    };
-                    let elev_diff = source_tile.elevation().unwrap() - adj_elev;
-                    if elev_diff > Meter(0.0) {
-                        // Neighbor is lower, we'll send runoff there
-                        Some((dir, elev_diff))
-                    } else {
-                        // Neighbor is higher, ignore it
-                        None
-                    }
-                })
-                .collect();
+            // This is a list of (direction,elevation_diff) pairs
+            let mut recipients: Vec<(HexDirection, Meter)> = Vec::new();
+            for dir in HexDirection::iter() {
+                let adj_pos = source_tile.position() + dir.vec();
+                let adj_elev = match tiles.get(&adj_pos) {
+                    // Adjacent tile isn't part of this continent, so assume
+                    // it's ocean
+                    None => World::SEA_LEVEL,
+                    Some(adj_tile) => adj_tile.elevation()?,
+                };
+                let elev_diff = source_tile.elevation()? - adj_elev;
+                // If neighbor is lower, we'll send runoff there. If not, then
+                // ignore it
+                if elev_diff > Meter(0.0) {
+                    recipients.push((dir, elev_diff))
+                }
+            }
 
             // Distribute the water to our neighbors. Each neighbor gets an
             // amount proportional to the elevation different
@@ -145,29 +159,28 @@ impl<'a> Continent<'a> {
             runoff_patterns.insert(source_tile.position(), runoff_pattern);
         }
 
-        runoff_patterns
+        Ok(runoff_patterns)
     }
 
     /// Simulate runoff for a single continent. Each continent is an independent
     /// system, meaning its runoff doesn't affect any other continents in any
     /// way.
-    fn sim_continent_runoff(&mut self) {
-        trace!(
-            "Simulating runoff for continent [first_tile={}]",
-            self.tiles.first().unwrap().0
-        );
-        self.initialize_runoff();
-        self.push_downhill();
-        self.sim_backflow();
+    fn sim_continent_runoff(&mut self) -> anyhow::Result<()> {
+        trace!("Simulating runoff for continent {}", self.id);
+        self.initialize_runoff()?;
+        self.push_downhill()?;
+        self.sim_backflow()?;
+        Ok(())
     }
 
     /// Generate an initial runoff level for every tile in a continent.
-    fn initialize_runoff(&mut self) {
+    fn initialize_runoff(&mut self) -> anyhow::Result<()> {
         // Set initial runoff for each tile
         for tile in self.tiles.values_mut() {
             // Set initial runoff level
-            tile.set_runoff(tile.rainfall().unwrap());
+            tile.set_runoff(tile.rainfall()?)?;
         }
+        Ok(())
     }
 
     /// Push all runoff on the continent downhill, so that it all ends up in
@@ -175,7 +188,7 @@ impl<'a> Continent<'a> {
     /// up in the ocean, but basins inside the continent will collect runoff
     /// at the terminals. Each dip will only have a single terminal though,
     /// so after this step we will still need to simulate "backflow".
-    fn push_downhill(&mut self) {
+    fn push_downhill(&mut self) -> anyhow::Result<()> {
         // Now that we have our runoff patterns, we can figure out how much
         // water ends up going to each terminal. We have to do this in
         // two steps because borrow checking.
@@ -183,7 +196,7 @@ impl<'a> Continent<'a> {
         for (source_tile, source_pattern) in
             self.tiles.values_mut().zip(self.runoff_patterns.values())
         {
-            let to_distribute = source_tile.clear_runoff();
+            let to_distribute = source_tile.clear_runoff()?;
             // Add the appropriate amount of water to each terminal. For most
             // tiles, the terminals' factors don't add up to 1, so
             // some or all of the water gets deleted from the system
@@ -202,8 +215,12 @@ impl<'a> Continent<'a> {
             }
         }
         for (pos, runoff) in terminal_runoffs {
-            self.tiles.get_mut(&pos).unwrap().add_runoff(runoff);
+            match self.tiles.get_mut(&pos) {
+                Some(tile) => tile.add_runoff(runoff)?,
+                None => bail!("unknown tile {} in continent {}", pos, self.id),
+            };
         }
+        Ok(())
     }
 
     /// Simulate "backflow", which is when runoff that has collected on a
@@ -213,15 +230,16 @@ impl<'a> Continent<'a> {
     /// will end up flowing over into the ocean. We also need to handle
     /// cases where two terminal clusters join to form a larger lake, or
     /// when one cluster overflows into another but they DON'T join.
-    fn sim_backflow(&mut self) {
+    fn sim_backflow(&mut self) -> anyhow::Result<()> {
         // For each terminal, map it to its constituents (all the other tiles
         // that it will spread to)
-        let mut basins = Basins::new(&mut self.tiles);
+        let mut basins = Basins::new(&mut self.tiles)?;
 
         let mut basin_queue: VecDeque<HexPoint> = basins.keys().collect();
         while let Some(basin_key) = basin_queue.pop_front() {
-            let basin = basins.get_mut(basin_key).unwrap();
-            let overflow_distribution = self.grow_basin(basin);
+            let basin =
+                basins.get_mut(basin_key).with_context(|| "queued basin")?;
+            let overflow_distribution = self.grow_basin(basin)?;
 
             // If this basin overflowed into other(s), then do some processing
             // for each one
@@ -230,7 +248,7 @@ impl<'a> Continent<'a> {
                 // ocean), then push the overflow runoff into that basin
                 if let Some(other_basin_key) = overflow_dest {
                     if basins
-                        .has_previously_overflowed(other_basin_key, basin_key)
+                        .has_previously_overflowed(other_basin_key, basin_key)?
                     {
                         // This other basin has already donated to us. Since
                         // we've overflowed in both directions now, the two need
@@ -239,7 +257,7 @@ impl<'a> Continent<'a> {
                             basin_key,
                             other_basin_key,
                             overflow_vol,
-                        );
+                        )?;
 
                         // Rebuild the queue to exclude any terminals in the
                         // newly created basin, then queue the primary key for
@@ -256,9 +274,7 @@ impl<'a> Continent<'a> {
                         // we can safely overflow into them
                         let other_basin = basins
                             .get_mut(other_basin_key)
-                            .unwrap_or_else(|| {
-                                panic!("unknown basin key: {}", other_basin_key)
-                            });
+                            .with_context(|| "joined basin")?;
                         other_basin.overflow(basin_key, overflow_vol);
 
                         // Re-queue the receiving basin (if it isn't already)
@@ -275,12 +291,19 @@ impl<'a> Continent<'a> {
         for basin in basins.into_basins() {
             let runoff_elev = basin.runoff_elevation();
             for pos in basin.tiles().tiles().keys() {
-                let tile = self.tiles.get_mut(pos).unwrap();
-                let runoff_height = runoff_elev - tile.elevation().unwrap();
+                let tile = match self.tiles.get_mut(pos) {
+                    Some(tile) => tile,
+                    None => {
+                        bail!("unknown tile {} in continent {}", pos, self.id)
+                    }
+                };
+                let runoff_height = runoff_elev - tile.elevation()?;
                 // Convert Meter -> Meter3
-                tile.set_runoff(runoff_height * Tile::AREA);
+                tile.set_runoff(runoff_height * Tile::AREA)?;
             }
         }
+
+        Ok(())
     }
 
     /// Spread around runoff for a single "basin". A basin is one cluster that
@@ -297,7 +320,8 @@ impl<'a> Continent<'a> {
     fn grow_basin(
         &self,
         basin: &mut Basin,
-    ) -> HashMap<RunoffDestination, Meter3, FnvBuildHasher> {
+    ) -> anyhow::Result<HashMap<RunoffDestination, Meter3, FnvBuildHasher>>
+    {
         // Ok so here's the deal: We have a single terminal tile with a bunch of
         // runoff on it, and we need to distribute it around. The general
         // approach is:
@@ -321,14 +345,16 @@ impl<'a> Continent<'a> {
             // Just a sanity check. We expect every tile that's not a terminal
             // to have no runoff on it. (and all terminals are initialized to
             // be in a basin, so none of them should ever become candidates).
-            assert!(
-                candidate_tile.runoff().unwrap() == Meter3(0.0),
-                "All candidates should have 0 runoff"
-            );
+            if candidate_tile.runoff()? != Meter3(0.0) {
+                bail!(
+                    "encountered candidate tile with non-zero runoff {:?}",
+                    candidate_tile
+                );
+            }
 
             // If the candidate is higher than our current water level, then
             // we can't reach it so the runoff stops spreading.
-            let candidate_elev = candidate_tile.elevation().unwrap();
+            let candidate_elev = candidate_tile.elevation()?;
             if candidate_elev >= basin.runoff_elevation() {
                 break;
             }
@@ -338,10 +364,15 @@ impl<'a> Continent<'a> {
             // into those other target(s) before we can grow this basin anymore.
             // You can think of this as the water level of the basin rising up
             // until it starts to leak out at the lowest opening.
-            let candidate_pattern = self
-                .runoff_patterns
-                .get(&candidate_tile.position())
-                .unwrap();
+            let candidate_pattern =
+                match self.runoff_patterns.get(&candidate_tile.position()) {
+                    Some(pattern) => pattern,
+                    None => bail!(
+                        "no runoff pattern found for {} in continent {}",
+                        candidate_tile.position(),
+                        self.id
+                    ),
+                };
             let overflow_vol: Meter3 = (basin.runoff_elevation()
                 - candidate_elev)
                 * Tile::AREA
@@ -349,12 +380,12 @@ impl<'a> Continent<'a> {
             let overflow_distribution =
                 basin.distribute_elsewhere(candidate_pattern, overflow_vol);
             if !overflow_distribution.is_empty() {
-                return overflow_distribution;
+                return Ok(overflow_distribution);
             }
 
-            basin.add_tile(candidate_tile); // Initiation!
+            basin.add_tile(candidate_tile)?; // Initiation!
         }
 
-        HashMap::default() // This won't allocate for an empty map
+        Ok(HashMap::default()) // This won't allocate for an empty map
     }
 }

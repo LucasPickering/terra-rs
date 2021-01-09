@@ -58,16 +58,16 @@ impl Biome {
 
     pub fn color(self) -> Color3 {
         match self {
-            Self::Ocean => Color3::new(0.08, 0.30, 0.64).unwrap(),
+            Self::Ocean => Color3::new_int(20, 77, 163),
             Self::Coast => Color3::new_int(32, 166, 178),
             Self::Lake => Color3::new_int(72, 192, 240),
 
-            Self::Snow => Color3::new(0.75, 0.75, 0.75).unwrap(),
-            Self::Desert => Color3::new(0.84, 0.80, 0.42).unwrap(),
-            Self::Alpine => Color3::new(0.39, 0.48, 0.37).unwrap(),
-            Self::Jungle => Color3::new(0.17, 0.70, 0.12).unwrap(),
-            Self::Forest => Color3::new(0.09, 0.48, 0.0).unwrap(),
-            Self::Plains => Color3::new(0.68, 0.79, 0.45).unwrap(),
+            Self::Snow => Color3::new_int(191, 191, 191),
+            Self::Desert => Color3::new_int(214, 204, 107),
+            Self::Alpine => Color3::new_int(99, 122, 99),
+            Self::Jungle => Color3::new_int(43, 179, 31),
+            Self::Forest => Color3::new_int(23, 122, 0),
+            Self::Plains => Color3::new_int(173, 201, 115),
         }
     }
 }
@@ -110,7 +110,14 @@ impl World {
             Level::Info,
             WorldBuilder::new(config).generate_world()
         );
-        Self { config, tiles }
+        match tiles {
+            Ok(tiles) => Self { config, tiles },
+            Err(err) => panic!(
+                "Error during world generation: {}\n{}",
+                err,
+                err.backtrace()
+            ),
+        }
     }
 }
 
@@ -248,6 +255,7 @@ impl Tile {
                 Color3::new(1.0 - normal_runoff, 1.0 - normal_runoff, 1.0)
             }
         }
+        // this is hard to remove because we can't pass an anyhow result to wasm
         .unwrap()
     }
 }

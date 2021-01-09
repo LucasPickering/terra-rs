@@ -11,9 +11,11 @@ use strum::IntoEnumIterator;
 pub struct WindGenerator;
 
 impl Generate for WindGenerator {
-    fn generate(&self, world: &mut WorldBuilder) {
+    fn generate(&self, world: &mut WorldBuilder) -> anyhow::Result<()> {
+        // unwrap is safe because HexAxis::iter() can't be empty
         let axis = HexAxis::iter().choose_stable(&mut world.rng).unwrap();
         let positive: bool = world.rng.gen_bool(0.5);
         world.wind_direction = Some(HexAxialDirection { axis, positive });
+        Ok(())
     }
 }
