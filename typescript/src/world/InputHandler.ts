@@ -7,6 +7,7 @@ const { TileLens } = await import("../wasm");
 const INPUT_ACTIONS = [
   "pause",
   "toggleDebugOverlay",
+  "lensSurface",
   "lensBiome",
   "lensElevation",
   "lensHumidity",
@@ -31,10 +32,11 @@ const DEFAULT_INPUT_CONFIG: InputConfig = {
   bindings: {
     pause: "ESCAPE",
     toggleDebugOverlay: "`",
-    lensBiome: "1",
-    lensElevation: "2",
-    lensHumidity: "3",
-    lensRunoff: "4",
+    lensSurface: "1",
+    lensBiome: "2",
+    lensElevation: "3",
+    lensHumidity: "4",
+    lensRunoff: "5",
   },
 };
 
@@ -84,6 +86,9 @@ class InputHandler {
         break;
       case "toggleDebugOverlay":
         this.scene.toggleDebugOverlay();
+        break;
+      case "lensSurface":
+        this.scene.setTileLens(TileLens.Surface);
         break;
       case "lensBiome":
         this.scene.setTileLens(TileLens.Biome);

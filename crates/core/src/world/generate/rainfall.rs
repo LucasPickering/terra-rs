@@ -111,7 +111,7 @@ impl<'a> CloudLine<'a> {
     /// Calculate how much water vapor this tile produces when the clouds pass
     /// over it.
     fn calc_evaporation(&self, tile: &TileBuilder) -> Meter3 {
-        if tile.is_water() {
+        if tile.is_water_biome() {
             self.config.evaporation_default
         } else {
             self.config.evaporation_default * self.config.evaporation_land_scale

@@ -42,8 +42,9 @@ pub struct RunoffGenerator;
 
 impl Generate for RunoffGenerator {
     fn generate(&self, world: &mut WorldBuilder) -> anyhow::Result<()> {
-        let continents =
-            Cluster::predicate(&mut world.tiles, |tile| Ok(!tile.is_water()))?;
+        let continents = Cluster::predicate(&mut world.tiles, |tile| {
+            Ok(!tile.is_water_biome())
+        })?;
         // Hypothetically we could run these simulations in parallel since each
         // continent is independent, but skipping that for now cause Wasm.
         for continent in continents {

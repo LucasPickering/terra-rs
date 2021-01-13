@@ -21,7 +21,7 @@ use crate::{
             HasHexPosition, HexAxialDirection, HexDirection, HexPoint,
             HexPointMap,
         },
-        Biome, BiomeType, Meter, Tile, World, WorldConfig,
+        Biome, BiomeType, GeoFeature, Meter, Tile, World, WorldConfig,
     },
 };
 use anyhow::{anyhow, Context};
@@ -30,7 +30,11 @@ use log::info;
 use noise::{MultiFractal, NoiseFn, Seedable};
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
-use std::{cmp, collections::HashMap, fmt::Debug};
+use std::{
+    cmp,
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+};
 
 /// A container for generating a new world. This applies a series of generators
 /// in sequence to create the world. These fields are public to allow for
@@ -169,6 +173,7 @@ pub struct TileBuilder {
     biome: Option<Biome>,
     runoff: Option<Meter3>,
     runoff_egress: Option<HashMap<HexDirection, Meter3, FnvBuildHasher>>,
+    features: HashSet<GeoFeature, FnvBuildHasher>,
 }
 
 impl TileBuilder {
@@ -180,6 +185,7 @@ impl TileBuilder {
             runoff: None,
             runoff_egress: None,
             biome: None,
+            features: HashSet::default(),
         }
     }
 
@@ -193,6 +199,7 @@ impl TileBuilder {
             rainfall: self.rainfall()?,
             runoff: self.runoff()?,
             biome: self.biome()?,
+            features: self.features,
             runoff_egress: self.runoff_egress.ok_or_else(|| {
                 anyhow!("runoff_egress not initialized for {}", position)
             })?,
@@ -311,10 +318,25 @@ impl TileBuilder {
 
     /// Convenience method to check if this tile is water. Will return false if
     /// the tile is land OR has no biome set.
-    pub fn is_water(&self) -> bool {
+    pub fn is_water_biome(&self) -> bool {
         match self.biome {
             Some(biome) => biome.biome_type() == BiomeType::Water,
             None => false,
+        }
+    }
+
+    /// Add a new geographic feature to this tile. Returns an error if the tile
+    /// already has that feature.
+    pub fn add_feature(&mut self, feature: GeoFeature) -> anyhow::Result<()> {
+        let is_new = self.features.insert(feature);
+        if is_new {
+            Ok(())
+        } else {
+            Err(anyhow!(
+                "feature {:?} already exists for {:?}",
+                feature,
+                self
+            ))
         }
     }
 }

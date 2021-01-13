@@ -63,7 +63,7 @@ class WorldRenderer {
       return [tile, idx];
     });
 
-    this.tileLens = TileLens.Biome;
+    this.tileLens = TileLens.Surface;
     this.updateTileColors(this.tileLens);
   }
 

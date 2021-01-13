@@ -16,6 +16,7 @@
 
 #![feature(cmp_min_max_by)]
 #![feature(const_fn)]
+#![feature(map_into_keys_values)]
 
 mod config;
 mod util;
@@ -24,5 +25,8 @@ mod world;
 pub use crate::{
     config::{NoiseFnConfig, WorldConfig},
     util::{Meter, Meter2, Meter3, NumRange, RangeValue},
-    world::{hex::HasHexPosition, Biome, BiomeType, Tile, TileLens, World},
+    world::{
+        hex::HasHexPosition, Biome, BiomeType, GeoFeature, Tile, TileLens,
+        World,
+    },
 };
