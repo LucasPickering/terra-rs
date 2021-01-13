@@ -21,7 +21,11 @@ struct Opt {
     /// Path to a config file that defines the world to be generated. Supported
     /// formats: JSON, TOML
     #[structopt(short, long)]
-    config: PathBuf,
+    config: Option<PathBuf>,
+
+    /// Path to an existing .bin world file to load
+    #[structopt(short, long)]
+    bin: Option<PathBuf>,
 
     /// If given, the generated world will be saved to this directory. The
     /// exact files that appear in the directory are defined by the output
@@ -73,29 +77,32 @@ fn gen_output(
     output_format: OutputFormat,
     world: &World,
 ) -> anyhow::Result<()> {
-    info!("Generating {} output", output_format);
+    let output_file_path = output_dir
+        .join("world")
+        .with_extension(output_format.to_string());
+
     match output_format {
         OutputFormat::Bin => {
-            let file_path = output_dir.join("world.bin");
             let world_bytes = rmp_serde::to_vec(&world)
-                .with_context(|| "Error serializing world")?;
+                .with_context(|| "error serializing world")?;
             let mut file = OpenOptions::new()
                 .write(true)
                 .create(true)
-                .open(&file_path)
+                .open(&output_file_path)
                 .with_context(|| {
-                    format!("Error opening output file {:?}", &file_path)
+                    format!("error opening output file {:?}", &output_file_path)
                 })?;
             file.write_all(&world_bytes).with_context(|| {
-                format!("Error writing world to file {:?}", &file_path)
+                format!("error writing world to file {:?}", &output_file_path)
             })?;
         }
         OutputFormat::Svg => {
-            let file_path = output_dir.join("world.svg");
-            let doc = svg::draw_world(world)?;
-            ::svg::save(file_path, &doc)?;
+            let doc = svg::draw_world(world);
+            ::svg::save(&output_file_path, &doc)
+                .with_context(|| "error saving svg")?;
         }
     }
+    info!("Saved {} output to {:?}", output_format, &output_file_path);
 
     Ok(())
 }
@@ -104,8 +111,38 @@ fn gen_output(
 fn run(opt: Opt) -> anyhow::Result<()> {
     SimpleLogger::new().with_level(opt.log_level).init()?;
 
-    let config = load_config(&opt.config)?;
-    let world = World::generate(config);
+    let world = match opt {
+        Opt {
+            config: Some(config_path),
+            bin: None,
+            ..
+        } => {
+            // Load world config and use it to generate a new world
+            let config = load_config(&config_path)?;
+            World::generate(config)
+        }
+        Opt {
+            config: None,
+            bin: Some(input_path),
+            ..
+        } => {
+            // Load existing world from a file
+            let file = OpenOptions::new()
+                .read(true)
+                .open(&input_path)
+                .with_context(|| {
+                    format!("error opening world file {:?}", input_path)
+                })?;
+            let world = rmp_serde::from_read(file)
+                .with_context(|| "error deserializing world")?;
+            info!("Loaded world from {:?}", &input_path);
+            world
+        }
+        _ => bail!(
+            "must pass exactly one of --config (to generate a new world) \
+            or --input (to load an existing world)"
+        ),
+    };
 
     // If an output dir was specified, write out output format(s) there
     if let Some(output_dir) = opt.output {
