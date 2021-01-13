@@ -24,5 +24,5 @@ mod world;
 pub use crate::{
     config::{NoiseFnConfig, WorldConfig},
     util::{Meter, Meter2, Meter3, NumRange, RangeValue},
-    world::World,
+    world::{hex::HasHexPosition, Biome, BiomeType, Tile, TileLens, World},
 };

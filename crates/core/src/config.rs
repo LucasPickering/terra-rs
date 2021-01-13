@@ -35,9 +35,9 @@ pub struct NoiseFnConfig {
 /// Configuration that defines a world gen process. Two worlds generated with
 /// same config will always be identical.
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[serde(default)]
 pub struct WorldConfig {
     /// RNG seed to use for all randomized processes during world gen.
-    #[serde(default = "rand::random")]
     pub seed: u64,
 
     /// Distance from the center of the world to the edge (in tiles).
@@ -95,7 +95,9 @@ impl Default for WorldConfig {
         // that whenever someone generates a world with the default config,
         // it looks pretty good.
         WorldConfig {
-            seed: 0, // You'll probably want to override this with rand::random
+            // Danger! This means the default will vary between calls!
+            seed: rand::random(),
+
             radius: 100,
             edge_buffer_size: 25,
             edge_buffer_exponent: 0.7,

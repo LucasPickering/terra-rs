@@ -99,6 +99,11 @@ impl World {
     pub const RAINFALL_SOFT_RANGE: NumRange<Meter3, f64> =
         NumRange::new(Meter3(0.0), Meter3(5.0));
 
+    /// Get a reference to the config that defines this world.
+    pub fn config(&self) -> &WorldConfig {
+        &self.config
+    }
+
     /// Get a reference to the map of tiles that make up this world.
     pub fn tiles(&self) -> &HexPointMap<Tile> {
         &self.tiles

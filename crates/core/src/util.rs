@@ -233,6 +233,21 @@ impl Color3 {
             blue: blue as f32 / 255.0,
         }
     }
+
+    /// Convert this number to a set of 3 bytes: `(red, green, blue)`
+    pub fn to_ints(self) -> (u8, u8, u8) {
+        (
+            (self.red * 255.0) as u8,
+            (self.green * 255.0) as u8,
+            (self.blue * 255.0) as u8,
+        )
+    }
+
+    /// Convert this color to an HTML color code: `#rrggbb`
+    pub fn to_html(self) -> String {
+        let (r, g, b) = self.to_ints();
+        format!("#{:02x}{:02x}{:02x}", r, g, b)
+    }
 }
 
 // Scale a color by a constant
