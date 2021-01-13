@@ -14,7 +14,7 @@ use crate::{
 };
 use fnv::FnvBuildHasher;
 use log::{info, Level};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::{prelude::*, JsCast};
 
@@ -30,7 +30,7 @@ pub enum BiomeType {
 /// https://en.wikipedia.org/wiki/Biome
 // TODO separate the concept of "biome" from "feature"?
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, PartialEq, Serialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Biome {
     // Water
     Ocean,
@@ -76,7 +76,7 @@ impl Biome {
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
     config: WorldConfig,
     tiles: HexPointMap<Tile>,
@@ -149,7 +149,7 @@ impl World {
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Tile {
     /// The location of this tile in the world. See [HexPoint] for a
     /// description of the coordinate system. Every tile in the world has a

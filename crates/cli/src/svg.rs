@@ -24,7 +24,7 @@ const TILE_VERTICES: &[(f32, f32)] = &[
 ];
 
 /// Generate an SVG document for a world
-pub fn draw_world(world: &World) -> anyhow::Result<Document> {
+pub fn draw_world(world: &World) -> Document {
     // Grow the view box based on the world size. The world height will always
     // be the larger size, so scale it based on that. The +1 provides a bit of
     // buffer space
@@ -48,7 +48,7 @@ pub fn draw_world(world: &World) -> anyhow::Result<Document> {
         document = document.add(polygon);
     }
 
-    Ok(document)
+    document
 }
 
 /// Generate an SVG polygon for a single tile

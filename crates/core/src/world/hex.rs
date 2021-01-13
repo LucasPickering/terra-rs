@@ -4,7 +4,7 @@ use anyhow::bail;
 use derive_more::{Add, AddAssign, Display, Mul, MulAssign};
 use fnv::FnvBuildHasher;
 use indexmap::{map::Entry, IndexMap};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     fmt::Debug,
@@ -29,7 +29,9 @@ use wasm_bindgen::prelude::*;
 /// a radius of more than 32k (that'd be ~4 billion tiles), so this saves on
 /// memory a lot.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Display, Serialize)]
+#[derive(
+    Copy, Clone, Debug, PartialEq, Eq, Hash, Display, Serialize, Deserialize,
+)]
 #[display(fmt = "({}, {}, {})", "self.x()", "self.y()", "self.z()")]
 pub struct HexPoint {
     x: i16,
@@ -320,7 +322,9 @@ pub trait HasHexPosition: Sized {
 ///
 /// See this page for more info (we use "flat topped" tiles):
 /// https://www.redblobgames.com/grids/hexagons/#coordinates-cube
-#[derive(Copy, Clone, Debug, EnumIter, PartialEq, Eq, Hash, Serialize)]
+#[derive(
+    Copy, Clone, Debug, EnumIter, PartialEq, Eq, Hash, Serialize, Deserialize,
+)]
 pub enum HexDirection {
     Up,
     UpRight,
