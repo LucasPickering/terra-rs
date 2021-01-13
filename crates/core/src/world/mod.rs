@@ -1,7 +1,7 @@
 mod generate;
 pub mod hex;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::{
     timed,
@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::{prelude::*, JsCast};
 
+/// High-level categories for biomes: land or water?
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum BiomeType {
     Water,
@@ -28,14 +29,12 @@ pub enum BiomeType {
 /// be assigned a single biome based on its characteristics.
 ///
 /// https://en.wikipedia.org/wiki/Biome
-// TODO separate the concept of "biome" from "feature"?
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Biome {
     // Water
     Ocean,
     Coast,
-    Lake,
 
     // Land
     Snow,
@@ -47,9 +46,10 @@ pub enum Biome {
 }
 
 impl Biome {
+    /// Get this biome's high-level category
     pub fn biome_type(self) -> BiomeType {
         match self {
-            Self::Ocean | Self::Coast | Self::Lake => BiomeType::Water,
+            Self::Ocean | Self::Coast => BiomeType::Water,
             Self::Snow
             | Self::Desert
             | Self::Alpine
@@ -59,11 +59,11 @@ impl Biome {
         }
     }
 
+    /// Get a pretty color unique to this biome
     pub fn color(self) -> Color3 {
         match self {
             Self::Ocean => Color3::new_int(20, 77, 163),
             Self::Coast => Color3::new_int(32, 166, 178),
-            Self::Lake => Color3::new_int(72, 192, 240),
 
             Self::Snow => Color3::new_int(191, 191, 191),
             Self::Desert => Color3::new_int(214, 204, 107),
@@ -73,6 +73,29 @@ impl Biome {
             Self::Plains => Color3::new_int(173, 201, 115),
         }
     }
+}
+
+/// A geographic feature is some feature that can appear on a tile. A tile can
+/// have zero or more features (unlike biomes, where each tile gets exactly
+/// one). Some feature combinations may be invalid (e.g. lake+beach) but that
+/// isn't codified in the type system. Try not to mess it up.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum GeoFeature {
+    /// Lakes are generated based on where water runoff collects. A lake takes
+    /// up an entire tile. [See here](https://en.wikipedia.org/wiki/Lake) for
+    /// more info.
+    Lake,
+
+    /// A river entering a tile from a specific direction. A tile can have
+    /// multiple river entrances, but each one must have a unique direction and
+    /// none of them can have the same direction as a river exit. These are
+    /// generated based on runoff ingress measurements.
+    RiverEntrance(HexDirection),
+    /// A river exiting a tile from in a specific direction. A tile can have
+    /// multiple river exits, but each one must have a unique direction and
+    /// none of them can have the same direction as a river entrance. These
+    /// are generated based on runoff egress measurements.
+    RiverExit(HexDirection),
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
@@ -136,12 +159,11 @@ impl World {
     /// A type-hacked accessor to get all tiles in the world from Wasm. This
     /// typing can be cleaned up after https://github.com/rustwasm/wasm-bindgen/issues/111
     #[wasm_bindgen]
-    pub fn wasm_tiles(&self) -> TileArray {
+    pub fn wasm_tiles(self) -> TileArray {
         use js_sys::Array;
 
         self.tiles
-            .values()
-            .cloned()
+            .into_values()
             .map(JsValue::from)
             .collect::<Array>()
             .unchecked_into()
@@ -170,6 +192,10 @@ pub struct Tile {
     /// The biome for this tile. Every tile exists in a single biome, which
     /// describes its climate characteristics. See [Biome] for more info.
     biome: Biome,
+    /// All geographic features on this tile. A geographic feature describes
+    /// some unique formation that can appear on a tile. This is a set to
+    /// enforce the requirement that no feature can appear twice.
+    features: HashSet<GeoFeature, FnvBuildHasher>,
 }
 
 impl Tile {
@@ -246,6 +272,13 @@ impl Tile {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
     pub fn color(&self, lens: TileLens) -> Color3 {
         match lens {
+            TileLens::Surface => {
+                if self.features.contains(&GeoFeature::Lake) {
+                    Ok(Color3::new_int(72, 192, 240))
+                } else {
+                    Ok(self.biome.color())
+                }
+            }
             TileLens::Biome => Ok(self.biome.color()),
             TileLens::Elevation => {
                 let normal_elev =
@@ -265,7 +298,7 @@ impl Tile {
                 // collected on the tile) AND runoff egress (how much water
                 // flowed over the tile without staying there). Runoff controls
                 // blue, runoff egress controls green.
-                if self.biome == Biome::Ocean || self.biome == Biome::Coast {
+                if self.biome.biome_type() == BiomeType::Water {
                     Color3::new(0.5, 0.5, 0.5)
                 } else {
                     let normal_runoff = NumRange::new(Meter3(0.0), Meter3(5.0))
@@ -308,6 +341,7 @@ impl HasHexPosition for Tile {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug)]
 pub enum TileLens {
+    Surface,
     Biome,
     Elevation,
     Humidity,

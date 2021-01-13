@@ -2,7 +2,7 @@ use crate::{
     util::Meter3,
     world::{
         generate::{Generate, WorldBuilder},
-        Biome,
+        GeoFeature,
     },
 };
 
@@ -19,7 +19,7 @@ impl Generate for LakeGenerator {
     fn generate(&self, world: &mut WorldBuilder) -> anyhow::Result<()> {
         for tile in world.tiles.values_mut() {
             if tile.runoff()? >= LAKE_RUNOFF_THRESHOLD {
-                tile.set_biome(Biome::Lake);
+                tile.add_feature(GeoFeature::Lake)?;
             }
         }
         Ok(())

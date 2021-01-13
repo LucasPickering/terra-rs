@@ -39,7 +39,6 @@ macro_rules! unwrap_or_bail {
 /// elapsed time, as a [Duration](std::time::Duration).
 #[cfg(not(target_arch = "wasm32"))]
 #[macro_export]
-// TODO make this accept an optional arg for setting logging level
 macro_rules! timed {
     ($label:expr, $ex:expr) => {
         timed!($label, log::Level::Debug, $ex)
