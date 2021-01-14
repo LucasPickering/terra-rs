@@ -122,7 +122,7 @@ impl<'a> Continent<'a> {
             // This is a list of (direction,elevation_diff) pairs
             let mut recipients: Vec<(HexDirection, Meter)> = Vec::new();
             for dir in HexDirection::iter() {
-                let adj_pos = source_tile.position() + dir.vec();
+                let adj_pos = source_tile.position() + dir.to_vector();
                 let adj_elev = match tiles.get(&adj_pos) {
                     // Adjacent tile isn't part of this continent, so assume
                     // it's ocean
@@ -148,7 +148,7 @@ impl<'a> Continent<'a> {
             // For each adjacent lower tile, mark it as an exit in the pattern
             let mut runoff_pattern = RunoffPattern::new(source_tile.position());
             for (dir, elev_diff) in recipients {
-                let adj_pos = source_tile.position() + dir.vec();
+                let adj_pos = source_tile.position() + dir.to_vector();
                 runoff_pattern.add_exit(
                     dir,
                     // This is why the tiles have to be ascending by elevation,
@@ -253,7 +253,7 @@ impl<'a> Continent<'a> {
             for (dir, adj_ingress) in
                 source_pattern.distribute_exits(source_ingress)
             {
-                let adj_pos = source_pos + dir.vec();
+                let adj_pos = source_pos + dir.to_vector();
                 *total_ingress.entry(adj_pos).or_default() += adj_ingress;
             }
         }

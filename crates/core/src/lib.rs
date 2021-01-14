@@ -16,6 +16,7 @@
 
 #![feature(cmp_min_max_by)]
 #![feature(const_fn)]
+#![feature(const_fn_floating_point_arithmetic)]
 #![feature(map_into_keys_values)]
 
 mod config;
@@ -24,9 +25,11 @@ mod world;
 
 pub use crate::{
     config::{NoiseFnConfig, WorldConfig},
-    util::{Meter, Meter2, Meter3, NumRange, RangeValue},
+    util::{Color3, Meter, Meter2, Meter3, NumRange, RangeValue},
     world::{
-        hex::HasHexPosition, Biome, BiomeType, GeoFeature, Tile, TileLens,
-        World,
+        hex::{
+            HasHexPosition, HexAxialDirection, HexAxis, HexDirection, HexPoint,
+        },
+        Biome, BiomeType, GeoFeature, Tile, TileLens, World,
     },
 };

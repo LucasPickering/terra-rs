@@ -1,7 +1,7 @@
 mod generate;
 pub mod hex;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use crate::{
     timed,
@@ -79,7 +79,7 @@ impl Biome {
 /// have zero or more features (unlike biomes, where each tile gets exactly
 /// one). Some feature combinations may be invalid (e.g. lake+beach) but that
 /// isn't codified in the type system. Try not to mess it up.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum GeoFeature {
     /// Lakes are generated based on where water runoff collects. A lake takes
     /// up an entire tile. [See here](https://en.wikipedia.org/wiki/Lake) for
@@ -170,6 +170,16 @@ impl World {
     }
 }
 
+/// A world is comprised of tiles. Each tile is a hexagon (in 2D renderings) or
+/// a hexagonal prism (in 3D renderings). In the case of the prism, a tile's
+/// height is determined by its elevation. Tiles **cannot** be stacked.
+///
+/// A tile has certain geographic properties, and when we combine a bunch of
+/// tiles together, we get terrain.
+///
+/// Tiles can't be constructed directly, they can only be made by the world
+/// generation process. See [World::generate]. They also can't be modified after
+/// world generation.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Tile {
@@ -193,16 +203,46 @@ pub struct Tile {
     /// describes its climate characteristics. See [Biome] for more info.
     biome: Biome,
     /// All geographic features on this tile. A geographic feature describes
-    /// some unique formation that can appear on a tile. This is a set to
-    /// enforce the requirement that no feature can appear twice.
-    features: HashSet<GeoFeature, FnvBuildHasher>,
+    /// some unique formation that can appear on a tile. No two features in
+    /// this vec can be identical.
+    features: Vec<GeoFeature>,
 }
 
+// Non-Wasm API
 impl Tile {
-    /// The top surface area of a single tile.
+    /// The top surface area of a single tile, in abstract units! Note that this
+    /// math doesn't line up with [Tile::VERTEX_RADIUS] or the other rendering
+    /// constants, i.e. if you were to calculate an
     pub const AREA: Meter2 = Meter2(1.0);
+
+    // Rendering constants below
+    /// Distance between the center of a tile and one of its 6 vertices, in
+    /// **2D space**. This is also the length of one side of the tile.
+    ///
+    /// ## Rendering Constant Caveat
+    /// This value is **not** consistent with the abstract units of [Meter]/
+    /// [Meter2]/[Meter3]. There is some artistic license employed during
+    /// rendering. See [Point2] for a description of 2D space.
+    pub const VERTEX_RADIUS: f64 = 1.0;
+    /// Distance between the center of a tile and the midpoint of one of its
+    /// sides, in **2D space**. See [Tile::VERTEX_RADIUS] for the rendering
+    /// constant caveat.
+    pub const SIDE_RADIUS: f64 = Self::VERTEX_RADIUS * 0.8660254; // sqrt(3)/2
+    /// Distance between the bottom side and top side of a tile, in **2D
+    /// space**. See [Tile::VERTEX_RADIUS] for the rendering constant caveat.
+    pub const HEIGHT: f64 = Self::SIDE_RADIUS * 2.0;
+
+    /// Get a list of geographic features that appear on this tile. See
+    /// [GeoFeature] for more info.
+    ///
+    /// **Note**: NOT available to WebAssembly. `wasm-bindgen` doesn't support
+    /// complex enums, so we can't pass [GeoFeature] across the Wasm boundary.
+    pub fn features(&self) -> &[GeoFeature] {
+        self.features.as_slice()
+    }
 }
 
+// Wasm-friendly API
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl Tile {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
@@ -341,10 +381,16 @@ impl HasHexPosition for Tile {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug)]
 pub enum TileLens {
+    /// Color is based on a combination of biome and geographic features.
     Surface,
+    /// Color is based solely on the tile's biome. Each biome has a unique
+    /// static color.
     Biome,
+    /// Color is a gradient based on elevation.
     Elevation,
+    /// Color is a gradient based on humidity.
     Humidity,
+    /// Color is based on a combination of runoff and total runoff egress.
     Runoff,
 }
 

@@ -57,7 +57,8 @@ impl ResolvedBasinKey {
 /// runoff. You can think of a basin as basically just a "lake", except that
 /// a basin is **not necessarily** guaranteed to become a lake, depending on the
 /// rules applied in
-/// [LakeGenerator](crate::world::generate::lake::LakeGenerator).
+/// [WaterFeatureGenerator](crate::world::generate::water_feature::
+/// WaterFeatureGenerator).
 #[derive(Clone, Debug)]
 pub struct Basin {
     /// The primary key for this basin. Each basin is initialized with a single

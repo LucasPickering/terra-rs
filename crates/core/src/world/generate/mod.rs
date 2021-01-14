@@ -1,9 +1,9 @@
 mod biome;
 mod elevation;
-mod lake;
 mod ocean;
 mod rainfall;
 mod runoff;
+mod water_feature;
 mod wind;
 
 use crate::{
@@ -13,8 +13,8 @@ use crate::{
     world::{
         generate::{
             biome::BiomeGenerator, elevation::ElevationGenerator,
-            lake::LakeGenerator, ocean::OceanGenerator,
-            rainfall::RainfallGenerator, runoff::RunoffGenerator,
+            ocean::OceanGenerator, rainfall::RainfallGenerator,
+            runoff::RunoffGenerator, water_feature::WaterFeatureGenerator,
             wind::WindGenerator,
         },
         hex::{
@@ -30,11 +30,7 @@ use log::info;
 use noise::{MultiFractal, NoiseFn, Seedable};
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
-use std::{
-    cmp,
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-};
+use std::{cmp, collections::HashMap, fmt::Debug};
 
 /// A container for generating a new world. This applies a series of generators
 /// in sequence to create the world. These fields are public to allow for
@@ -124,7 +120,7 @@ impl WorldBuilder {
         self.apply_generator(OceanGenerator)?;
         self.apply_generator(RainfallGenerator)?;
         self.apply_generator(RunoffGenerator)?;
-        self.apply_generator(LakeGenerator)?;
+        self.apply_generator(WaterFeatureGenerator)?;
         self.apply_generator(BiomeGenerator)?;
 
         // Build each tile into its final value
@@ -173,7 +169,7 @@ pub struct TileBuilder {
     biome: Option<Biome>,
     runoff: Option<Meter3>,
     runoff_egress: Option<HashMap<HexDirection, Meter3, FnvBuildHasher>>,
-    features: HashSet<GeoFeature, FnvBuildHasher>,
+    features: Vec<GeoFeature>,
 }
 
 impl TileBuilder {
@@ -185,7 +181,7 @@ impl TileBuilder {
             runoff: None,
             runoff_egress: None,
             biome: None,
-            features: HashSet::default(),
+            features: Vec::new(),
         }
     }
 
@@ -208,9 +204,8 @@ impl TileBuilder {
 
     /// See [Tile::elevation]. Returns an error if elevation is unset.
     pub fn elevation(&self) -> anyhow::Result<Meter> {
-        self.elevation.ok_or_else(|| {
-            anyhow!("elevation not initialized for {}", self.position)
-        })
+        self.elevation
+            .ok_or_else(|| anyhow!("elevation not initialized for {:?}", self))
     }
 
     /// Set the elevation for this tile. Returns an error if the elevation value
@@ -223,9 +218,8 @@ impl TileBuilder {
 
     /// See [Tile::rainfall]. Returns an error if rainfall is unset.
     pub fn rainfall(&self) -> anyhow::Result<Meter3> {
-        self.rainfall.ok_or_else(|| {
-            anyhow!("rainfall not initialized for {}", self.position)
-        })
+        self.rainfall
+            .ok_or_else(|| anyhow!("rainfall not initialized for {:?}", self))
     }
 
     /// Set the rainfall for this tile. Returns an error if the given value is
@@ -259,9 +253,8 @@ impl TileBuilder {
 
     /// See [Tile::runoff]. Returns an error if runoff is unset.
     pub fn runoff(&self) -> anyhow::Result<Meter3> {
-        self.runoff.ok_or_else(|| {
-            anyhow!("runoff not initialized for {}", self.position)
-        })
+        self.runoff
+            .ok_or_else(|| anyhow!("runoff not initialized for {:?}", self))
     }
 
     /// Add some amount of runoff to this tile. Returns an error if the amount
@@ -294,6 +287,15 @@ impl TileBuilder {
         Ok(runoff)
     }
 
+    /// See [Tile::runoff_egress]. Returns an error if runoff_egress is unset.
+    pub fn runoff_egress(
+        &self,
+    ) -> anyhow::Result<&HashMap<HexDirection, Meter3, FnvBuildHasher>> {
+        self.runoff_egress.as_ref().ok_or_else(|| {
+            anyhow!("runoff_egress not initialized for {:?}", self)
+        })
+    }
+
     /// Set the runoff_egress map, which tells us how much runoff this tile
     /// pushed out to each of its neighbors.
     pub fn set_runoff_egress(
@@ -305,9 +307,8 @@ impl TileBuilder {
 
     /// See [Tile::biome]. Returns an error if biome is unset.
     pub fn biome(&self) -> anyhow::Result<Biome> {
-        self.biome.ok_or_else(|| {
-            anyhow!("biome not initialized for {}", self.position)
-        })
+        self.biome
+            .ok_or_else(|| anyhow!("biome not initialized for {:?}", self))
     }
 
     /// Get this tile's biome as an `Option`, meaning if the biome is unset, we
@@ -328,15 +329,15 @@ impl TileBuilder {
     /// Add a new geographic feature to this tile. Returns an error if the tile
     /// already has that feature.
     pub fn add_feature(&mut self, feature: GeoFeature) -> anyhow::Result<()> {
-        let is_new = self.features.insert(feature);
-        if is_new {
-            Ok(())
-        } else {
+        if self.features.contains(&feature) {
             Err(anyhow!(
                 "feature {:?} already exists for {:?}",
                 feature,
                 self
             ))
+        } else {
+            self.features.push(feature);
+            Ok(())
         }
     }
 }
