@@ -13,11 +13,12 @@ pub struct WorldConfig {
     /// Distance from the center of the world to the edge (in tiles).
     pub radius: u16,
 
-    /// Buffer space at the edge of the world where we gradually push
-    /// elevations down, to ensure that the very edge of the world is all
-    /// ocean. This is included **as part of the radius**, and therefore must
-    /// be less than the radius.
-    pub edge_buffer_size: u16,
+    /// The fraction of the world's radius that is buffer space. Tiles in the
+    /// buffer space will be pushed down, to ensure that the very edge of the
+    /// world is all ocean. The closer to the edge a tile is, the more it will
+    /// be pushed. 1.0 means the world is _entirely_ buffer space, 0.0 means
+    /// there is no buffer at all, 0.25 means the outer 25% is buffer, etc.
+    pub edge_buffer_fraction: f64,
     /// Exponent to apply to the function that pushes down elevations in the
     /// buffer zone. An exponent of 1.0 will push them linearly. Sub-1.0
     /// exponents will have a smooth dropoff closer to the middle, then get
@@ -47,16 +48,19 @@ pub struct RainfallConfig {
     /// and it can be modified under certain scenarios according to other
     /// fields in this config.
     pub evaporation_default: Meter3,
+
     /// Scaling factor for evaporation from land tiles. Each land tile will
     /// produce the default evaporation amount times this scaling factor.
     /// Should probably be less than 1.
     pub evaporation_land_scale: f64,
+
     /// The distance (in tiles) that evaporation spreads, perpendicular to the
     /// wind. E.g. if we consider the wind direction to be *forward*, then
     /// this is the distance to the left and right that a particular tile's
     /// evaporation will spread. This is a smoothing mechanism that makes
     /// precipitation patterns appear smoother/more natural.
     pub evaporation_spread_distance: u16,
+
     /// Exponent to apply while calculating spread diminishment. If the
     /// exponent is 1.0, then evaporation spread will be linear, meaning the
     /// amount of evaporation that one tile will receive from another tile that
@@ -64,6 +68,7 @@ pub struct RainfallConfig {
     /// spreading will be biased towards the center, and if >1 will be biased
     /// towards the outer edges.
     pub evaporation_spread_exponent: f64,
+
     /// The maximum fraction of a cloud's rainfall that can be dropped on any
     /// particular tile. E.g. if this is 0.01, then a cloud can drop at most 1%
     /// of its held water on a single tile. This value should typically be
@@ -134,7 +139,7 @@ impl Default for WorldConfig {
             seed: rand::random(),
 
             radius: 100,
-            edge_buffer_size: 25,
+            edge_buffer_fraction: 0.25,
             edge_buffer_exponent: 0.7,
             rainfall: RainfallConfig::default(),
             geo_feature: GeoFeatureConfig::default(),
