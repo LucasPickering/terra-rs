@@ -22,6 +22,14 @@ impl Terra {
     pub fn generate_world(&self, config: JsValue) -> Result<World, JsValue> {
         info!("Loading config");
         let config: WorldConfig = serde_wasm_bindgen::from_value(config)?;
-        Ok(World::generate(config))
+
+        World::generate(config).map_err(|err| {
+            format!(
+                "Error during world generation: {:?}\n{}\n",
+                err,
+                err.backtrace()
+            )
+            .into()
+        })
     }
 }

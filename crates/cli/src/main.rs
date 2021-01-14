@@ -86,8 +86,8 @@ fn load_config(config_path: &Path) -> anyhow::Result<WorldConfig> {
             "invalid character in path {:?}",
             config_path
         )))
-        .with_context(|| "error reading config file")?;
-    settings.try_into().with_context(|| "error reading config")
+        .context("error reading config file")?;
+    settings.try_into().context("error reading config")
 }
 
 /// Generate an output form of the world in the given format.
@@ -103,8 +103,8 @@ fn gen_output(
     match output_format {
         OutputFormat::Bin => {
             // Serialize the entire world via msgpack
-            let world_bytes = rmp_serde::to_vec(&world)
-                .with_context(|| "error serializing world")?;
+            let world_bytes =
+                rmp_serde::to_vec(&world).context("error serializing world")?;
             let mut file = OpenOptions::new()
                 .write(true)
                 .create(true)
@@ -119,7 +119,7 @@ fn gen_output(
         OutputFormat::Cfg => {
             // Serialize just the world config via toml
             let cfg_string = toml::to_string_pretty(world.config())
-                .with_context(|| "error serializing config")?;
+                .context("error serializing config")?;
             let mut file = OpenOptions::new()
                 .write(true)
                 .create(true)
@@ -134,8 +134,7 @@ fn gen_output(
         OutputFormat::Svg => {
             // Render the world in 2D
             let doc = svg::draw_world(world);
-            ::svg::save(&output_file_path, &doc)
-                .with_context(|| "error saving svg")?;
+            ::svg::save(&output_file_path, &doc).context("error saving svg")?;
         }
     }
     info!("Saved {} output to {:?}", output_format, &output_file_path);
@@ -155,7 +154,7 @@ fn run(opt: Opt) -> anyhow::Result<()> {
         } => {
             // Load world config and use it to generate a new world
             let config = load_config(&config_path)?;
-            World::generate(config)
+            World::generate(config)?
         }
         Opt {
             config: None,
@@ -170,7 +169,7 @@ fn run(opt: Opt) -> anyhow::Result<()> {
                     format!("error opening world file {:?}", input_path)
                 })?;
             let world = rmp_serde::from_read(file)
-                .with_context(|| "error deserializing world")?;
+                .context("error deserializing world")?;
             info!("Loaded world from {:?}", &input_path);
             world
         }

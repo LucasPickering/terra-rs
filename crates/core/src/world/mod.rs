@@ -12,9 +12,11 @@ use crate::{
     },
     WorldConfig,
 };
+use anyhow::Context;
 use fnv::FnvBuildHasher;
 use log::{info, Level};
 use serde::{Deserialize, Serialize};
+use validator::Validate;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::{prelude::*, JsCast};
 
@@ -134,21 +136,20 @@ impl World {
 
     /// Generate a new world with the given config. This operation could take
     /// several seconds, depending on the world size and complexity.
-    pub fn generate(config: WorldConfig) -> Self {
+    pub fn generate(config: WorldConfig) -> anyhow::Result<Self> {
         info!("Generating world with config {:#?}", config);
+
+        config.validate().context("invalid config")?;
+
         let tiles = timed!(
             "World generation",
             Level::Info,
-            WorldBuilder::new(config).generate_world()
+            WorldBuilder::new(config)
+                .generate_world()
+                .context("error during world validation")?
         );
-        match tiles {
-            Ok(tiles) => Self { config, tiles },
-            Err(err) => panic!(
-                "Error during world generation: {:?}\n{}\n",
-                err,
-                err.backtrace()
-            ),
-        }
+
+        Ok(Self { config, tiles })
     }
 }
 
