@@ -65,9 +65,9 @@ pub struct WorldBuilder {
 }
 
 impl WorldBuilder {
+    /// Initialize a builder that will construct a new world. **This assumes
+    /// that the given config is already validated!**
     pub fn new(config: WorldConfig) -> Self {
-        // TODO config validation
-
         // Initialize each tile
         let tiles = timed!("World initialization", {
             let capacity = util::world_len(config.radius);
@@ -235,9 +235,8 @@ impl TileBuilder {
 
     /// See [Tile::humidity]. Returns an error if humidity is unset.
     pub fn humidity(&self) -> anyhow::Result<f64> {
-        let rainfall = self
-            .rainfall()
-            .with_context(|| "failed to calculate humidity")?;
+        let rainfall =
+            self.rainfall().context("failed to calculate humidity")?;
         Ok(World::RAINFALL_SOFT_RANGE
             .value(rainfall)
             .clamp()

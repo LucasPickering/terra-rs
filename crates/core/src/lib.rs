@@ -7,7 +7,7 @@
 //! use terra::{WorldConfig, World};
 //!
 //! let config = WorldConfig::default();
-//! let world = World::generate(config);
+//! let world = World::generate(config).unwrap();
 //! println!("{}", world.tiles().len());
 //! // From here you can display/use the world however you like.
 //! ```
@@ -24,7 +24,7 @@ mod util;
 mod world;
 
 pub use crate::{
-    config::{NoiseFnConfig, WorldConfig},
+    config::{GeoFeatureConfig, NoiseFnConfig, RainfallConfig, WorldConfig},
     util::{Color3, Meter, Meter2, Meter3, NumRange, RangeValue},
     world::{
         hex::{

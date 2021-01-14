@@ -2,7 +2,7 @@ use terra::{World, WorldConfig};
 
 #[test]
 fn test_world_gen_default() {
-    let world = World::generate(WorldConfig::default());
+    let world = World::generate(WorldConfig::default()).unwrap();
     assert_eq!(world.tiles().len(), 30301);
 }
 
@@ -15,6 +15,6 @@ fn test_world_gen_large() {
         edge_buffer_fraction: 0.25,
         ..Default::default()
     };
-    let world = World::generate(config);
+    let world = World::generate(config).unwrap();
     assert_eq!(world.tiles().len(), 481201);
 }

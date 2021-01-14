@@ -1,16 +1,17 @@
-use serde::{Deserialize, Serialize};
-
 use crate::Meter3;
+use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 /// Configuration that defines a world gen process. Two worlds generated with
 /// same config will always be identical.
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
 #[serde(default)]
 pub struct WorldConfig {
     /// RNG seed to use for all randomized processes during world gen.
     pub seed: u64,
 
     /// Distance from the center of the world to the edge (in tiles).
+    #[validate(range(min = 0, max = 10000))]
     pub radius: u16,
 
     /// The fraction of the world's radius that is buffer space. Tiles in the
@@ -18,6 +19,7 @@ pub struct WorldConfig {
     /// world is all ocean. The closer to the edge a tile is, the more it will
     /// be pushed. 1.0 means the world is _entirely_ buffer space, 0.0 means
     /// there is no buffer at all, 0.25 means the outer 25% is buffer, etc.
+    #[validate(range(min = 0.0, max = 1.0))]
     pub edge_buffer_fraction: f64,
     /// Exponent to apply to the function that pushes down elevations in the
     /// buffer zone. An exponent of 1.0 will push them linearly. Sub-1.0
@@ -27,19 +29,22 @@ pub struct WorldConfig {
     pub edge_buffer_exponent: f64,
 
     /// Config for fields related to rainfall and evaporation
+    #[validate]
     pub rainfall: RainfallConfig,
 
     /// Config for fields related to geographic feature generation
+    #[validate]
     pub geo_feature: GeoFeatureConfig,
 
     /// Config for the noise function used to generate elevation values
+    #[validate]
     pub elevation: NoiseFnConfig,
 }
 
 /// Configuration related to rainfall and evaporation simulation. These params
 /// control how rainfall is generated for the world, which in turn has a major
 /// impact on runoff and feature generation.
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
 #[serde(default)]
 pub struct RainfallConfig {
     /// The amount of evaporation that each tile provides under "default"
@@ -52,6 +57,7 @@ pub struct RainfallConfig {
     /// Scaling factor for evaporation from land tiles. Each land tile will
     /// produce the default evaporation amount times this scaling factor.
     /// Should probably be less than 1.
+    #[validate(range(min = 0.0))]
     pub evaporation_land_scale: f64,
 
     /// The distance (in tiles) that evaporation spreads, perpendicular to the
@@ -59,6 +65,7 @@ pub struct RainfallConfig {
     /// this is the distance to the left and right that a particular tile's
     /// evaporation will spread. This is a smoothing mechanism that makes
     /// precipitation patterns appear smoother/more natural.
+    #[validate(range(min = 0))]
     pub evaporation_spread_distance: u16,
 
     /// Exponent to apply while calculating spread diminishment. If the
@@ -73,12 +80,13 @@ pub struct RainfallConfig {
     /// particular tile. E.g. if this is 0.01, then a cloud can drop at most 1%
     /// of its held water on a single tile. This value should typically be
     /// pretty small, to allow water spreading over large chunks of land.
+    #[validate(range(min = 0.0, max = 1.0))]
     pub rainfall_fraction_limit: f64,
 }
 
 /// Configuration surrounding how geographic features are generated. See
 /// [GeoFeature](crate::GeoFeature) for more info.
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
 #[serde(default)]
 pub struct GeoFeatureConfig {
     /// The minimum amount of runoff that needs to collect on a tile for it to
@@ -99,14 +107,16 @@ pub struct GeoFeatureConfig {
 /// https://crates.io/crates/noise for noise generation. This type is generic,
 /// i.e. not specific to a particular noise function, so as such it has no
 /// default implementation.
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
 pub struct NoiseFnConfig {
     /// Number of different frequencies to add together. We can use multiple
     /// octaves to build a set of curves, then add them together to get our
     /// final function.
+    #[validate(range(min = 0))]
     pub octaves: usize,
 
     /// The frequency of the first (lowest) octave.
+    #[validate(range(min = 0.0))]
     pub frequency: f64,
 
     /// Constant to add to the frequency for each octave. E.g. if we have 3

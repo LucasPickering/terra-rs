@@ -303,8 +303,7 @@ impl<'a> Continent<'a> {
 
         let mut basin_queue: VecDeque<HexPoint> = basins.keys().collect();
         while let Some(basin_key) = basin_queue.pop_front() {
-            let basin =
-                basins.get_mut(basin_key).with_context(|| "queued basin")?;
+            let basin = basins.get_mut(basin_key).context("queued basin")?;
             let overflow_distribution = self.grow_basin(basin)?;
 
             // If this basin overflowed into other(s), then do some processing
@@ -342,7 +341,7 @@ impl<'a> Continent<'a> {
                         // we can safely overflow into them
                         let other_basin = basins
                             .get_mut(other_basin_key)
-                            .with_context(|| "joined basin")?;
+                            .context("joined basin")?;
                         other_basin.overflow(basin_key, overflow_vol);
 
                         // Re-queue the receiving basin (if it isn't already)
