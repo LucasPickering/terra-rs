@@ -38,6 +38,8 @@ struct Opt {
     /// bin - Binary representation that can be reloaded by this CLI and
     ///   other tools later. Use this for persisting & sharing worlds
     ///
+    /// cfg - The full config object used for the world, in TOML format
+    ///
     /// svg - 2D rendering of the world
     #[structopt(short = "f", long)]
     output_formats: Vec<OutputFormat>,
@@ -54,8 +56,25 @@ struct Opt {
 enum OutputFormat {
     // If you change this, make sure to update the help text for
     // `--output-formats`!
+    /// Export the world in a serialized binary format, which can be
+    /// deserialized later to recover the world
     Bin,
+    /// Export the world's full config in a human-readable file
+    Cfg,
+    /// Render the world as a 2D SVG
     Svg,
+    /* If you change this, make sure to update the help text for
+     * `--output-formats`! */
+}
+
+impl OutputFormat {
+    fn file_ext(self) -> &'static str {
+        match self {
+            Self::Bin => "bin",
+            Self::Cfg => "toml",
+            Self::Svg => "svg",
+        }
+    }
 }
 
 fn load_config(config_path: &Path) -> anyhow::Result<WorldConfig> {
@@ -79,10 +98,11 @@ fn gen_output(
 ) -> anyhow::Result<()> {
     let output_file_path = output_dir
         .join("world")
-        .with_extension(output_format.to_string());
+        .with_extension(output_format.file_ext());
 
     match output_format {
         OutputFormat::Bin => {
+            // Serialize the entire world via msgpack
             let world_bytes = rmp_serde::to_vec(&world)
                 .with_context(|| "error serializing world")?;
             let mut file = OpenOptions::new()
@@ -96,7 +116,23 @@ fn gen_output(
                 format!("error writing world to file {:?}", &output_file_path)
             })?;
         }
+        OutputFormat::Cfg => {
+            // Serialize just the world config via toml
+            let cfg_string = toml::to_string_pretty(world.config())
+                .with_context(|| "error serializing config")?;
+            let mut file = OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open(&output_file_path)
+                .with_context(|| {
+                    format!("error opening output file {:?}", &output_file_path)
+                })?;
+            file.write_all(cfg_string.as_bytes()).with_context(|| {
+                format!("error writing config to file {:?}", &output_file_path)
+            })?;
+        }
         OutputFormat::Svg => {
+            // Render the world in 2D
             let doc = svg::draw_world(world);
             ::svg::save(&output_file_path, &doc)
                 .with_context(|| "error saving svg")?;

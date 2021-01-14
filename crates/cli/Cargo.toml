@@ -19,3 +19,4 @@ structopt = "0.3"
 strum = "*"
 svg = "0.8"
 terra = {path = "../core"}
+toml = "*"

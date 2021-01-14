@@ -908,6 +908,7 @@ dependencies = [
  "strum",
  "svg",
  "terra",
+ "toml",
 ]
 
 [[package]]
