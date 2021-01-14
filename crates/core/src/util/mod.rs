@@ -1,22 +1,21 @@
+mod render;
+mod unit;
+
+pub use crate::util::{render::*, unit::*};
+
 use anyhow::anyhow;
-use derive_more::{
-    Add, AddAssign, Display, Div, DivAssign, From, Into, Mul, MulAssign, Sub,
-    SubAssign, Sum,
-};
+use derive_more::Display;
 use log::debug;
 use rand::{
     distributions::uniform::{SampleRange, SampleUniform, UniformSampler},
     RngCore,
 };
-use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
     fmt::{Debug, Display},
     marker::PhantomData,
     ops,
 };
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
 
 /// A macro to unwrap an option to its `Some` value, and bail out of the current
 /// function with an [anyhow::Error] if not. Can only be used in functions that
@@ -70,197 +69,6 @@ macro_rules! timed {
         console::time_end_with_label($label);
         value
     }};
-}
-
-/// Unit used for elevation
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Display,
-    PartialEq,
-    PartialOrd,
-    From,
-    Into,
-    Add,
-    Sub,
-    Mul,
-    Div,
-    AddAssign,
-    SubAssign,
-    MulAssign,
-    DivAssign,
-    Sum,
-    Serialize,
-    Deserialize,
-)]
-#[display(fmt = "{} m", "self.0")]
-pub struct Meter(pub f64);
-
-/// Unit used for tile area. One tile has a top surface area of 1m^2.
-///
-/// **Note:** Tiles may not actually be rendered such that the area is exactly
-/// 1m^2 with reference to the elevation, but that's fine. This is just a nice
-/// simplification that makes math easier.
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Display,
-    PartialEq,
-    PartialOrd,
-    From,
-    Into,
-    Add,
-    Sub,
-    Mul,
-    Div,
-    AddAssign,
-    SubAssign,
-    MulAssign,
-    DivAssign,
-    Sum,
-    Serialize,
-    Deserialize,
-)]
-#[display(fmt = "{} m²", "self.0")]
-pub struct Meter2(pub f64);
-
-/// Unit used for liquid volume. One meter of runoff on a single tile equals
-/// 1 volumetric meter. See caveat on [Meter2], this may not actually appear
-/// to be 1m*1m*1m when compared to elevation, depending on what ratios the
-/// renderer uses.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Display,
-    PartialEq,
-    PartialOrd,
-    From,
-    Into,
-    Add,
-    Sub,
-    Mul,
-    Div,
-    AddAssign,
-    SubAssign,
-    MulAssign,
-    DivAssign,
-    Sum,
-    Serialize,
-    Deserialize,
-)]
-#[display(fmt = "{} m³", "self.0")]
-pub struct Meter3(pub f64);
-
-// 1m * 1m^2 = 1m^3
-impl ops::Mul<Meter> for Meter2 {
-    type Output = Meter3;
-
-    fn mul(self, rhs: Meter) -> Self::Output {
-        Meter3(self.0 * rhs.0)
-    }
-}
-impl ops::Mul<Meter2> for Meter {
-    type Output = Meter3;
-
-    fn mul(self, rhs: Meter2) -> Self::Output {
-        Meter3(self.0 * rhs.0)
-    }
-}
-
-// 1m^3 / 1m^2 = 1m
-impl ops::Div<Meter2> for Meter3 {
-    type Output = Meter;
-
-    fn div(self, rhs: Meter2) -> Self::Output {
-        Meter(self.0 / rhs.0)
-    }
-}
-
-/// An RGB color. Values are stored as floats between 0 and 1 (inclusive).
-/// This uses f32 because the extra precision from f64 is pointless.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, PartialEq, Serialize)]
-pub struct Color3 {
-    pub red: f32,
-    pub green: f32,
-    pub blue: f32,
-}
-
-impl Color3 {
-    /// The valid range of values for each component in RGB
-    const COMPONENT_RANGE: NumRange<f32> = NumRange::new(0.0, 1.0);
-
-    /// Create a new RGB color. Return if any of the components are out of
-    /// the range [0.0, 1.0].
-    pub fn new(red: f32, green: f32, blue: f32) -> anyhow::Result<Self> {
-        fn check_component(
-            component_name: &str,
-            value: f32,
-        ) -> anyhow::Result<f32> {
-            if Color3::COMPONENT_RANGE.contains(value) {
-                Ok(value)
-            } else {
-                Err(anyhow!(
-                    "Color component {} must be in {}, but was {}",
-                    component_name,
-                    Color3::COMPONENT_RANGE,
-                    value
-                ))
-            }
-        }
-
-        Ok(Self {
-            red: check_component("red", red)?,
-            green: check_component("green", green)?,
-            blue: check_component("blue", blue)?,
-        })
-    }
-
-    /// Create a new RGB color from integer components in the [0,255] range.
-    pub fn new_int(red: u8, green: u8, blue: u8) -> Self {
-        Self {
-            red: red as f32 / 255.0,
-            green: green as f32 / 255.0,
-            blue: blue as f32 / 255.0,
-        }
-    }
-
-    /// Convert this number to a set of 3 bytes: `(red, green, blue)`
-    pub fn to_ints(self) -> (u8, u8, u8) {
-        (
-            (self.red * 255.0) as u8,
-            (self.green * 255.0) as u8,
-            (self.blue * 255.0) as u8,
-        )
-    }
-
-    /// Convert this color to an HTML color code: `#rrggbb`
-    pub fn to_html(self) -> String {
-        let (r, g, b) = self.to_ints();
-        format!("#{:02x}{:02x}{:02x}", r, g, b)
-    }
-}
-
-// Scale a color by a constant
-impl ops::Mul<f32> for Color3 {
-    type Output = Self;
-
-    fn mul(self, rhs: f32) -> Self {
-        let red = Self::COMPONENT_RANGE.clamp(self.red * rhs);
-        let green = Self::COMPONENT_RANGE.clamp(self.green * rhs);
-        let blue = Self::COMPONENT_RANGE.clamp(self.blue * rhs);
-        // It's safe to bypass the constructor here because we just clamped
-        // all 3 components to the valid range
-        Self { red, green, blue }
-    }
 }
 
 /// A type of value that we can create ranges of, where a range has a min and

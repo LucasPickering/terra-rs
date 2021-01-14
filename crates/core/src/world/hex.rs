@@ -15,11 +15,21 @@ use strum::{EnumIter, IntoEnumIterator};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
+use crate::{
+    util::{Point2, Vector2},
+    Tile,
+};
+
 /// A point in a hexagon-tiled world. Each point has an x, y, and z component.
+///
+/// ## Hex Coordinate System
+///
 /// See this page for info on how the cube coordinate system works:
 /// https://www.redblobgames.com/grids/hexagons/#coordinates-cube
 ///
 /// **In this page's vernacular, we use "flat topped" tiles.**
+///
+/// ## Implementation
 ///
 /// This struct actually only needs to store x and y, since x+y+z=0 for all
 /// points, so z can be derived as necessary which means we can save 33% of
@@ -66,6 +76,16 @@ impl HexPoint {
             + (self.z() - other.z()).abs()) as usize
             / 2
     }
+
+    /// Convert this position from hex space to 2D space. Useful for rendering
+    /// a tile in 2D or 3D.
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+    pub fn to_point2(self) -> Point2 {
+        Point2 {
+            x: self.x as f64 * 1.5,
+            y: (self.x as f64 / 2.0 + self.y as f64) * -(3.0f64.sqrt()),
+        }
+    }
 }
 
 impl HexPoint {
@@ -97,14 +117,14 @@ impl HexPoint {
     /// Get an iterator of all the points directly adjacent to this one. The
     /// iterator will always contain exactly 6 values.
     pub fn adjacents(self) -> impl Iterator<Item = HexPoint> {
-        HexDirection::iter().map(move |dir| self + dir.vec())
+        HexDirection::iter().map(move |dir| self + dir.to_vector())
     }
 }
 
-impl ops::Add<HexVec> for HexPoint {
+impl ops::Add<HexVector> for HexPoint {
     type Output = HexPoint;
 
-    fn add(self, rhs: HexVec) -> Self::Output {
+    fn add(self, rhs: HexVector) -> Self::Output {
         Self::new(self.x + rhs.x(), self.y + rhs.y())
     }
 }
@@ -116,12 +136,12 @@ impl ops::Add<HexVec> for HexPoint {
 /// vectors.
 #[derive(Copy, Clone, Debug, Display, Add, Mul, AddAssign, MulAssign)]
 #[display(fmt = "({}, {}, {})", "self.x()", "self.y()", "self.z()")]
-pub struct HexVec {
+pub struct HexVector {
     x: i16,
     y: i16,
 }
 
-impl HexVec {
+impl HexVector {
     pub const ZERO: Self = Self::new(0, 0);
 
     pub const fn new(x: i16, y: i16) -> Self {
@@ -138,6 +158,167 @@ impl HexVec {
 
     pub fn z(&self) -> i16 {
         -(self.x + self.y)
+    }
+}
+
+/// A trait that denotes any type that has a singular assigned position in the
+/// hex world.
+pub trait HasHexPosition: Sized {
+    fn position(&self) -> HexPoint;
+}
+
+/// The 6 directions in which hexes can line up side-to-side. This is similar to
+/// [HexAxis], but while `HexAxis` is center-to-vertex, this enum denotes
+/// center-to-side directions. So each entry in this enum reprensents a line
+/// drawn from the center of a tile to the center of one side on that tile.
+///
+/// See this page for more info (we use "flat topped" tiles):
+/// https://www.redblobgames.com/grids/hexagons/#coordinates-cube
+#[derive(
+    Copy, Clone, Debug, EnumIter, PartialEq, Eq, Hash, Serialize, Deserialize,
+)]
+pub enum HexDirection {
+    Up,
+    UpRight,
+    DownRight,
+    Down,
+    DownLeft,
+    UpLeft,
+}
+
+impl HexDirection {
+    /// Get an vector offset that would move a point one tile in this direction
+    pub fn to_vector(self) -> HexVector {
+        match self {
+            Self::Up => HexVector::new(0, 1),
+            Self::UpRight => HexVector::new(1, 0),
+            Self::DownRight => HexVector::new(1, -1),
+            Self::Down => HexVector::new(0, -1),
+            Self::DownLeft => HexVector::new(-1, 0),
+            Self::UpLeft => HexVector::new(-1, 1),
+        }
+    }
+
+    /// Convert this direction into a half-unit 2D offset. This offset
+    /// represents the distance between the center of a tile and the midpoint of
+    /// one side of the tile, in **2D** coordinates. See [Point2] for a
+    /// description of 2D coordinates.
+    ///
+    /// https://www.redblobgames.com/grids/hexagons/#hex-to-pixel (FLAT TOPPED)
+    pub fn to_vector2(self) -> Vector2 {
+        match self {
+            Self::Up => Vector2 {
+                x: 0.0,
+                y: -Tile::SIDE_RADIUS,
+            },
+            Self::UpRight => Vector2 {
+                x: Tile::VERTEX_RADIUS * 0.75,
+                y: -Tile::SIDE_RADIUS / 2.0,
+            },
+            Self::DownRight => Vector2 {
+                x: Tile::VERTEX_RADIUS * 0.75,
+                y: Tile::SIDE_RADIUS / 2.0,
+            },
+            Self::Down => Vector2 {
+                x: 0.0,
+                y: Tile::SIDE_RADIUS,
+            },
+            Self::DownLeft => Vector2 {
+                x: -Tile::VERTEX_RADIUS * 0.75,
+                y: Tile::SIDE_RADIUS / 2.0,
+            },
+            Self::UpLeft => Vector2 {
+                x: -Tile::VERTEX_RADIUS * 0.75,
+                y: -Tile::SIDE_RADIUS / 2.0,
+            },
+        }
+    }
+}
+
+/// The 3 axes in our coordinate system.
+///
+/// See this page for more info (we use "flat topped" tiles):
+/// https://www.redblobgames.com/grids/hexagons/#coordinates-cube
+#[derive(Copy, Clone, Debug, EnumIter)]
+pub enum HexAxis {
+    X,
+    Y,
+    Z,
+}
+
+/// Similar to [HexDirection], but instead of denoting center-to-side
+/// directions, this denotes center-to-vertex axes. Each main axis is made by
+/// connecting two opposite vertices on the origin tile (3 vertex pairs = 3
+/// axes). This enum splits each axis into two segments (positive and negative)
+/// for ease of use.
+///
+/// See this page for more info (we use "flat topped" tiles):
+/// https://www.redblobgames.com/grids/hexagons/#coordinates-cube
+#[derive(Copy, Clone, Debug)]
+pub struct HexAxialDirection {
+    pub axis: HexAxis,
+    pub positive: bool,
+}
+
+impl HexAxialDirection {
+    /// A list of all hex axial directions. Starts with the negative x (which
+    /// is due left of the origin), then goes around clockwise from there.
+    pub const ALL: &'static [Self] = &[
+        Self {
+            axis: HexAxis::X,
+            positive: false,
+        },
+        Self {
+            axis: HexAxis::Y,
+            positive: true,
+        },
+        Self {
+            axis: HexAxis::Z,
+            positive: false,
+        },
+        Self {
+            axis: HexAxis::X,
+            positive: true,
+        },
+        Self {
+            axis: HexAxis::Y,
+            positive: false,
+        },
+        Self {
+            axis: HexAxis::Z,
+            positive: true,
+        },
+    ];
+
+    pub fn signum(self) -> i16 {
+        if self.positive {
+            1
+        } else {
+            -1
+        }
+    }
+
+    /// Convert this axial direction into a half-unit 2D offset. This offset
+    /// represents the distance between the center of a tile and one vertex,
+    /// in **2D** coordinates. See [Point2] for a description of 2D coordinates.
+    ///
+    /// https://www.redblobgames.com/grids/hexagons/#hex-to-pixel (FLAT TOPPED)
+    pub fn to_vector2(self) -> Vector2 {
+        let vec2 = match self.axis {
+            HexAxis::X => Vector2 {
+                x: Tile::VERTEX_RADIUS,
+                y: 0.0,
+            },
+            HexAxis::Y => Vector2 {
+                x: -Tile::VERTEX_RADIUS / 2.0,
+                y: -Tile::SIDE_RADIUS,
+            },
+            HexAxis::Z => Vector2 {
+                x: -Tile::VERTEX_RADIUS / 2.0,
+                y: Tile::SIDE_RADIUS,
+            },
+        };
+        vec2 * (self.signum() as f64)
     }
 }
 
@@ -306,80 +487,6 @@ impl<T: Debug> Cluster<T> {
             .chain(other.adjacents.into_iter())
             .filter(|pos| !self.tiles.contains_key(pos))
             .collect();
-    }
-}
-
-/// A trait that denotes any type that has a singular assigned position in the
-/// hex world.
-pub trait HasHexPosition: Sized {
-    fn position(&self) -> HexPoint;
-}
-
-/// The 6 directions in which hexes can line up side-to-side. This is similar to
-/// [HexAxis], but while `HexAxis` is center-to-vertex, this enum denotes
-/// center-to-side directions. So each entry in this enum reprensents a line
-/// drawn from the center of a tile to the center of one side on that tile.
-///
-/// See this page for more info (we use "flat topped" tiles):
-/// https://www.redblobgames.com/grids/hexagons/#coordinates-cube
-#[derive(
-    Copy, Clone, Debug, EnumIter, PartialEq, Eq, Hash, Serialize, Deserialize,
-)]
-pub enum HexDirection {
-    Up,
-    UpRight,
-    DownRight,
-    Down,
-    DownLeft,
-    UpLeft,
-}
-
-impl HexDirection {
-    /// Get an vector offset that would move a point one tile in this direction
-    pub fn vec(self) -> HexVec {
-        match self {
-            Self::Up => HexVec::new(0, 1),
-            Self::UpRight => HexVec::new(1, 0),
-            Self::DownRight => HexVec::new(1, -1),
-            Self::Down => HexVec::new(0, -1),
-            Self::DownLeft => HexVec::new(-1, 0),
-            Self::UpLeft => HexVec::new(-1, 1),
-        }
-    }
-}
-
-/// The 3 axes in our coordinate system.
-///
-/// See this page for more info (we use "flat topped" tiles):
-/// https://www.redblobgames.com/grids/hexagons/#coordinates-cube
-#[derive(Copy, Clone, Debug, EnumIter)]
-pub enum HexAxis {
-    X,
-    Y,
-    Z,
-}
-
-/// Similar to [HexDirection], but instead of denoting center-to-side
-/// directions, this denotes center-to-vertex axes. Each main axis is made by
-/// connecting two opposite vertices on the origin tile (3 vertex pairs = 3
-/// axes). This enum splits each axis into two segments (positive and negative)
-/// for ease of use.
-///
-/// See this page for more info (we use "flat topped" tiles):
-/// https://www.redblobgames.com/grids/hexagons/#coordinates-cube
-#[derive(Copy, Clone, Debug)]
-pub struct HexAxialDirection {
-    pub axis: HexAxis,
-    pub positive: bool,
-}
-
-impl HexAxialDirection {
-    pub fn signum(self) -> i16 {
-        if self.positive {
-            1
-        } else {
-            -1
-        }
     }
 }
 

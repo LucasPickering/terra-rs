@@ -48,11 +48,11 @@ class WorldRenderer {
     this.tiles = tiles.map((tile, i) => {
       // Convert hex coords to pixel coords
       // https://www.redblobgames.com/grids/hexagons/#coordinates-cube
-      const pos = tile.pos;
+      const pos2d = tile.pos.to_point2();
       const transformMatrix = Matrix.Translation(
-        pos.x * 0.75 * TILE_VERTEX_DIAM,
+        pos2d.x,
         tile.height[0],
-        (pos.x / 2 + pos.y) * -(Math.sqrt(3) / 2) * TILE_VERTEX_DIAM
+        pos2d.y
         // I'm not entirely sure why this scaling works, but it does
       ).add(Matrix.Scaling(0, tile.height[0], 0));
 
