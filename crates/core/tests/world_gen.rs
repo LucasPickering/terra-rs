@@ -12,7 +12,7 @@ fn test_world_gen_large() {
     let config = WorldConfig {
         seed: 1021522790211909,
         radius: 400,
-        edge_buffer_size: 100,
+        edge_buffer_fraction: 0.25,
         ..Default::default()
     };
     let world = World::generate(config);
