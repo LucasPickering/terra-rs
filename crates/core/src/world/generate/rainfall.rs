@@ -56,16 +56,18 @@ impl<'a> CloudLine<'a> {
         let cloud_volumes: Vec<Meter3> =
             iter::repeat(Meter3(0.0)).take(world_width).collect();
 
-        let l = (2 * config.evaporation_spread_distance + 1) as usize;
-        let center_idx = config.evaporation_spread_distance as usize;
+        let l = (2 * config.rainfall.evaporation_spread_distance + 1) as usize;
+        let center_idx = config.rainfall.evaporation_spread_distance as usize;
         let mut spread_coefficients: Vec<f64> =
             iter::repeat(0.0).take(l).collect();
-        let spread_range =
-            NumRange::new(0.0, config.evaporation_spread_distance as f64);
-        for d in 0..=config.evaporation_spread_distance {
+        let spread_range = NumRange::new(
+            0.0,
+            config.rainfall.evaporation_spread_distance as f64,
+        );
+        for d in 0..=config.rainfall.evaporation_spread_distance {
             let v = spread_range
                 .normalize(d as f64)
-                .powf(config.evaporation_spread_exponent);
+                .powf(config.rainfall.evaporation_spread_exponent);
             spread_coefficients[center_idx - d as usize] = v;
             spread_coefficients[center_idx + d as usize] = v;
         }
@@ -81,7 +83,7 @@ impl<'a> CloudLine<'a> {
             cloud_volumes,
             rainfall_factor_range: NumRange::new(
                 0.0,
-                config.rainfall_factor_limit,
+                config.rainfall.rainfall_fraction_limit,
             ),
             spread_coefficients,
         }
@@ -112,9 +114,10 @@ impl<'a> CloudLine<'a> {
     /// over it.
     fn calc_evaporation(&self, tile: &TileBuilder) -> Meter3 {
         if tile.is_water_biome() {
-            self.config.evaporation_default
+            self.config.rainfall.evaporation_default
         } else {
-            self.config.evaporation_default * self.config.evaporation_land_scale
+            self.config.rainfall.evaporation_default
+                * self.config.rainfall.evaporation_land_scale
         }
     }
 
@@ -148,7 +151,8 @@ impl<'a> CloudLine<'a> {
         // For each slot in the clouds, it draws water from n tiles to its
         // left and right. The exact distance, and the diminishing factor, are
         // determined by the config.
-        let spread_dist = self.config.evaporation_spread_distance as usize;
+        let spread_dist =
+            self.config.rainfall.evaporation_spread_distance as usize;
         for (i, v) in self.cloud_volumes.iter_mut().enumerate() {
             let evap: Meter3 = self
                 .spread_coefficients
