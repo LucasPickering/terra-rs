@@ -1,19 +1,19 @@
 mod generate;
 pub mod hex;
 
-use std::collections::HashMap;
-
 use crate::{
     timed,
     util::{Color3, Meter, Meter2, Meter3, NumRange},
     world::{
         generate::WorldBuilder,
-        hex::{HasHexPosition, HexDirection, HexPoint, HexPointMap},
+        hex::{
+            HasHexPosition, HexDirection, HexDirectionMap, HexPoint,
+            HexPointMap,
+        },
     },
     WorldConfig,
 };
 use anyhow::Context;
-use fnv::FnvBuildHasher;
 use log::{info, Level};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -92,12 +92,18 @@ pub enum GeoFeature {
     /// multiple river entrances, but each one must have a unique direction and
     /// none of them can have the same direction as a river exit. These are
     /// generated based on runoff ingress measurements.
-    RiverEntrance(HexDirection),
+    RiverEntrance {
+        direction: HexDirection,
+        volume: Meter3,
+    },
     /// A river exiting a tile from in a specific direction. A tile can have
     /// multiple river exits, but each one must have a unique direction and
     /// none of them can have the same direction as a river entrance. These
     /// are generated based on runoff egress measurements.
-    RiverExit(HexDirection),
+    RiverExit {
+        direction: HexDirection,
+        volume: Meter3,
+    },
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
@@ -195,11 +201,17 @@ pub struct Tile {
     /// Amount of runoff water that remains on the tile after runoff
     /// simulation.
     runoff: Meter3,
-    /// Amount of runoff that **exited** this tile in each direction. This map
-    /// will only contain entries for non-zero egress directions, meaning
-    /// any direction for which the adjacent tile is uphill (higher elevation)
-    /// will *not* have an entry here.
-    runoff_egress: HashMap<HexDirection, Meter3, FnvBuildHasher>,
+    /// The net amount of runoff gained/lost for this tile in each direction.
+    /// Positive values indicate ingress (i.e. runoff came in from that
+    /// direction) and negative values indicate egress (i.e. runoff left in
+    /// that direction). The value should be positive if the neighbor in that
+    /// direction is a higher elevation, and negative if it is lower.
+    ///
+    /// It's _possible_ for this map to not have 6 entries, if a tile doesn't
+    /// have 6 neighbors or if it had 0 ingress/egress with one of the
+    /// neighbors, but in most scenarios there will be an entry for all 6
+    /// neighbors.
+    runoff_traversed: HexDirectionMap<Meter3>,
     /// The biome for this tile. Every tile exists in a single biome, which
     /// describes its climate characteristics. See [Biome] for more info.
     biome: Biome,
@@ -351,9 +363,17 @@ impl Tile {
                         .convert::<f64>()
                         .inner() as f32;
 
+                    let runoff_egress: Meter3 = self
+                        .runoff_traversed
+                        .values()
+                        .copied()
+                        // Only include egress, ignore ingress
+                        .filter(|v| *v < Meter3(0.0))
+                        .map(|Meter3(v)| Meter3(v.abs()))
+                        .sum();
                     let normal_runoff_egress =
                         NumRange::new(Meter3(0.0), Meter3(1000.0))
-                            .value(self.runoff_egress.values().copied().sum())
+                            .value(runoff_egress)
                             .normalize()
                             .clamp()
                             .convert::<f64>()

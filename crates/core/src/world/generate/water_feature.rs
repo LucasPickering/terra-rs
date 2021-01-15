@@ -1,7 +1,10 @@
-use crate::world::{
-    generate::{Generate, WorldBuilder},
-    hex::HexDirection,
-    GeoFeature,
+use crate::{
+    world::{
+        generate::{Generate, WorldBuilder},
+        hex::HexDirection,
+        GeoFeature,
+    },
+    Meter3,
 };
 
 /// A generator that creates lakes and rivers based on runoff level, runoff
@@ -19,17 +22,24 @@ impl Generate for WaterFeatureGenerator {
             }
 
             // River exit
-            // We have to copy this into a new structure cause borrow checking
-            let river_exit_dirs: Vec<HexDirection> = tile
-                .runoff_egress()?
+            // We have to copy this into a vec before mutating cause borrow ck
+            let runoff_traversed: Vec<(HexDirection, Meter3)> = tile
+                .runoff_traversed()
                 .iter()
-                .filter(|(_, runoff_egress)| {
-                    **runoff_egress >= cfg.river_runoff_traversed_threshold
-                })
-                .map(|(dir, _)| *dir)
+                .map(|(k, v)| (*k, *v))
                 .collect();
-            for dir in river_exit_dirs {
-                tile.add_feature(GeoFeature::RiverExit(dir))?;
+            for (dir, runoff_net) in runoff_traversed {
+                if runoff_net > cfg.river_runoff_traversed_threshold {
+                    tile.add_feature(GeoFeature::RiverEntrance {
+                        direction: dir,
+                        volume: runoff_net,
+                    })?;
+                } else if runoff_net < -cfg.river_runoff_traversed_threshold {
+                    tile.add_feature(GeoFeature::RiverExit {
+                        direction: dir,
+                        volume: -runoff_net,
+                    })?;
+                }
             }
         }
         Ok(())

@@ -1,6 +1,6 @@
 use derive_more::{
-    Add, AddAssign, Display, Div, DivAssign, From, Into, Mul, MulAssign, Sub,
-    SubAssign, Sum,
+    Add, AddAssign, Display, Div, DivAssign, From, Into, Mul, MulAssign, Neg,
+    Sub, SubAssign, Sum,
 };
 use serde::{Deserialize, Serialize};
 use std::ops;
@@ -19,6 +19,7 @@ use wasm_bindgen::prelude::*;
     PartialOrd,
     From,
     Into,
+    Neg,
     Add,
     Sub,
     Mul,
@@ -49,6 +50,7 @@ pub struct Meter(pub f64);
     PartialOrd,
     From,
     Into,
+    Neg,
     Add,
     Sub,
     Mul,
@@ -79,6 +81,7 @@ pub struct Meter2(pub f64);
     PartialOrd,
     From,
     Into,
+    Neg,
     Add,
     Sub,
     Mul,

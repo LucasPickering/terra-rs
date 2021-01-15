@@ -187,6 +187,18 @@ pub enum HexDirection {
 }
 
 impl HexDirection {
+    /// Get the direction that is directly opposite this one
+    pub fn opposite(self) -> HexDirection {
+        match self {
+            Self::Up => Self::Down,
+            Self::UpRight => Self::DownLeft,
+            Self::DownRight => Self::UpLeft,
+            Self::Down => Self::Up,
+            Self::DownLeft => Self::UpRight,
+            Self::UpLeft => Self::DownRight,
+        }
+    }
+
     /// Get an vector offset that would move a point one tile in this direction
     pub fn to_vector(self) -> HexVector {
         match self {
@@ -202,7 +214,8 @@ impl HexDirection {
     /// Convert this direction into a half-unit 2D offset. This offset
     /// represents the distance between the center of a tile and the midpoint of
     /// one side of the tile, in **2D** coordinates. See [Point2] for a
-    /// description of 2D coordinates.
+    /// description of 2D coordinates. This is probably only useful for
+    /// rendering.
     ///
     /// https://www.redblobgames.com/grids/hexagons/#hex-to-pixel (FLAT TOPPED)
     pub fn to_vector2(self) -> Vector2 {
@@ -301,6 +314,7 @@ impl HexAxialDirection {
     /// Convert this axial direction into a half-unit 2D offset. This offset
     /// represents the distance between the center of a tile and one vertex,
     /// in **2D** coordinates. See [Point2] for a description of 2D coordinates.
+    /// This is probably only useful for rendering.
     ///
     /// https://www.redblobgames.com/grids/hexagons/#hex-to-pixel (FLAT TOPPED)
     pub fn to_vector2(self) -> Vector2 {
@@ -329,6 +343,8 @@ pub type HexPointMap<T> = HashMap<HexPoint, T, FnvBuildHasher>;
 /// An ORDERED map of hex points to some `T`. This has some extra memory
 /// overhead, so we should only use it when we actually need the ordering.
 pub type HexPointIndexMap<T> = IndexMap<HexPoint, T, FnvBuildHasher>;
+/// A map of hex directions to some `T`
+pub type HexDirectionMap<T> = HashMap<HexDirection, T, FnvBuildHasher>;
 
 /// A cluster is a set of contiguous hex points. All items in a cluster are
 /// adjacent to at least one other item in the cluster (unless the cluster is a
