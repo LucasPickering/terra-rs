@@ -68,8 +68,9 @@ fn draw_tile(tile: &Tile) -> Group {
     for feature in tile.features() {
         match feature {
             GeoFeature::Lake => {} // This is covered by TileLens::Surface
-            GeoFeature::RiverEntrance(dir) | GeoFeature::RiverExit(dir) => {
-                let side_offset = dir.to_vector2();
+            GeoFeature::RiverEntrance { direction, .. }
+            | GeoFeature::RiverExit { direction, .. } => {
+                let side_offset = direction.to_vector2();
                 group = group.add(
                     Line::new()
                         .set("x1", 0)

@@ -12,14 +12,17 @@ use crate::{
     util::{self, Meter3, NumRange, Rangeable},
     world::{
         generate::{
-            biome::BiomeGenerator, elevation::ElevationGenerator,
-            ocean::OceanGenerator, rainfall::RainfallGenerator,
-            runoff::RunoffGenerator, water_feature::WaterFeatureGenerator,
+            biome::BiomeGenerator,
+            elevation::ElevationGenerator,
+            ocean::OceanGenerator,
+            rainfall::RainfallGenerator,
+            runoff::{RunoffGenerator, RunoffPattern},
+            water_feature::WaterFeatureGenerator,
             wind::WindGenerator,
         },
         hex::{
-            HasHexPosition, HexAxialDirection, HexDirection, HexPoint,
-            HexPointMap,
+            HasHexPosition, HexAxialDirection, HexDirection, HexDirectionMap,
+            HexPoint, HexPointMap,
         },
         Biome, BiomeType, GeoFeature, Meter, Tile, World, WorldConfig,
     },
@@ -30,7 +33,7 @@ use log::info;
 use noise::{MultiFractal, NoiseFn, Seedable};
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
-use std::{cmp, collections::HashMap, fmt::Debug};
+use std::{cmp, fmt::Debug};
 
 /// A container for generating a new world. This applies a series of generators
 /// in sequence to create the world. These fields are public to allow for
@@ -168,7 +171,11 @@ pub struct TileBuilder {
     rainfall: Option<Meter3>,
     biome: Option<Biome>,
     runoff: Option<Meter3>,
-    runoff_egress: Option<HashMap<HexDirection, Meter3, FnvBuildHasher>>,
+    /// A static pattern that indicates how runoff flows out of this tile. See
+    /// [RunoffPattern] for more info. This is only used during world
+    /// generation, so it gets thrown away when the full world is built.
+    runoff_pattern: Option<RunoffPattern>,
+    runoff_traversed: HexDirectionMap<Meter3>,
     features: Vec<GeoFeature>,
 }
 
@@ -179,7 +186,8 @@ impl TileBuilder {
             elevation: None,
             rainfall: None,
             runoff: None,
-            runoff_egress: None,
+            runoff_pattern: None,
+            runoff_traversed: HexDirectionMap::default(),
             biome: None,
             features: Vec::new(),
         }
@@ -196,9 +204,7 @@ impl TileBuilder {
             runoff: self.runoff()?,
             biome: self.biome()?,
             features: self.features,
-            runoff_egress: self.runoff_egress.ok_or_else(|| {
-                anyhow!("runoff_egress not initialized for {}", position)
-            })?,
+            runoff_traversed: self.runoff_traversed,
         })
     }
 
@@ -250,21 +256,24 @@ impl TileBuilder {
         self.biome = Some(biome);
     }
 
+    /// Get a reference to this tile's runoff pattern. The runoff pattern gives
+    /// info about how runoff flows out of this tile. Returns an error if the
+    /// runoff pattern is uninitialized.
+    pub fn runoff_pattern(&self) -> anyhow::Result<&RunoffPattern> {
+        self.runoff_pattern.as_ref().ok_or_else(|| {
+            anyhow!("runoff_pattern not initialized for {:?}", self)
+        })
+    }
+
+    /// Initialize the runoff pattern for this tile.
+    pub fn set_runoff_pattern(&mut self, runoff_pattern: RunoffPattern) {
+        self.runoff_pattern = Some(runoff_pattern);
+    }
+
     /// See [Tile::runoff]. Returns an error if runoff is unset.
     pub fn runoff(&self) -> anyhow::Result<Meter3> {
         self.runoff
             .ok_or_else(|| anyhow!("runoff not initialized for {:?}", self))
-    }
-
-    /// Add some amount of runoff to this tile. Returns an error if the amount
-    /// is negative or runoff is uninitialized.
-    pub fn add_runoff(&mut self, runoff: Meter3) -> anyhow::Result<()> {
-        if runoff >= Meter3(0.0) {
-            self.runoff = Some(self.runoff()? + runoff);
-            Ok(())
-        } else {
-            Err(anyhow!("cannot add negative runoff {}", runoff))
-        }
     }
 
     /// Set the runoff level of this tile (any existing runoff will be deleted).
@@ -278,6 +287,50 @@ impl TileBuilder {
         }
     }
 
+    /// Add some amount of runoff from another tile to this one.
+    /// `from_direction` indicates which direction the runoff is coming
+    /// from, which will be used to track this runoff as ingress.  Returns
+    /// an error if the amount is negative or runoff is uninitialized.
+    pub fn add_runoff(
+        &mut self,
+        runoff: Meter3,
+        from_direction: HexDirection,
+    ) -> anyhow::Result<()> {
+        if runoff >= Meter3(0.0) {
+            self.runoff = Some(self.runoff()? + runoff);
+            // Track this runoff ingress
+            *self.runoff_traversed.entry(from_direction).or_default() += runoff;
+            Ok(())
+        } else {
+            Err(anyhow!("cannot add negative runoff {}", runoff))
+        }
+    }
+
+    /// Clear all runoff from this tile, and return it in a map that determines
+    /// how much runoff to send in each direction. This will always remove
+    /// **all** runoff from this tile, and that runoff will be tracked as
+    /// egress on this tile. The returned map should be used to add that amount
+    /// of runoff to neighboring tiles.
+    pub fn distribute_runoff(
+        &mut self,
+    ) -> anyhow::Result<HexDirectionMap<Meter3>> {
+        let distribution =
+            self.runoff_pattern()?.distribute_exits(self.runoff()?);
+
+        // If we have anywhere to distribute (i.e. if this tile isn't a
+        // terminal), then clear our runoff and count it as egress
+        if !distribution.is_empty() {
+            self.runoff = Some(Meter3(0.0));
+
+            // Track each outgoing chunk of runoff as egress
+            for (dir, runoff) in distribution.iter() {
+                *self.runoff_traversed.entry(*dir).or_default() -= *runoff;
+            }
+        }
+
+        Ok(distribution)
+    }
+
     /// Reset the runoff on this tile to 0 and return whatever amount was here.
     /// Returns an error if runoff is unset.
     pub fn clear_runoff(&mut self) -> anyhow::Result<Meter3> {
@@ -286,22 +339,9 @@ impl TileBuilder {
         Ok(runoff)
     }
 
-    /// See [Tile::runoff_egress]. Returns an error if runoff_egress is unset.
-    pub fn runoff_egress(
-        &self,
-    ) -> anyhow::Result<&HashMap<HexDirection, Meter3, FnvBuildHasher>> {
-        self.runoff_egress.as_ref().ok_or_else(|| {
-            anyhow!("runoff_egress not initialized for {:?}", self)
-        })
-    }
-
-    /// Set the runoff_egress map, which tells us how much runoff this tile
-    /// pushed out to each of its neighbors.
-    pub fn set_runoff_egress(
-        &mut self,
-        runoff_egress: HashMap<HexDirection, Meter3, FnvBuildHasher>,
-    ) {
-        self.runoff_egress = Some(runoff_egress);
+    /// See [Tile::runoff_traversed].
+    pub fn runoff_traversed(&self) -> &HexDirectionMap<Meter3> {
+        &self.runoff_traversed
     }
 
     /// See [Tile::biome]. Returns an error if biome is unset.

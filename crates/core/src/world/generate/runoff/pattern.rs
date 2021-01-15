@@ -1,5 +1,7 @@
 use crate::{
-    world::hex::{HasHexPosition, HexDirection, HexPoint, HexPointMap},
+    world::hex::{
+        HasHexPosition, HexDirection, HexDirectionMap, HexPoint, HexPointMap,
+    },
     Meter3,
 };
 use fnv::FnvBuildHasher;
@@ -42,7 +44,7 @@ pub struct RunoffPattern {
     /// tile. This map will only include entries for tiles that actually get
     /// some water, and all the values should sum to 1 (unless it's empty). If
     /// this map is empty, the tile is a terminal.
-    exits: HashMap<HexDirection, f64, FnvBuildHasher>,
+    exits: HexDirectionMap<f64>,
 
     /// A map that tracks every tile that runoff passes over after leaving this
     /// tile. This **doesn't** track where the runoff _ends up_ (that's what
@@ -104,10 +106,7 @@ impl RunoffPattern {
     /// receives. The values of the returned map will always sum to 1,
     /// **unless** this tile is a terminal. In that case, it has no exits,
     /// so the returned map will be empty.
-    pub fn distribute_exits(
-        &self,
-        runoff: Meter3,
-    ) -> HashMap<HexDirection, Meter3, FnvBuildHasher> {
+    pub fn distribute_exits(&self, runoff: Meter3) -> HexDirectionMap<Meter3> {
         self.exits
             .iter()
             .map(|(dir, f)| (*dir, runoff * f))

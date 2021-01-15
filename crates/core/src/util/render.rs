@@ -1,8 +1,8 @@
 use crate::NumRange;
 use anyhow::anyhow;
 use derive_more::{
-    Add, AddAssign, Display, Div, DivAssign, From, Into, Mul, MulAssign, Sub,
-    SubAssign, Sum,
+    Add, AddAssign, Display, Div, DivAssign, From, Into, Mul, MulAssign, Neg,
+    Sub, SubAssign, Sum,
 };
 use std::ops;
 #[cfg(target_arch = "wasm32")]
@@ -32,6 +32,7 @@ use wasm_bindgen::prelude::*;
     PartialOrd,
     From,
     Into,
+    Neg,
     Add,
     Sub,
     Mul,
@@ -63,6 +64,7 @@ pub struct Point2 {
     PartialOrd,
     From,
     Into,
+    Neg,
     Add,
     Sub,
     Mul,
