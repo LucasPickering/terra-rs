@@ -1,0 +1,23 @@
+# These are the settings we use for the blog post at https://lucaspickering.me/projects/terra
+edge_buffer_exponent = 0.7
+edge_buffer_fraction = 0.25
+radius = 100
+seed = 6419875009622483798
+
+[rainfall]
+evaporation_default = 3.0
+evaporation_land_scale = 0.22
+evaporation_spread_distance = 50
+evaporation_spread_exponent = 0.6
+rainfall_fraction_limit = 0.03
+
+[geo_feature]
+lake_runoff_threshold = 10.0
+river_runoff_traversed_threshold = 250.0
+
+[elevation]
+exponent = 0.9
+frequency = 0.5
+lacunarity = 3.0
+octaves = 3
+persistence = 0.3
