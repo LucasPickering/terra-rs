@@ -16,6 +16,7 @@ use crate::{
 use anyhow::Context;
 use log::{info, Level};
 use serde::{Deserialize, Serialize};
+use strum::EnumString;
 use validator::Validate;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::{prelude::*, JsCast};
@@ -400,7 +401,8 @@ impl HasHexPosition for Tile {
 
 /// A definition of what data is used to compute a tile's color.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, EnumString)]
+#[strum(serialize_all = "snake_case")]
 pub enum TileLens {
     /// Color is based on a combination of biome and geographic features.
     Surface,

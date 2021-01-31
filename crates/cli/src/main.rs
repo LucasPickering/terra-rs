@@ -12,7 +12,7 @@ use std::{
 };
 use structopt::StructOpt;
 use strum::{Display, EnumString};
-use terra::{unwrap_or_bail, World, WorldConfig};
+use terra::{unwrap_or_bail, TileLens, World, WorldConfig};
 
 /// CLI for generating worlds via the Terra generation kit.
 #[derive(Debug, StructOpt)]
@@ -44,9 +44,20 @@ struct Opt {
     #[structopt(short = "f", long)]
     output_formats: Vec<OutputFormat>,
 
+    /// The lens used to determine the color of each tile. Only relevant for
+    /// rendered output formats, such as SVG.
+    // TODO include link to TileLens docs here
+    #[structopt(long, default_value = "surface")]
+    lens: TileLens,
+
+    /// Hide geographic features such as rivers, lakes, etc? Only relevant for
+    /// rendered output formats, such as SVG.
+    #[structopt(long)]
+    hide_features: bool,
+
     /// The logging level to use during world generation. See
     /// https://docs.rs/log/0.4.11/log/enum.LevelFilter.html for options
-    #[structopt(short, long, default_value = "info")]
+    #[structopt(long, default_value = "info")]
     log_level: LevelFilter,
 }
 
@@ -77,6 +88,13 @@ impl OutputFormat {
     }
 }
 
+/// Options to configure rendered output formats.
+#[derive(Copy, Clone, Debug)]
+pub struct RenderOptions {
+    lens: TileLens,
+    show_features: bool,
+}
+
 fn load_config(config_path: &Path) -> anyhow::Result<WorldConfig> {
     // Load config
     let mut settings = Config::new();
@@ -95,6 +113,7 @@ fn gen_output(
     output_dir: &Path,
     output_format: OutputFormat,
     world: &World,
+    render_options: RenderOptions,
 ) -> anyhow::Result<()> {
     let output_file_path = output_dir
         .join("world")
@@ -133,7 +152,7 @@ fn gen_output(
         }
         OutputFormat::Svg => {
             // Render the world in 2D
-            let doc = svg::draw_world(world);
+            let doc = svg::draw_world(world, render_options);
             ::svg::save(&output_file_path, &doc).context("error saving svg")?;
         }
     }
@@ -185,8 +204,12 @@ fn run(opt: Opt) -> anyhow::Result<()> {
             bail!("output dir was specified, but no output formats were given")
         }
         fs::create_dir_all(&output_dir)?;
+        let render_options = RenderOptions {
+            lens: opt.lens,
+            show_features: !opt.hide_features,
+        };
         for output_format in opt.output_formats {
-            gen_output(&output_dir, output_format, &world)?;
+            gen_output(&output_dir, output_format, &world, render_options)?;
         }
     }
 
