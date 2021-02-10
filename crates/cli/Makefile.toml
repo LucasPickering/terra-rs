@@ -1,0 +1,10 @@
+[tasks.serve]
+script = "python3 -m http.server 3000 --directory ${@}"
+
+[tasks.svg]
+script = [
+  '''
+world_dir=./world/
+cargo watch -w . -w ../core -i $world_dir -x "run -- -o $world_dir -f svg ${@}"
+''',
+]

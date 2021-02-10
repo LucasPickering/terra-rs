@@ -1,0 +1,21 @@
+[package]
+authors = ["Lucas Pickering <lucas@lucaspickering.me>"]
+description = "WebAssembly bindings for the Terra core crate"
+edition = "2018"
+license = "MIT"
+name = "terra-wasm"
+repository = "https://github.com/LucasPickering/terra-rs"
+version = "0.1.0"
+[package.metadata.wasm-pack.profile.dev]
+wasm-opt = ['-O4', '-g']
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+console_error_panic_hook = "0.1"
+log = "0.4"
+serde-wasm-bindgen = "0.1"
+terra = {path = "../core"}
+wasm-bindgen = {version = "0.2"}
+wasm-logger = "0.2"
