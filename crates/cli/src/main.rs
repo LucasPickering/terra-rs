@@ -12,7 +12,7 @@ use std::{
 };
 use structopt::StructOpt;
 use strum::{Display, EnumString};
-use terra::{unwrap_or_bail, TileLens, World, WorldConfig};
+use terra::{timed, unwrap_or_bail, TileLens, World, WorldConfig};
 
 /// CLI for generating worlds via the Terra generation kit.
 #[derive(Debug, StructOpt)]
@@ -115,48 +115,55 @@ fn gen_output(
     world: &World,
     render_options: RenderOptions,
 ) -> anyhow::Result<()> {
+    fn generate_bytes(
+        output_format: OutputFormat,
+        world: &World,
+        render_options: RenderOptions,
+    ) -> anyhow::Result<Vec<u8>> {
+        match output_format {
+            OutputFormat::Bin => {
+                // Serialize the entire world via msgpack
+                rmp_serde::to_vec(&world).context("error serializing world")
+            }
+            OutputFormat::Cfg => {
+                // Serialize just the world config via toml
+                let cfg_string = toml::to_string_pretty(world.config())
+                    .context("error serializing config")?;
+                Ok(cfg_string.into_bytes())
+            }
+            OutputFormat::Svg => {
+                // Render the world in 2D
+                let doc = svg::draw_world(world, render_options);
+                Ok(doc.to_string().into_bytes())
+            }
+        }
+    }
+
     let output_file_path = output_dir
         .join("world")
         .with_extension(output_format.file_ext());
 
-    match output_format {
-        OutputFormat::Bin => {
-            // Serialize the entire world via msgpack
-            let world_bytes =
-                rmp_serde::to_vec(&world).context("error serializing world")?;
+    timed!(
+        format!(
+            "Generating {} output and writing to {:?}",
+            output_format, &output_file_path
+        ),
+        log::Level::Info,
+        {
+            let bytes = generate_bytes(output_format, world, render_options)?;
             let mut file = OpenOptions::new()
                 .write(true)
                 .create(true)
+                .truncate(true)
                 .open(&output_file_path)
                 .with_context(|| {
                     format!("error opening output file {:?}", &output_file_path)
                 })?;
-            file.write_all(&world_bytes).with_context(|| {
-                format!("error writing world to file {:?}", &output_file_path)
+            file.write_all(&bytes).with_context(|| {
+                format!("error writing to file {:?}", &output_file_path)
             })?;
         }
-        OutputFormat::Cfg => {
-            // Serialize just the world config via toml
-            let cfg_string = toml::to_string_pretty(world.config())
-                .context("error serializing config")?;
-            let mut file = OpenOptions::new()
-                .write(true)
-                .create(true)
-                .open(&output_file_path)
-                .with_context(|| {
-                    format!("error opening output file {:?}", &output_file_path)
-                })?;
-            file.write_all(cfg_string.as_bytes()).with_context(|| {
-                format!("error writing config to file {:?}", &output_file_path)
-            })?;
-        }
-        OutputFormat::Svg => {
-            // Render the world in 2D
-            let doc = svg::draw_world(world, render_options);
-            ::svg::save(&output_file_path, &doc).context("error saving svg")?;
-        }
-    }
-    info!("Saved {} output to {:?}", output_format, &output_file_path);
+    );
 
     Ok(())
 }
