@@ -1,4 +1,4 @@
-name: Lint, Test, Build, and Deploy
+name: Lint and Test
 
 on:
   push:
@@ -7,8 +7,27 @@ on:
   pull_request:
 
 jobs:
+  fmt:
+    name: "Rustfmt"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Cache cargo files
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-fmt-${{ hashFiles('rust-toolchain') }}
+      - name: Rustfmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
+
+  # This also covers linting because lints are handled through the compiler
   test:
-    name: "Clippy, Rustfmt, & Tests"
+    name: "Tests"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
@@ -20,59 +39,67 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
-      - name: Install dependencies
-        run: |
-          rustup component add rustfmt clippy
-      - name: Rustfmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -- --check
-      - name: Check
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all-features --all-targets
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
           command: test
 
-  build-and-deploy-ts:
-    name: "Build TS app, & Deploy if on master"
+  build-demo:
+    name: "Build TS demo"
     runs-on: ubuntu-latest
-    needs:
-      - test
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-        with:
-          persist-credentials: false
 
-      - name: Cache cargo & npm files
+      # Caching
+      - name: Cache cargo files
         uses: actions/cache@v2
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
-            typescript/node_modules
-          key: ${{ runner.os }}-cargo-wasm-${{ hashFiles('Cargo.lock', 'typescript/package-lock.json') }}
+          key: ${{ runner.os }}-cargo-wasm-${{ hashFiles('Cargo.lock') }}
+      - name: Cache npm files
+        uses: actions/cache@v2
+        with:
+          path: typescript/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('typescript/package-lock.json') }}
 
-      - name: Install Toolchain
+      - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build
         run: |
           cd typescript
-          npm install
+          npm ci
           npm run build
 
-      - name: Deploy
+      - name: Archive build
         if: github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v2
+        with:
+          name: demo-build
+          path: typescript/dist
+
+  # Deploy only on master
+  deploy-demo:
+    name: "Deploy demo"
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    needs:
+      - build-demo
+    steps:
+      - name: Download build artifact
+        id: download
+        uses: actions/download-artifact@v2
+        with:
+          name: demo-build
+
+      - name: Deploy
         uses: JamesIves/github-pages-deploy-action@3.7.1
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: gh-pages
-          FOLDER: typescript/dist
+          FOLDER: ${{ steps.download.outputs.download-path }}
           CLEAN: true
