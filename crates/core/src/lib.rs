@@ -25,10 +25,11 @@ mod world;
 
 pub use crate::{
     config::{GeoFeatureConfig, NoiseFnConfig, RainfallConfig, WorldConfig},
-    util::{Color3, Meter, Meter2, Meter3, NumRange, RangeValue},
+    util::{Color3, Meter, Meter2, Meter3, NumRange, Point2, RangeValue},
     world::{
         hex::{
-            HasHexPosition, HexAxialDirection, HexAxis, HexDirection, HexPoint,
+            HasHexPosition, HexAxialDirection, HexAxis, HexDirection,
+            HexDirectionMap, HexPoint, HexPointMap,
         },
         Biome, BiomeType, GeoFeature, Tile, TileLens, World,
     },

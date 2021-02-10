@@ -199,6 +199,29 @@ impl HexDirection {
         }
     }
 
+    /// Get a pair of [HexAxialDirection]s that denote the endpoints of a side
+    /// of a tile. The direction defines which side we're talking about, then
+    /// the directions define the vertices relative to the center of the tile.
+    /// These will always been returned in clockwise order.
+    pub fn endpoints(self) -> (HexAxialDirection, HexAxialDirection) {
+        match self {
+            Self::Up => (HexAxialDirection::Y_POS, HexAxialDirection::Z_NEG),
+            Self::UpRight => {
+                (HexAxialDirection::Z_NEG, HexAxialDirection::X_POS)
+            }
+            Self::DownRight => {
+                (HexAxialDirection::X_POS, HexAxialDirection::Y_NEG)
+            }
+            Self::Down => (HexAxialDirection::Y_NEG, HexAxialDirection::Z_POS),
+            Self::DownLeft => {
+                (HexAxialDirection::Z_POS, HexAxialDirection::X_NEG)
+            }
+            Self::UpLeft => {
+                (HexAxialDirection::X_NEG, HexAxialDirection::Y_POS)
+            }
+        }
+    }
+
     /// Get an vector offset that would move a point one tile in this direction
     pub fn to_vector(self) -> HexVector {
         match self {
@@ -252,7 +275,7 @@ impl HexDirection {
 ///
 /// See this page for more info (we use "flat topped" tiles):
 /// https://www.redblobgames.com/grids/hexagons/#coordinates-cube
-#[derive(Copy, Clone, Debug, EnumIter)]
+#[derive(Copy, Clone, Debug, EnumIter, PartialEq, Eq, Hash)]
 pub enum HexAxis {
     X,
     Y,
@@ -267,40 +290,57 @@ pub enum HexAxis {
 ///
 /// See this page for more info (we use "flat topped" tiles):
 /// https://www.redblobgames.com/grids/hexagons/#coordinates-cube
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct HexAxialDirection {
     pub axis: HexAxis,
     pub positive: bool,
 }
 
 impl HexAxialDirection {
+    pub const X_NEG: Self = Self {
+        axis: HexAxis::X,
+        positive: false,
+    };
+    pub const X_POS: Self = Self {
+        axis: HexAxis::X,
+        positive: true,
+    };
+    pub const Y_NEG: Self = Self {
+        axis: HexAxis::Y,
+        positive: false,
+    };
+    pub const Y_POS: Self = Self {
+        axis: HexAxis::Y,
+        positive: true,
+    };
+    pub const Z_NEG: Self = Self {
+        axis: HexAxis::Z,
+        positive: false,
+    };
+    pub const Z_POS: Self = Self {
+        axis: HexAxis::Z,
+        positive: true,
+    };
+
     /// A list of all hex axial directions. Starts with the negative x (which
     /// is due left of the origin), then goes around clockwise from there.
     pub const ALL: &'static [Self] = &[
-        Self {
-            axis: HexAxis::X,
-            positive: false,
-        },
-        Self {
-            axis: HexAxis::Y,
-            positive: true,
-        },
-        Self {
-            axis: HexAxis::Z,
-            positive: false,
-        },
-        Self {
-            axis: HexAxis::X,
-            positive: true,
-        },
-        Self {
-            axis: HexAxis::Y,
-            positive: false,
-        },
-        Self {
-            axis: HexAxis::Z,
-            positive: true,
-        },
+        Self::X_NEG,
+        Self::X_POS,
+        Self::Y_NEG,
+        Self::Y_POS,
+        Self::Z_NEG,
+        Self::Z_POS,
+    ];
+    /// List of all hex axial directions, in clockwise order starting from the
+    /// top-left vertex of a tile.
+    pub const CLOCKWISE: &'static [Self] = &[
+        Self::Y_POS,
+        Self::Z_NEG,
+        Self::X_POS,
+        Self::Y_NEG,
+        Self::Z_POS,
+        Self::X_NEG,
     ];
 
     pub fn signum(self) -> i16 {
