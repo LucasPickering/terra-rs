@@ -35,11 +35,21 @@ use wasm_bindgen::prelude::*;
 #[display(fmt = "{} m", "self.0")]
 pub struct Meter(pub f64);
 
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+impl Meter {
+    #[wasm_bindgen(constructor)]
+    pub fn new(value: f64) -> Self {
+        Self(value)
+    }
+}
+
 /// Unit used for tile area. One tile has a top surface area of 1m^2.
 ///
 /// **Note:** Tiles may not actually be rendered such that the area is exactly
 /// 1m^2 with reference to the elevation, but that's fine. This is just a nice
 /// simplification that makes math easier.
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(
     Copy,
     Clone,
@@ -65,6 +75,15 @@ pub struct Meter(pub f64);
 )]
 #[display(fmt = "{} m²", "self.0")]
 pub struct Meter2(pub f64);
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+impl Meter2 {
+    #[wasm_bindgen(constructor)]
+    pub fn new(value: f64) -> Self {
+        Self(value)
+    }
+}
 
 /// Unit used for liquid volume. One meter of runoff on a single tile equals
 /// 1 volumetric meter. See caveat on [Meter2], this may not actually appear
@@ -96,6 +115,15 @@ pub struct Meter2(pub f64);
 )]
 #[display(fmt = "{} m³", "self.0")]
 pub struct Meter3(pub f64);
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+impl Meter3 {
+    #[wasm_bindgen(constructor)]
+    pub fn new(value: f64) -> Self {
+        Self(value)
+    }
+}
 
 // 1m * 1m^2 = 1m^3
 impl ops::Mul<Meter> for Meter2 {

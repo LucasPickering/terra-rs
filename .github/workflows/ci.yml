@@ -45,7 +45,7 @@ jobs:
           command: test
 
   build-demo:
-    name: "Build TS demo"
+    name: "Build demo"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -63,24 +63,26 @@ jobs:
       - name: Cache npm files
         uses: actions/cache@v2
         with:
-          path: typescript/node_modules
-          key: ${{ runner.os }}-npm-${{ hashFiles('typescript/package-lock.json') }}
+          path: demo/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('demo/package-lock.json') }}
 
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
+      - name: Install npm dependencies
+        working-directory: demo
+        run: npm install
+
       - name: Build
-        run: |
-          cd typescript
-          npm ci
-          npm run build
+        working-directory: demo
+        run: npm run build
 
       - name: Archive build
         if: github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v2
         with:
           name: demo-build
-          path: typescript/dist
+          path: demo/dist
 
   # Deploy only on master
   deploy-demo:

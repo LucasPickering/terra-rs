@@ -1,5 +1,7 @@
 build/
 node_modules/
-static/
+public/
 .eslintrc.js
 webpack.config.js
+*.d.ts
+!declarations.d.ts

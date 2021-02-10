@@ -1,11 +1,9 @@
 import { KeyboardEventTypes, KeyboardInfo } from "@babylonjs/core";
 import { assertUnreachable } from "../util";
 import WorldScene from "./WorldScene";
-const config = await import("../input.json");
-const { TileLens } = await import("../wasm");
+const { TileLens } = await import("terra-wasm");
 
 const INPUT_ACTIONS = [
-  "pause",
   "toggleDebugOverlay",
   "lensSurface",
   "lensBiome",
@@ -30,7 +28,6 @@ function isInputAction(s: string): s is InputAction {
 
 const DEFAULT_INPUT_CONFIG: InputConfig = {
   bindings: {
-    pause: "ESCAPE",
     toggleDebugOverlay: "`",
     lensSurface: "1",
     lensBiome: "2",
@@ -46,14 +43,7 @@ class InputHandler {
   private scene: WorldScene;
 
   constructor(scene: WorldScene) {
-    this.config = {
-      ...DEFAULT_INPUT_CONFIG,
-      ...config,
-      bindings: {
-        ...DEFAULT_INPUT_CONFIG.bindings,
-        ...config?.bindings,
-      },
-    };
+    this.config = DEFAULT_INPUT_CONFIG;
     this.scene = scene;
 
     this.keyToEvent = new Map();
@@ -81,9 +71,6 @@ class InputHandler {
 
   private handleAction(action: InputAction): void {
     switch (action) {
-      case "pause":
-        this.scene.setPaused(true);
-        break;
       case "toggleDebugOverlay":
         this.scene.toggleDebugOverlay();
         break;

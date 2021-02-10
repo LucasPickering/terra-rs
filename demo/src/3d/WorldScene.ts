@@ -7,12 +7,9 @@ import {
 } from "@babylonjs/core";
 import WorldRenderer from "./WorldRenderer";
 import InputHandler from "./InputHandler";
-import type { Terra, TileLens, World } from "../wasm";
-import PauseMenu from "./PauseMenu";
-
-// We'll let Rust enforce the correct type here
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const config: any = await import("../world.json");
+import type { Terra, TileLens, World } from "terra-wasm";
+import { hexCodeToColor4 } from "../util";
+import theme from "../theme";
 
 export interface NoiseFnConfig {
   octaves: number;
@@ -24,6 +21,8 @@ export interface NoiseFnConfig {
 function initScene(engine: Engine): Scene {
   // Init world scene
   const scene = new Scene(engine);
+  // consistency!
+  scene.clearColor = hexCodeToColor4(theme().palette.background.default);
   // do a bunch of shit to make it go zoomer fast
   // (doesn't actually make much of a difference)
   scene.animationsEnabled = false;
@@ -55,50 +54,20 @@ function initScene(engine: Engine): Scene {
   return scene;
 }
 
-function getWorldConfig(): Record<string, unknown> {
-  const queryParams = new URLSearchParams(window.location.search);
-
-  const cfg = {
-    // bullshit here to pick a random seed if we don't have one
-    seed: Math.round(Math.random() * Number.MAX_SAFE_INTEGER),
-    ...config,
-  };
-
-  // This is shitty but it works for now
-  const addQueryParam = (param: string): void => {
-    const val = queryParams.get(param);
-    const parsed = parseInt(val ?? "", 10);
-    if (Number.isFinite(parsed)) {
-      cfg[param] = parsed;
-    }
-  };
-
-  addQueryParam("seed");
-  addQueryParam("radius");
-
-  return cfg;
-}
-
 /**
- * The scene that handles everything in-game
+ * The scene that handles everything in-game. Config is an unknown type so we
+ * can let Rust handle validation etc.
  */
 class WorldScene {
-  private terra: Terra;
   private inputHandler: InputHandler;
   private scene: Scene;
-  private pauseMenu: PauseMenu;
-  private paused: boolean;
-  private world: World;
   private worldRenderer: WorldRenderer;
 
-  constructor(terra: Terra, engine: Engine) {
-    this.terra = terra;
+  constructor(terra: Terra, engine: Engine, world: World) {
     // Init world scene
     this.scene = initScene(engine);
 
-    // Generate the world
-    this.world = this.terra.generate_world(getWorldConfig());
-    this.worldRenderer = new WorldRenderer(this.scene, this.world);
+    this.worldRenderer = new WorldRenderer(terra, this.scene, world);
     this.scene.freezeActiveMeshes();
 
     this.inputHandler = new InputHandler(this);
@@ -106,14 +75,6 @@ class WorldScene {
     this.scene.onKeyboardObservable.add((kbInfo) =>
       this.inputHandler.handleKeyEvent(kbInfo)
     );
-
-    // Init pause menu
-    this.pauseMenu = new PauseMenu(engine, this);
-    this.paused = false;
-  }
-
-  setPaused(paused: boolean): void {
-    this.paused = paused;
   }
 
   toggleDebugOverlay(): void {
@@ -129,11 +90,7 @@ class WorldScene {
   }
 
   render(): void {
-    if (this.paused) {
-      this.pauseMenu.render();
-    } else {
-      this.scene.render();
-    }
+    this.scene.render();
   }
 }
 
