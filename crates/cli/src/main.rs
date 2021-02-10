@@ -1,3 +1,4 @@
+mod stl;
 mod svg;
 
 use anyhow::{bail, Context};
@@ -41,6 +42,8 @@ struct Opt {
     /// cfg - The full config object used for the world, in TOML format
     ///
     /// svg - 2D rendering of the world
+    ///
+    /// stl - 3D rendering of the world
     #[structopt(short = "f", long)]
     output_formats: Vec<OutputFormat>,
 
@@ -74,6 +77,8 @@ enum OutputFormat {
     Cfg,
     /// Render the world as a 2D SVG
     Svg,
+    /// Render the world as a 3D STL
+    Stl,
     /* If you change this, make sure to update the help text for
      * `--output-formats`! */
 }
@@ -84,6 +89,7 @@ impl OutputFormat {
             Self::Bin => "bin",
             Self::Cfg => "toml",
             Self::Svg => "svg",
+            Self::Stl => "stl",
         }
     }
 }
@@ -135,6 +141,14 @@ fn gen_output(
                 // Render the world in 2D
                 let doc = svg::draw_world(world, render_options);
                 Ok(doc.to_string().into_bytes())
+            }
+            OutputFormat::Stl => {
+                // Render the world in 3D
+                let mesh = stl::draw_world(world, render_options);
+                let mut buffer = Vec::<u8>::new();
+                stl_io::write_stl(&mut buffer, mesh.iter())
+                    .context("error serializing STL")?;
+                Ok(buffer)
             }
         }
     }
