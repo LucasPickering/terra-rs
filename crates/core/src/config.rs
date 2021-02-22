@@ -1,13 +1,34 @@
 use crate::Meter3;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
 
 /// Configuration that defines a world gen process. Two worlds generated with
 /// same config will always be identical.
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
 #[serde(default)]
 pub struct WorldConfig {
     /// RNG seed to use for all randomized processes during world gen.
+    ///
+    /// When deserializing a config, this field supports a few options:
+    /// - If the value is an integer that fits into `u64`, use that value
+    /// - If it's a string that can be parsed into a `u64`, use the parsed
+    ///   value
+    /// - If it's_any other string, hash it and use the hash value
+    /// - If it's anything else (out of range number, float, array, etc.),
+    ///   error
+    ///
+    /// **Note:** It seems that some serde implementations (including
+    /// serde_json) will be overzealous and accidentally support additional
+    /// data types here. E.g. if you pass a bool, it will stringify it then
+    /// hash the string. Don't consider that supported behavior, just a
+    /// bug.
+    ///
+    /// Regardless of how the seed value is input, it will always be serialized
+    /// as a number.
+    #[serde(deserialize_with = "serde_seed::deserialize")]
     pub seed: u64,
 
     /// Distance from the center of the world to the edge (in tiles).
@@ -44,6 +65,7 @@ pub struct WorldConfig {
 /// Configuration related to rainfall and evaporation simulation. These params
 /// control how rainfall is generated for the world, which in turn has a major
 /// impact on runoff and feature generation.
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
 #[serde(default)]
 pub struct RainfallConfig {
@@ -86,6 +108,7 @@ pub struct RainfallConfig {
 
 /// Configuration surrounding how geographic features are generated. See
 /// [GeoFeature](crate::GeoFeature) for more info.
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
 #[serde(default)]
 pub struct GeoFeatureConfig {
@@ -107,6 +130,7 @@ pub struct GeoFeatureConfig {
 /// https://crates.io/crates/noise for noise generation. This type is generic,
 /// i.e. not specific to a particular noise function, so as such it has no
 /// default implementation.
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
 pub struct NoiseFnConfig {
     /// Number of different frequencies to add together. We can use multiple
@@ -168,7 +192,7 @@ impl Default for RainfallConfig {
     fn default() -> Self {
         Self {
             evaporation_default: Meter3(3.0),
-            evaporation_land_scale: 0.22,
+            evaporation_land_scale: 0.2,
             evaporation_spread_distance: 50,
             evaporation_spread_exponent: 0.6,
             rainfall_fraction_limit: 0.03,
@@ -182,5 +206,76 @@ impl Default for GeoFeatureConfig {
             lake_runoff_threshold: Meter3(10.0),
             river_runoff_traversed_threshold: Meter3(100.0),
         }
+    }
+}
+
+/// The seed field has some fancy deserialization behavior implemented here. See
+/// the `seed` field definition for a description.
+mod serde_seed {
+    use fnv::FnvHasher;
+    use serde::{de::Visitor, Deserializer};
+    use std::{
+        convert::TryInto,
+        fmt,
+        hash::{Hash, Hasher},
+    };
+
+    /// Macro to make it easier to implement visit logic for different types
+    macro_rules! impl_visit {
+        ($fname:ident, $type:ty) => {
+            fn $fname<E>(self, value: $type) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                value.try_into().map_err(|_| {
+                    E::custom(format!("u64 out of range: {}", value))
+                })
+            }
+        };
+    }
+
+    struct SeedVisitor;
+
+    impl<'de> Visitor<'de> for SeedVisitor {
+        type Value = u64;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("an integer or string")
+        }
+
+        // yay for metaprogramming
+        impl_visit!(visit_u8, u8);
+        impl_visit!(visit_u16, u16);
+        impl_visit!(visit_u32, u32);
+        impl_visit!(visit_u64, u64);
+        impl_visit!(visit_u128, u128);
+        impl_visit!(visit_i8, i8);
+        impl_visit!(visit_i16, i16);
+        impl_visit!(visit_i32, i32);
+        impl_visit!(visit_i64, i64);
+        impl_visit!(visit_i128, i128);
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            match value.parse::<u64>() {
+                Ok(seed) => Ok(seed),
+                Err(_) => {
+                    let mut hasher = FnvHasher::default();
+                    value.hash(&mut hasher);
+                    Ok(hasher.finish())
+                }
+            }
+        }
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<u64, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // We can deserialize from a bunch of different types so we can't give
+        // a type hint here
+        deserializer.deserialize_any(SeedVisitor)
     }
 }

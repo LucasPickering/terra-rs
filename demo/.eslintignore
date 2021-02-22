@@ -1,0 +1,7 @@
+build/
+node_modules/
+public/
+.eslintrc.js
+webpack.config.js
+*.d.ts
+!declarations.d.ts

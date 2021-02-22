@@ -14,12 +14,12 @@ use crate::{
     WorldConfig,
 };
 use anyhow::Context;
-use log::{info, Level};
+use log::info;
 use serde::{Deserialize, Serialize};
 use strum::EnumString;
 use validator::Validate;
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen::{prelude::*, JsCast};
+use wasm_bindgen::prelude::*;
 
 /// High-level categories for biomes: land or water?
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -150,31 +150,13 @@ impl World {
 
         let tiles = timed!(
             "World generation",
-            Level::Info,
+            log::Level::Info,
             WorldBuilder::new(config)
                 .generate_world()
                 .context("error during world validation")?
         );
 
         Ok(Self { config, tiles })
-    }
-}
-
-// Wasm-only functions
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-impl World {
-    /// A type-hacked accessor to get all tiles in the world from Wasm. This
-    /// typing can be cleaned up after https://github.com/rustwasm/wasm-bindgen/issues/111
-    #[wasm_bindgen]
-    pub fn wasm_tiles(self) -> TileArray {
-        use js_sys::Array;
-
-        self.tiles
-            .into_values()
-            .map(JsValue::from)
-            .collect::<Array>()
-            .unchecked_into()
     }
 }
 
@@ -415,16 +397,4 @@ pub enum TileLens {
     Humidity,
     /// Color is based on a combination of runoff and total runoff egress.
     Runoff,
-}
-
-// Types that we can't natively return. These are assigned TS types, but
-// these types aren't actually verified by the compiler. Be careful
-// here!
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-
-    /// Type hack needed until https://github.com/rustwasm/wasm-bindgen/issues/111
-    #[wasm_bindgen(typescript_type = "Tile[]")]
-    pub type TileArray;
 }

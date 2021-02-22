@@ -2,11 +2,11 @@
 
 **Try it out! [terra.lucaspickering.me](https://terra.lucaspickering.me)**
 
-Hexagon tile-based terrain generation system. I originally wrote this in Java ([here](https://github.com/LucasPickering/terra)), but decided to re-write it in Rust here. This version isn't as advanced as the Java one, but I'm working on it.
+Hexagon tile-based terrain generation system. A series of configurable algorithsm can generated varied and realistic terrain.
 
-For reference, here's what the Java version looks like:
+## Usage
 
-![Terra screenshot](/screenshots/java.jpg?raw=true "Terra Java")
+Want to use Terra? It has a native Rust interface, as well as a WebAssembly interface. View the code in `demo/` for an example of how to create Terra configs and generate worlds from Wasm.
 
 ## Development
 
@@ -16,11 +16,12 @@ For reference, here's what the Java version looks like:
 - [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
 - [npm](https://www.npmjs.com/get-npm)
 
-### Starting the App
+### Running the Demo
+
+There is a minimal in-browser demo that's very useful for development.
 
 ```sh
-rustup target add wasm32-unknown-unknown
-cd typescript
+cd demo
 npm install
 npm run start
 ```

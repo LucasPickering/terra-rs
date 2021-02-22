@@ -34,3 +34,4 @@ pub use crate::{
         Biome, BiomeType, GeoFeature, Tile, TileLens, World,
     },
 };
+pub use validator;
