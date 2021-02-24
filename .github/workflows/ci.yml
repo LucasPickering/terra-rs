@@ -63,7 +63,9 @@ jobs:
       - name: Cache npm files
         uses: actions/cache@v2
         with:
-          path: demo/node_modules
+          path: |
+            demo/node_modules
+            !demo/node_modules/terra-wasm
           key: ${{ runner.os }}-npm-${{ hashFiles('demo/package-lock.json') }}
 
       - name: Install wasm-pack
