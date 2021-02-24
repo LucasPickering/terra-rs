@@ -139,16 +139,13 @@ fn gen_output(
             }
             OutputFormat::Svg => {
                 // Render the world in 2D
-                let doc = svg::draw_world(world, render_options);
-                Ok(doc.to_string().into_bytes())
+                Ok(world
+                    .to_svg(render_options.lens, render_options.show_features)
+                    .into_bytes())
             }
             OutputFormat::Stl => {
                 // Render the world in 3D
-                let mesh = stl::draw_world(world, render_options);
-                let mut buffer = Vec::<u8>::new();
-                stl_io::write_stl(&mut buffer, mesh.iter())
-                    .context("error serializing STL")?;
-                Ok(buffer)
+                world.to_stl()
             }
         }
     }

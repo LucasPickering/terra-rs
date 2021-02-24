@@ -1,20 +1,25 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
+import { saveAs } from "file-saver";
 import WorldDemo from "3d/WorldDemo";
 import {
   IconButton,
   CircularProgress,
   makeStyles,
   Paper,
+  Menu,
+  MenuItem,
 } from "@material-ui/core";
 import {
   Edit as IconEdit,
   Close as IconClose,
   ArrowBack as IconArrowBack,
+  GetApp as IconGetApp,
 } from "@material-ui/icons";
 import DemoContext from "context/DemoContext";
 import { Location } from "history";
 import ConfigEditor from "./ConfigEditor";
 import UnstyledLink from "../UnstyledLink";
+const { TileLens } = await import("terra-wasm");
 
 const useStyles = makeStyles(({ spacing }) => ({
   loading: {
@@ -54,8 +59,10 @@ const WorldCanvas: React.FC = () => {
   const { terra, world, generateWorld } = useContext(DemoContext);
   const classes = useStyles();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const downloadMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const worldDemoRef = useRef<WorldDemo | undefined>();
   const [configOpen, setConfigOpen] = useState<boolean>(false);
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState<boolean>(false);
 
   // If we ever hit this page with no world present, then generate one
   useEffect(() => {
@@ -88,7 +95,7 @@ const WorldCanvas: React.FC = () => {
     }
   }, [terra, world]);
 
-  if (world === "generating") {
+  if (!world || world === "generating") {
     return <CircularProgress className={classes.loading} size="10rem" />;
   }
 
@@ -112,6 +119,39 @@ const WorldCanvas: React.FC = () => {
           >
             {configOpen ? <IconClose /> : <IconEdit />}
           </IconButton>
+          <IconButton
+            ref={downloadMenuButtonRef}
+            aria-controls="download-menu"
+            aria-haspopup="true"
+            onClick={() => setDownloadMenuOpen(true)}
+          >
+            <IconGetApp />
+          </IconButton>
+          <Menu
+            id="download-menu"
+            anchorEl={downloadMenuButtonRef.current}
+            open={downloadMenuOpen}
+            getContentAnchorEl={null}
+            anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+            onClose={() => setDownloadMenuOpen(false)}
+          >
+            <MenuItem
+              onClick={() => {
+                const svg = world.to_svg(TileLens.Biome, true);
+                saveAs(new Blob([svg]), "terra.svg");
+              }}
+            >
+              Download as SVG
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                const bytes = world.to_stl();
+                saveAs(new Blob([bytes]), "terra.stl");
+              }}
+            >
+              Download as STL
+            </MenuItem>
+          </Menu>
         </div>
         {configOpen && (
           <Paper className={classes.configOverlay}>
