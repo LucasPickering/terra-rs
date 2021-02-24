@@ -54,6 +54,7 @@ const WorldCanvas: React.FC = () => {
   const { terra, world, generateWorld } = useContext(DemoContext);
   const classes = useStyles();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const worldDemoRef = useRef<WorldDemo | undefined>();
   const [configOpen, setConfigOpen] = useState<boolean>(false);
 
   // If we ever hit this page with no world present, then generate one
@@ -66,11 +67,26 @@ const WorldCanvas: React.FC = () => {
   }, [world]);
 
   useEffect(() => {
-    if (canvasRef.current && world && world !== "generating") {
-      // World is ready, render it
-      new WorldDemo(canvasRef.current, terra, world);
+    // If we have a demo rendered but the world is gone, dump the render
+    if (
+      (world === undefined || world === "generating") &&
+      worldDemoRef.current
+    ) {
+      worldDemoRef.current.dispose();
+      worldDemoRef.current = undefined;
     }
-  }, [canvasRef, terra, world]);
+
+    if (canvasRef.current && world && world !== "generating") {
+      // The above check should always dispose of the last render, but this is
+      // just a safety check in case that branch never got called
+      if (worldDemoRef.current) {
+        worldDemoRef.current.dispose();
+      }
+
+      // World is ready, render it.
+      worldDemoRef.current = new WorldDemo(canvasRef.current, terra, world);
+    }
+  }, [terra, world]);
 
   if (world === "generating") {
     return <CircularProgress className={classes.loading} size="10rem" />;
