@@ -1,4 +1,7 @@
-use crate::RenderOptions;
+use crate::{
+    Color3, GeoFeature, HasHexPosition, HexAxialDirection, Tile, TileLens,
+    World,
+};
 use svg::{
     node::{
         element::{Group, Line, Polygon},
@@ -6,14 +9,22 @@ use svg::{
     },
     Document,
 };
-use terra::{
-    Color3, GeoFeature, HasHexPosition, HexAxialDirection, Tile, World,
-};
 
 const RIVER_COLOR: Color3 = Color3::new_int(72, 192, 240);
 
-/// Generate an SVG document for a world
-pub fn draw_world(world: &World, options: RenderOptions) -> Document {
+/// Render a world as an SVG. This will be a 2D top-down rendering, in full
+/// color.
+///
+/// ## Params
+/// - `world` - The world to render
+/// - `lens` - The [TileLens] to use when determining each tile's color
+/// - `show_features` - Should geographic features (lakes, rivers, etc.) be
+///   rendered? See [crate::GeoFeature] for a full list
+pub fn world_to_svg(
+    world: &World,
+    lens: TileLens,
+    show_features: bool,
+) -> Document {
     // Grow the view box based on the world size. The world height will always
     // be the larger size, so scale it based on that. The +1 provides a bit of
     // buffer space
@@ -33,7 +44,7 @@ pub fn draw_world(world: &World, options: RenderOptions) -> Document {
         .add(Comment::new(format!("\n{:#?}\n", world.config())));
 
     for tile in world.tiles().values() {
-        let polygon = draw_tile(tile, options);
+        let polygon = draw_tile(tile, lens, show_features);
         document = document.add(polygon);
     }
 
@@ -41,7 +52,7 @@ pub fn draw_world(world: &World, options: RenderOptions) -> Document {
 }
 
 /// Generate an SVG polygon for a single tile
-fn draw_tile(tile: &Tile, options: RenderOptions) -> Group {
+fn draw_tile(tile: &Tile, lens: TileLens, show_features: bool) -> Group {
     let pos = tile.position();
     let pos2d = pos.to_point2();
 
@@ -61,11 +72,11 @@ fn draw_tile(tile: &Tile, options: RenderOptions) -> Group {
                         })
                         .collect::<Vec<_>>(),
                 )
-                .set("fill", tile.color(options.lens).to_html()),
+                .set("fill", tile.color(lens).to_html()),
         );
 
     // Add overlays for each geo feature
-    if options.show_features {
+    if show_features {
         for feature in tile.features() {
             match feature {
                 GeoFeature::Lake => {} // This is covered by TileLens::Surface

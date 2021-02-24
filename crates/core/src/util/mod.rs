@@ -1,4 +1,8 @@
 mod render;
+#[cfg(feature = "stl")]
+pub mod stl;
+#[cfg(feature = "svg")]
+pub mod svg;
 mod unit;
 
 pub use crate::util::{render::*, unit::*};
