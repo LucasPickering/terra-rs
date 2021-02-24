@@ -1,6 +1,3 @@
-mod stl;
-mod svg;
-
 use anyhow::{bail, Context};
 use config::{Config, File};
 use log::{info, LevelFilter};
@@ -145,7 +142,7 @@ fn gen_output(
             }
             OutputFormat::Stl => {
                 // Render the world in 3D
-                world.to_stl()
+                Ok(world.to_stl())
             }
         }
     }

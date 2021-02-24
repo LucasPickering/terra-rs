@@ -59,14 +59,13 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
+            crates/wasm/pkg
           key: ${{ runner.os }}-cargo-wasm-${{ hashFiles('Cargo.lock') }}
       - name: Cache npm files
         uses: actions/cache@v2
         with:
-          path: |
-            demo/node_modules
-            !demo/node_modules/terra-wasm
-          key: ${{ runner.os }}-npm-${{ hashFiles('demo/package-lock.json') }}
+          path: demo/node_modules
+          key: ${{ runner.os }}-demo-node-modules-${{ hashFiles('demo/package-lock.json') }}
 
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
@@ -92,6 +91,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
     needs:
+      - fmt
+      - test
       - build-demo
     steps:
       - name: Download build artifact
