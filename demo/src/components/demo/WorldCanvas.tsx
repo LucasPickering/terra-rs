@@ -137,8 +137,19 @@ const WorldCanvas: React.FC = () => {
           >
             <MenuItem
               onClick={() => {
+                const bytes = world.to_bin();
+                saveAs(
+                  new Blob([bytes], { type: "application/octet-stream" }),
+                  "terra.bin"
+                );
+              }}
+            >
+              Download as BIN
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
                 const svg = world.to_svg(TileLens.Biome, true);
-                saveAs(new Blob([svg]), "terra.svg");
+                saveAs(new Blob([svg], { type: "image/svg+xml" }), "terra.svg");
               }}
             >
               Download as SVG
@@ -146,7 +157,7 @@ const WorldCanvas: React.FC = () => {
             <MenuItem
               onClick={() => {
                 const bytes = world.to_stl();
-                saveAs(new Blob([bytes]), "terra.stl");
+                saveAs(new Blob([bytes], { type: "model/stl" }), "terra.stl");
               }}
             >
               Download as STL

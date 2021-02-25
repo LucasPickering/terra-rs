@@ -7,7 +7,7 @@ import {
 } from "@babylonjs/core";
 import WorldRenderer from "./WorldRenderer";
 import InputHandler from "./InputHandler";
-import type { Terra, TileLens, World } from "terra-wasm";
+import type { Terra, TileLens, WasmWorld } from "terra-wasm";
 import { hexCodeToColor4 } from "../util";
 import theme from "../theme";
 
@@ -63,7 +63,7 @@ class WorldScene {
   private scene: Scene;
   private worldRenderer: WorldRenderer;
 
-  constructor(terra: Terra, engine: Engine, world: World) {
+  constructor(terra: Terra, engine: Engine, world: WasmWorld) {
     // Init world scene
     this.scene = initScene(engine);
 
