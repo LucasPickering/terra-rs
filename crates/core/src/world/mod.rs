@@ -107,14 +107,14 @@ pub enum GeoFeature {
     },
 }
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+/// A fully generated world. Contains a collection of tiles as well the
+/// configuration that was used to generate this world.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
     config: WorldConfig,
     tiles: HexPointMap<Tile>,
 }
 
-// Non-wasm definitions
 impl World {
     /// All tiles above this elevation are guaranteed to be non-ocean. All tiles
     /// at OR below _could_ be ocean, but the actual chance depends upon the
@@ -159,11 +159,7 @@ impl World {
 
         Ok(Self { config, tiles })
     }
-}
 
-// Wasm definitions
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-impl World {
     /// Render this world as a 2D SVG, from a top-down perspective. Returns the
     /// SVG in a string.
     ///
@@ -173,23 +169,22 @@ impl World {
     /// - `show_features` - Should geographic features (lakes, rivers, etc.) be
     ///   rendered? See [crate::GeoFeature] for a full list
     #[cfg(feature = "svg")]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
     pub fn to_svg(&self, lens: TileLens, show_features: bool) -> String {
         use crate::util;
         util::svg::world_to_svg(self, lens, show_features).to_string()
     }
 
     /// Render this world into an STL model. Return value is the STL binary
-    /// data.
+    /// data. Returns an error if serialization fails, which indicates a bug
+    /// in terra or stl_io.
     #[cfg(feature = "stl")]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-    pub fn to_stl(&self) -> Vec<u8> {
+    pub fn to_stl(&self) -> anyhow::Result<Vec<u8>> {
         use crate::util;
         let mesh = util::stl::world_to_stl(self);
         let mut buffer = Vec::<u8>::new();
         stl_io::write_stl(&mut buffer, mesh.iter())
-            .expect("error serializing STL");
-        buffer
+            .context("error serializing STL")?;
+        Ok(buffer)
     }
 }
 

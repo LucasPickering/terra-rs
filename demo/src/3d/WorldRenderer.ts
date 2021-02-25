@@ -1,5 +1,10 @@
 import { Matrix, Mesh, MeshBuilder, Scene } from "@babylonjs/core";
-import type { TileLens as TileLensType, Tile, World, Terra } from "terra-wasm";
+import type {
+  TileLens as TileLensType,
+  Tile,
+  WasmWorld,
+  Terra,
+} from "terra-wasm";
 const { TileLens } = await import("terra-wasm");
 
 /**
@@ -23,7 +28,7 @@ class WorldRenderer {
   private tiles: Array<[Tile, number]>;
   private tileLens: TileLensType;
 
-  constructor(terra: Terra, scene: Scene, world: World) {
+  constructor(terra: Terra, scene: Scene, world: WasmWorld) {
     // We use "thin instances" here for the tiles cause #performance
     // https://doc.babylonjs.com/divingDeeper/mesh/copies/thinInstances
     // TODO there's a section on that page called "Faster thin instances", use
@@ -43,7 +48,7 @@ class WorldRenderer {
 
     // This call allocates a whole new array, so we store the array instead of
     // the full world object.
-    const tiles = terra.tiles_array(world);
+    const tiles = world.tiles();
 
     this.tiles = tiles.map((tile, i) => {
       // Convert hex coords to pixel coords

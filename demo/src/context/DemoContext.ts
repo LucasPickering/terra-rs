@@ -1,5 +1,5 @@
 import React from "react";
-import type { Terra, WorldConfigObject, World } from "terra-wasm";
+import type { Terra, WorldConfigObject, WasmWorld } from "terra-wasm";
 import { Path } from "../util";
 
 /**
@@ -14,7 +14,7 @@ export interface DemoContextType {
   generateWorldEnabled: boolean;
   setConfigValue: (key: ConfigKey, value: unknown) => void;
   resetConfig: () => void; // Reset to default value
-  world: World | "generating" | undefined;
+  world: WasmWorld | "generating" | undefined;
   generateWorld: (goToWorld: boolean) => void;
 }
 

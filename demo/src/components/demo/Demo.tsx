@@ -5,7 +5,7 @@ import WorldCanvas from "./WorldCanvas";
 import NotFound from "../NotFound";
 import useStaticValue from "hooks/useStaticValue";
 import DemoContext, { ConfigKey } from "context/DemoContext";
-import type { World, WorldConfigObject } from "terra-wasm";
+import type { WasmWorld, WorldConfigObject } from "terra-wasm";
 import useQueryParams from "hooks/useQueryParams";
 import { set } from "../../util";
 const { Terra } = await import("terra-wasm");
@@ -45,7 +45,7 @@ const Demo: React.FC = () => {
     WorldConfigObject | undefined
   >();
 
-  const [world, setWorld] = useState<World | "generating" | undefined>();
+  const [world, setWorld] = useState<WasmWorld | "generating" | undefined>();
   const generateWorld = async (goToWorld: boolean): Promise<void> => {
     setWorld("generating");
     setLastGeneratedConfig(config);
