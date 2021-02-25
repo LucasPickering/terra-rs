@@ -61,11 +61,12 @@ jobs:
             target
             crates/wasm/pkg
           key: ${{ runner.os }}-cargo-wasm-${{ hashFiles('Cargo.lock') }}
-      - name: Cache npm files
-        uses: actions/cache@v2
-        with:
-          path: demo/node_modules
-          key: ${{ runner.os }}-demo-node-modules-${{ hashFiles('demo/package-lock.json') }}
+      # Disabled because of a failure related to the terra-wasm package
+      # - name: Cache npm files
+      #   uses: actions/cache@v2
+      #   with:
+      #     path: demo/node_modules
+      #     key: ${{ runner.os }}-demo-node-modules-${{ hashFiles('demo/package-lock.json') }}
 
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
