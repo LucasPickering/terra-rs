@@ -142,7 +142,7 @@ fn gen_output(
             }
             OutputFormat::Stl => {
                 // Render the world in 3D
-                Ok(world.to_stl())
+                world.to_stl()
             }
         }
     }

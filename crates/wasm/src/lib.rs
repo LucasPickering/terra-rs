@@ -14,7 +14,7 @@
 // wasm32-unknown-unknown as the default target for this crate, and kill this
 #![cfg(target_arch = "wasm32")]
 
-use terra::{validator::Validate, World, WorldConfig};
+use terra::{anyhow, validator::Validate, TileLens, World, WorldConfig};
 use wasm_bindgen::{prelude::*, JsCast};
 
 /// A top-level interface for interacting with Terra from Wasm.
@@ -74,30 +74,45 @@ impl Terra {
     pub fn generate_world(
         &self,
         config: WorldConfig,
-    ) -> Result<World, JsValue> {
-        World::generate(config).map_err(|err| {
-            format!(
-                "Error during world generation: {:?}\n{}\n",
-                err,
-                err.backtrace()
-            )
-            .into()
-        })
+    ) -> Result<WasmWorld, JsValue> {
+        let world = World::generate(config).map_err(to_js_error)?;
+        Ok(WasmWorld(world))
     }
+}
 
-    /// A type-hacked accessor to get all tiles in a world from Wasm. This
-    /// typing can be cleaned up after https://github.com/rustwasm/wasm-bindgen/issues/111
-    #[wasm_bindgen]
-    pub fn tiles_array(&self, world: &World) -> TileArray {
+/// A wrapper around [terra::World] that provides a nice Wasm-friendly API.
+#[wasm_bindgen]
+pub struct WasmWorld(World);
+
+#[wasm_bindgen]
+impl WasmWorld {
+    /// A type-hacked wrapper around [terra::World::tiles]. This typing can be
+    /// cleaned up after https://github.com/rustwasm/wasm-bindgen/issues/111
+    pub fn tiles(&self) -> TileArray {
         use js_sys::Array;
 
-        world
+        self.0
             .tiles()
             .values()
             .map(|tile| JsValue::from(tile.clone()))
             .collect::<Array>()
             .unchecked_into()
     }
+
+    /// See [terra::World::to_svg]
+    pub fn to_svg(&self, lens: TileLens, show_features: bool) -> String {
+        self.0.to_svg(lens, show_features)
+    }
+
+    /// See [terra::World::to_stl]
+    pub fn to_stl(&self) -> Result<Vec<u8>, JsValue> {
+        self.0.to_stl().map_err(to_js_error)
+    }
+}
+
+/// Helper to convert an anyhow error to a JS error value.
+fn to_js_error(error: anyhow::Error) -> JsValue {
+    format!("{:?}\n{}", error, error.backtrace()).into()
 }
 
 #[wasm_bindgen(typescript_custom_section)]
