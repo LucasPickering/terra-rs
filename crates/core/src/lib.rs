@@ -13,6 +13,13 @@
 //! ```
 //!
 //! See [WorldConfig] for details on how the world generation can be customized.
+//!
+//! ## Features
+//!
+//! - `bin` - Import/export worlds to/from binary format
+//!   ([World::from_bin]/[World::to_bin])
+//! - `stl` - Render worlds in 3D STL format ([World::to_stl])
+//! - `svg` - Render worlds in 2D SVG format ([World::to_svg])
 
 #![feature(cmp_min_max_by)]
 #![feature(const_fn)]
