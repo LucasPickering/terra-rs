@@ -99,6 +99,11 @@ impl WasmWorld {
             .unchecked_into()
     }
 
+    /// See [terra::World::to_bin]
+    pub fn to_bin(&self) -> Result<Vec<u8>, JsValue> {
+        self.0.to_bin().map_err(to_js_error)
+    }
+
     /// See [terra::World::to_svg]
     pub fn to_svg(&self, lens: TileLens, show_features: bool) -> String {
         self.0.to_svg(lens, show_features)

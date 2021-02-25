@@ -1,6 +1,8 @@
 mod generate;
 pub mod hex;
 
+use std::io::Read;
+
 use crate::{
     timed,
     util::{Color3, Meter, Meter2, Meter3, NumRange},
@@ -109,6 +111,13 @@ pub enum GeoFeature {
 
 /// A fully generated world. Contains a collection of tiles as well the
 /// configuration that was used to generate this world.
+///
+///
+/// ## Binary Format
+/// Worlds can be saved and exported in a binary format via [World::to_bin] and
+/// reloaded via [World::from_bin]. Currently the binary format is just msgpack,
+/// but that is subject to change so beware of that if you write other programs
+/// that load the format.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
     config: WorldConfig,
@@ -158,6 +167,25 @@ impl World {
         );
 
         Ok(Self { config, tiles })
+    }
+
+    /// Deserialize a world from binary format. A world can be serialized into
+    /// binary with [World::to_bin]. See the struct-level [World] documentation
+    /// for a description of the binary format. Will fail if the input is
+    /// malformed.
+    #[cfg(feature = "bin")]
+    pub fn from_bin(read: impl Read) -> anyhow::Result<Self> {
+        rmp_serde::from_read(read).context("error deserializing world")
+    }
+
+    /// Serializes this world into a binary format. This is a recoverable
+    /// format, which can be loaded back into a [World] with [World::from_bin].
+    /// See the struct-level [World] documentation for a description of the
+    /// binary format. A failure here indicates a bug in Terra that prevents
+    /// serialization.
+    #[cfg(feature = "bin")]
+    pub fn to_bin(&self) -> anyhow::Result<Vec<u8>> {
+        rmp_serde::to_vec(self).context("error serializing world")
     }
 
     /// Render this world as a 2D SVG, from a top-down perspective. Returns the

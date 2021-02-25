@@ -126,7 +126,7 @@ fn gen_output(
         match output_format {
             OutputFormat::Bin => {
                 // Serialize the entire world via msgpack
-                rmp_serde::to_vec(&world).context("error serializing world")
+                world.to_bin()
             }
             OutputFormat::Cfg => {
                 // Serialize just the world config via toml
@@ -202,8 +202,7 @@ fn run(opt: Opt) -> anyhow::Result<()> {
                 .with_context(|| {
                     format!("error opening world file {:?}", input_path)
                 })?;
-            let world = rmp_serde::from_read(file)
-                .context("error deserializing world")?;
+            let world = World::from_bin(file)?;
             info!("Loaded world from {:?}", &input_path);
             world
         }
