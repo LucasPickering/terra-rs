@@ -114,18 +114,18 @@ const WorldCanvas: React.FC = () => {
             <IconArrowBack />
           </IconButton>
           <IconButton
-            aria-label={configOpen ? "close config" : "edit config"}
-            onClick={() => setConfigOpen((old) => !old)}
-          >
-            {configOpen ? <IconClose /> : <IconEdit />}
-          </IconButton>
-          <IconButton
             ref={downloadMenuButtonRef}
             aria-controls="download-menu"
             aria-haspopup="true"
             onClick={() => setDownloadMenuOpen(true)}
           >
             <IconGetApp />
+          </IconButton>
+          <IconButton
+            aria-label={configOpen ? "close config" : "edit config"}
+            onClick={() => setConfigOpen((old) => !old)}
+          >
+            {configOpen ? <IconClose /> : <IconEdit />}
           </IconButton>
           <Menu
             id="download-menu"
