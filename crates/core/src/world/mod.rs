@@ -1,8 +1,6 @@
 mod generate;
 pub mod hex;
 
-use std::io::Read;
-
 use crate::{
     timed,
     util::{Color3, Meter, Meter2, Meter3, NumRange},
@@ -18,6 +16,7 @@ use crate::{
 use anyhow::Context;
 use log::info;
 use serde::{Deserialize, Serialize};
+use std::io::Read;
 use strum::EnumString;
 use validator::Validate;
 #[cfg(target_arch = "wasm32")]

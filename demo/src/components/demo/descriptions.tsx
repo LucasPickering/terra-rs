@@ -88,6 +88,41 @@ const descriptions = {
         </p>
       </>
     ),
+    noise_type: (
+      <>
+        <p>
+          The type of noise function used to generate elevation values. See
+          associated links for a description of each function type.
+        </p>
+        <ul>
+          <li>
+            <Link to="https://docs.rs/noise/0.7.0/noise/struct.BasicMulti.html">
+              Basic Multi
+            </Link>
+          </li>
+          <li>
+            <Link to="https://docs.rs/noise/0.7.0/noise/struct.Billow.html">
+              Billow
+            </Link>
+          </li>
+          <li>
+            <Link to="https://docs.rs/noise/0.7.0/noise/struct.Fbm.html">
+              Fractal Brownian Motion
+            </Link>
+          </li>
+          <li>
+            <Link to="https://docs.rs/noise/0.7.0/noise/struct.HybridMulti.html">
+              Hybrid Multi
+            </Link>
+          </li>
+          <li>
+            <Link to="https://docs.rs/noise/0.7.0/noise/struct.RidgedMulti.html">
+              Ridged Multi
+            </Link>
+          </li>
+        </ul>
+      </>
+    ),
     octaves: (
       <>
         The number of octaves in the noise function. Fewer octaves tends to give

@@ -1,9 +1,16 @@
 import React, { useContext } from "react";
-import { Button, Grid, GridSize, Typography } from "@material-ui/core";
+import {
+  Button,
+  Grid,
+  GridSize,
+  MenuItem,
+  Typography,
+} from "@material-ui/core";
 import ConfigInput from "./ConfigInput";
 import DemoContext from "context/DemoContext";
 import ConfigSection from "./ConfigSection";
 import RangeConfigInput from "./RangeConfigInput";
+import SelectConfigInput from "./SelectConfigInput";
 import TextConfigInput from "./TextConfigInput";
 import descriptions from "./descriptions";
 import { Breakpoint } from "@material-ui/core/styles/createBreakpoints";
@@ -100,6 +107,19 @@ const ConfigEditor: React.FC<{ inline?: boolean }> = ({ inline = false }) => {
             title="Elevation"
             description={descriptions.elevation.root}
           >
+            <ConfigInput
+              field={["elevation", "noise_type"]}
+              label="Noise Type"
+              description={descriptions.elevation.noise_type}
+            >
+              <SelectConfigInput>
+                <MenuItem value="basic_multi">Basic Multi</MenuItem>
+                <MenuItem value="billow">Billow</MenuItem>
+                <MenuItem value="fbm">Fractal Brownian Motion</MenuItem>
+                <MenuItem value="hybrid_multi">Hybrid Multi</MenuItem>
+                <MenuItem value="ridged_multi">Ridged Multi</MenuItem>
+              </SelectConfigInput>
+            </ConfigInput>
             <ConfigInput
               field={["elevation", "octaves"]}
               label="Octaves"
