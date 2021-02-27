@@ -133,6 +133,8 @@ pub struct GeoFeatureConfig {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
 pub struct NoiseFnConfig {
+    pub noise_type: NoiseFnType,
+
     /// Number of different frequencies to add together. We can use multiple
     /// octaves to build a set of curves, then add them together to get our
     /// final function.
@@ -162,6 +164,22 @@ pub struct NoiseFnConfig {
     pub exponent: f64,
 }
 
+/// The different types of supported noise functions. These are all expected to
+/// be seedable and multi-fractal. See
+/// https://docs.rs/noise/0.7.0/noise/trait.MultiFractal.html for a list of
+/// types that could possibly be supported here.
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NoiseFnType {
+    // if you add a variant here, make sure you update the type in wasm/lib.rs
+    BasicMulti,
+    Billow,
+    Fbm,
+    HybridMulti,
+    RidgedMulti,
+}
+
 impl Default for WorldConfig {
     fn default() -> Self {
         // This should be the general source of truth for a "nice world", but
@@ -178,6 +196,7 @@ impl Default for WorldConfig {
             rainfall: RainfallConfig::default(),
             geo_feature: GeoFeatureConfig::default(),
             elevation: NoiseFnConfig {
+                noise_type: NoiseFnType::Fbm,
                 octaves: 3,
                 frequency: 0.5,
                 lacunarity: 3.0,

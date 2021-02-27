@@ -1,5 +1,6 @@
 use terra::{
-    GeoFeatureConfig, Meter3, NoiseFnConfig, RainfallConfig, World, WorldConfig,
+    GeoFeatureConfig, Meter3, NoiseFnConfig, NoiseFnType, RainfallConfig,
+    World, WorldConfig,
 };
 use validator::ValidationErrors;
 
@@ -23,6 +24,7 @@ fn test_config_validation() {
             river_runoff_traversed_threshold: Meter3(-1.0),
         },
         elevation: NoiseFnConfig {
+            noise_type: NoiseFnType::Fbm,
             octaves: 0,        // valid (but weird)
             frequency: -1.0,   // invalid
             lacunarity: -1.0,  // valid (but weird)

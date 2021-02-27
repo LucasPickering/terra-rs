@@ -31,7 +31,10 @@ mod util;
 mod world;
 
 pub use crate::{
-    config::{GeoFeatureConfig, NoiseFnConfig, RainfallConfig, WorldConfig},
+    config::{
+        GeoFeatureConfig, NoiseFnConfig, NoiseFnType, RainfallConfig,
+        WorldConfig,
+    },
     util::{Color3, Meter, Meter2, Meter3, NumRange, Point2, RangeValue},
     world::{
         hex::{

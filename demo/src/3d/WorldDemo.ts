@@ -22,7 +22,7 @@ export default class WorldDemo {
 
     // TODO this doesn't fully work, we need to resize the camera too after
     // an engine resize
-    const resizeEngine = debounce(this.engine.resize, 1000);
+    const resizeEngine = debounce(() => this.engine.resize(), 1000);
     window.onresize = () => {
       resizeEngine();
     };

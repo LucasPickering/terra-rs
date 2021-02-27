@@ -143,6 +143,7 @@ export interface WorldConfigObject {
         river_runoff_traversed_threshold: number;
     };
     elevation: {
+        noise_type: 'basic_multi' | 'billow' | 'fbm' | 'hybrid_multi' | 'ridged_multi';
         octaves: number;
         frequency: number;
         lacunarity: number;

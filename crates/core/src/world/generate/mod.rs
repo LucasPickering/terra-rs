@@ -1,5 +1,6 @@
 mod biome;
 mod elevation;
+mod noise;
 mod ocean;
 mod rainfall;
 mod runoff;
@@ -7,9 +8,8 @@ mod water_feature;
 mod wind;
 
 use crate::{
-    config::NoiseFnConfig,
     timed,
-    util::{self, Meter3, NumRange, Rangeable},
+    util::{self, Meter3},
     world::{
         generate::{
             biome::BiomeGenerator,
@@ -30,8 +30,7 @@ use crate::{
 use anyhow::{anyhow, Context};
 use fnv::FnvBuildHasher;
 use log::info;
-use noise::{MultiFractal, NoiseFn, Seedable};
-use rand::{Rng, SeedableRng};
+use rand::SeedableRng;
 use rand_pcg::Pcg64;
 use std::{cmp, fmt::Debug};
 
@@ -384,96 +383,5 @@ impl TileBuilder {
 impl HasHexPosition for TileBuilder {
     fn position(&self) -> HexPoint {
         self.position
-    }
-}
-
-/// A wrapper around a noise function that makes it easy to use for generating
-/// tile values. This is initialized for a particular function type, and
-/// makes it easy to pass in a [HexPoint] and get out values in an arbitrary
-/// output range.
-///
-/// This type can optionally also do transparent conversions on the output type,
-/// e.g. if you are using a newtype that wraps `f64`.
-#[derive(Clone, Debug)]
-pub struct TileNoiseFn<F: NoiseFn<[f64; 3]>, T: Rangeable<f64> = f64> {
-    /// The noise generation function
-    noise_fn: F,
-    /// Exponent to apply to each noise value. This will be applied to values
-    /// in the range [0,1], so exponents <1 bias upwards, and >1 bias
-    /// downwards.
-    exponent: f64,
-    output_range: NumRange<T, f64>,
-}
-
-impl<F: NoiseFn<[f64; 3]>, T: Rangeable<f64>> TileNoiseFn<F, T> {
-    /// If we used the full values from the input, our frequencies would have
-    /// to be stupid low to get resonable looking output, so we scale them
-    /// down by this factor
-    const INPUT_SCALE: f64 = 100.0;
-    /// The output range of the internal noise function. Used to map the noise
-    /// values to our own output range.
-    const NOISE_FN_OUTPUT_RANGE: NumRange<f64> = NumRange::new(-1.0, 1.0);
-
-    /// Initialize a wrapper around the given function.
-    fn from_fn(
-        noise_fn: F,
-        exponent: f64,
-        output_range: NumRange<T, f64>,
-    ) -> Self {
-        Self {
-            noise_fn,
-            exponent,
-            output_range,
-        }
-    }
-
-    /// Get the function output at the given point
-    pub fn get(&self, point: HexPoint) -> T {
-        // See INPUT_SCALE doc comment for why we need it
-        let scaled_input = [
-            point.x() as f64 / Self::INPUT_SCALE,
-            point.y() as f64 / Self::INPUT_SCALE,
-            point.z() as f64 / Self::INPUT_SCALE,
-        ];
-        let fn_output = self.noise_fn.get(scaled_input);
-        Self::NOISE_FN_OUTPUT_RANGE
-            .value(fn_output)
-            // Map to [0,1] so we can apply the exponent
-            .normalize()
-            .apply(|val| val.powf(self.exponent))
-            .convert() // f64 -> T
-            .map_to(self.output_range)
-            .inner()
-    }
-}
-
-impl<
-        F: Default + Seedable + MultiFractal + NoiseFn<[f64; 3]>,
-        T: Rangeable<f64>,
-    > TileNoiseFn<F, T>
-{
-    /// Initialize a new function for some underlying noise fn type.
-    ///
-    /// ### Arguments
-    /// - `world_config` - The overall world config, needed for seed and world
-    /// radius.
-    /// - `fn_config` - Configuration for the underlying noise fn.
-    /// - `output_range` - The output range of this function. Noise values will
-    /// be mapped to this range during generation.
-    pub fn new(
-        rng: &mut impl Rng,
-        fn_config: &NoiseFnConfig,
-        output_range: NumRange<T, f64>,
-    ) -> Self {
-        // Configure the noise function
-        let noise_fn = F::default()
-            // Gen a new seed so that we get a different one per function
-            .set_seed(rng.gen())
-            .set_octaves(fn_config.octaves)
-            .set_frequency(fn_config.frequency)
-            .set_lacunarity(fn_config.lacunarity)
-            .set_persistence(fn_config.persistence);
-
-        Self::from_fn(noise_fn, fn_config.exponent, output_range)
     }
 }

@@ -1,12 +1,11 @@
 use crate::{
     util::{Meter, NumRange},
     world::{
-        generate::{Generate, TileNoiseFn, WorldBuilder},
+        generate::{noise::TileNoiseFn, Generate, WorldBuilder},
         hex::{HasHexPosition, HexPoint},
         World,
     },
 };
-use noise::Fbm;
 
 /// Generate an elevation map using a noise function.
 #[derive(Debug)]
@@ -16,7 +15,7 @@ impl Generate for ElevationGenerator {
     fn generate(&self, world: &mut WorldBuilder) -> anyhow::Result<()> {
         let config = world.config;
         let normal_range = NumRange::normal_range();
-        let noise_fn: TileNoiseFn<Fbm, Meter> =
+        let noise_fn: TileNoiseFn<Meter> =
             TileNoiseFn::new(&mut world.rng, &config.elevation, normal_range);
 
         // Buffer size is given as a fraction of the total radius, we need
