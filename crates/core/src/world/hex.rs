@@ -4,10 +4,10 @@ use anyhow::bail;
 use derive_more::{Add, AddAssign, Display, Mul, MulAssign};
 use fnv::FnvBuildHasher;
 use indexmap::{map::Entry, IndexMap};
-use serde::{Deserialize, Serialize};
+use serde::{de::Visitor, Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
-    fmt::Debug,
+    fmt::{self, Debug},
     hash::Hash,
     ops,
 };
@@ -39,15 +39,14 @@ use crate::{
 /// a radius of more than 32k (that'd be ~4 billion tiles), so this saves on
 /// memory a lot.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(
-    Copy, Clone, Debug, PartialEq, Eq, Hash, Display, Serialize, Deserialize,
-)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Display)]
 #[display(fmt = "({}, {}, {})", "self.x()", "self.y()", "self.z()")]
 pub struct HexPoint {
     x: i16,
     y: i16,
 }
 
+// Wasm functions
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl HexPoint {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
@@ -88,6 +87,7 @@ impl HexPoint {
     }
 }
 
+// Non-wasm functions
 impl HexPoint {
     pub const ORIGIN: Self = Self::new(0, 0);
 
@@ -128,6 +128,56 @@ impl ops::Add<HexVector> for HexPoint {
         Self::new(self.x + rhs.x(), self.y + rhs.y())
     }
 }
+
+// ==============================
+// Custom serialize for HexPoint, to serialize as a key instead of object.
+// This lets us use it as a map key in other languages that don't support
+// complex map keys.
+// ==============================
+struct HexPointVisitor;
+
+impl<'de> Visitor<'de> for HexPointVisitor {
+    type Value = HexPoint;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a string of the format `<x>,<y>`")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        match value.split_once(',') {
+            Some((x, y)) => {
+                let x: i16 = x.parse().map_err(serde::de::Error::custom)?;
+                let y: i16 = y.parse().map_err(serde::de::Error::custom)?;
+                Ok(HexPoint { x, y })
+            }
+            None => todo!(),
+        }
+    }
+}
+
+impl Serialize for HexPoint {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&format!("{},{}", self.x, self.y))
+    }
+}
+
+impl<'de> Deserialize<'de> for HexPoint {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(HexPointVisitor)
+    }
+}
+// ==============================
+// END HexPoint serialization stuff
+// ==============================
 
 /// A vector in a hex world. This is an (x,y,z) kind of vector, not a list
 /// vector. This is essentially the same as a [HexPoint], but by denoting some

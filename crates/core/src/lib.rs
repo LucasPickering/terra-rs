@@ -25,6 +25,7 @@
 #![feature(const_fn)]
 #![feature(const_fn_floating_point_arithmetic)]
 #![feature(map_into_keys_values)]
+#![feature(str_split_once)]
 
 mod config;
 mod util;
