@@ -38,6 +38,9 @@ struct Opt {
     ///
     /// cfg - The full config object used for the world, in TOML format
     ///
+    /// json - JSON representation. Similar to the binary format, but slower
+    ///   and much less compact
+    ///
     /// svg - 2D rendering of the world
     ///
     /// stl - 3D rendering of the world
@@ -72,6 +75,10 @@ enum OutputFormat {
     Bin,
     /// Export the world's full config in a human-readable file
     Cfg,
+    /// Export the world in a serialized JSON format, which can be deserialized
+    /// later to recover the world. This is similar to the bin format, but is
+    /// human readable at the cost of being slower and much less compact
+    Json,
     /// Render the world as a 2D SVG
     Svg,
     /// Render the world as a 3D STL
@@ -85,6 +92,7 @@ impl OutputFormat {
         match self {
             Self::Bin => "bin",
             Self::Cfg => "toml",
+            Self::Json => "json",
             Self::Svg => "svg",
             Self::Stl => "stl",
         }
@@ -133,6 +141,10 @@ fn gen_output(
                 let cfg_string = toml::to_string_pretty(world.config())
                     .context("error serializing config")?;
                 Ok(cfg_string.into_bytes())
+            }
+            OutputFormat::Json => {
+                // Serialize the entire world via JSON
+                serde_json::to_vec(world).context("error serializing world")
             }
             OutputFormat::Svg => {
                 // Render the world in 2D

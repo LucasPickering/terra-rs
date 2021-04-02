@@ -184,7 +184,7 @@ impl World {
     /// serialization.
     #[cfg(feature = "bin")]
     pub fn to_bin(&self) -> anyhow::Result<Vec<u8>> {
-        rmp_serde::to_vec(self).context("error serializing world")
+        rmp_serde::to_vec_named(self).context("error serializing world")
     }
 
     /// Render this world as a 2D SVG, from a top-down perspective. Returns the
