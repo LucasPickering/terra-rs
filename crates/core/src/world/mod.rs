@@ -168,6 +168,19 @@ impl World {
         Ok(Self { config, tiles })
     }
 
+    /// Deserialize a world from JSON. A world can be serialized into JSON with
+    /// [World::to_json]. Will fail if the input is malformed.
+    pub fn from_json(&self, json: &str) -> anyhow::Result<Self> {
+        serde_json::from_str(json).context("error deserializing world")
+    }
+
+    /// Serializes this world into JSON. This is a recoverable format, which can
+    /// be loaded back into a [World] with [World::from_json].  A failure
+    /// here indicates a bug in Terra that prevents serialization.
+    pub fn to_json(&self) -> anyhow::Result<String> {
+        serde_json::to_string(self).context("error serializing world")
+    }
+
     /// Deserialize a world from binary format. A world can be serialized into
     /// binary with [World::to_bin]. See the struct-level [World] documentation
     /// for a description of the binary format. Will fail if the input is

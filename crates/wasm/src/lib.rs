@@ -99,6 +99,11 @@ impl WasmWorld {
             .unchecked_into()
     }
 
+    /// See [terra::World::to_json]
+    pub fn to_json(&self) -> Result<String, JsValue> {
+        self.0.to_json().map_err(to_js_error)
+    }
+
     /// See [terra::World::to_bin]
     pub fn to_bin(&self) -> Result<Vec<u8>, JsValue> {
         self.0.to_bin().map_err(to_js_error)
