@@ -1,5 +1,4 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import { saveAs } from "file-saver";
 import WorldDemo from "3d/WorldDemo";
 import {
   IconButton,
@@ -18,6 +17,7 @@ import {
 import DemoContext from "context/DemoContext";
 import { Location } from "history";
 import ConfigEditor from "./ConfigEditor";
+import DownloadMenu from "./DownloadMenu";
 import UnstyledLink from "../UnstyledLink";
 const { TileLens } = await import("terra-wasm");
 
@@ -127,42 +127,15 @@ const WorldCanvas: React.FC = () => {
           >
             {configOpen ? <IconClose /> : <IconEdit />}
           </IconButton>
-          <Menu
+          <DownloadMenu
+            world={world}
             id="download-menu"
             anchorEl={downloadMenuButtonRef.current}
             open={downloadMenuOpen}
             getContentAnchorEl={null}
             anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
             onClose={() => setDownloadMenuOpen(false)}
-          >
-            <MenuItem
-              onClick={() => {
-                const bytes = world.to_bin();
-                saveAs(
-                  new Blob([bytes], { type: "application/octet-stream" }),
-                  "terra.bin"
-                );
-              }}
-            >
-              Download as BIN
-            </MenuItem>
-            <MenuItem
-              onClick={() => {
-                const svg = world.to_svg(TileLens.Biome, true);
-                saveAs(new Blob([svg], { type: "image/svg+xml" }), "terra.svg");
-              }}
-            >
-              Download as SVG
-            </MenuItem>
-            <MenuItem
-              onClick={() => {
-                const bytes = world.to_stl();
-                saveAs(new Blob([bytes], { type: "model/stl" }), "terra.stl");
-              }}
-            >
-              Download as STL
-            </MenuItem>
-          </Menu>
+          />
         </div>
         {configOpen && (
           <Paper className={classes.configOverlay}>
