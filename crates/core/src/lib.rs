@@ -21,11 +21,9 @@
 //! - `stl` - Render worlds in 3D STL format ([World::to_stl])
 //! - `svg` - Render worlds in 2D SVG format ([World::to_svg])
 
-#![feature(cmp_min_max_by)]
 #![feature(const_fn)]
 #![feature(const_fn_floating_point_arithmetic)]
-#![feature(map_into_keys_values)]
-#![feature(str_split_once)]
+#![feature(const_fn_trait_bound)]
 
 mod config;
 mod util;

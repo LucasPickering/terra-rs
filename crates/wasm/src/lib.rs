@@ -10,10 +10,6 @@
 //!
 //! See the [demo code](https://github.com/LucasPickering/terra-rs/tree/master/demo) for a usage example.
 
-// TODO after https://github.com/rust-lang/cargo/pull/9030 set
-// wasm32-unknown-unknown as the default target for this crate, and kill this
-#![cfg(target_arch = "wasm32")]
-
 use terra::{anyhow, validator::Validate, TileLens, World, WorldConfig};
 use wasm_bindgen::{prelude::*, JsCast};
 
