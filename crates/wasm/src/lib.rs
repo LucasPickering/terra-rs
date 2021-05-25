@@ -10,7 +10,9 @@
 //!
 //! See the [demo code](https://github.com/LucasPickering/terra-rs/tree/master/demo) for a usage example.
 
-use terra::{anyhow, validator::Validate, TileLens, World, WorldConfig};
+use terra::{
+    anyhow, validator::Validate, Color3, Tile, TileLens, World, WorldConfig,
+};
 use wasm_bindgen::{prelude::*, JsCast};
 
 /// A top-level interface for interacting with Terra from Wasm.
@@ -74,6 +76,18 @@ impl Terra {
         let world = World::generate(config).map_err(to_js_error)?;
         Ok(WasmWorld(world))
     }
+
+    /// A Wasm-friendly wrapper around [TileLens::tile_color]. wasm-bindgen
+    /// doesn't support impls on enums so we have to do this
+    /// https://github.com/rustwasm/wasm-bindgen/issues/1715
+    #[wasm_bindgen]
+    pub fn tile_color(
+        &self,
+        tile: &Tile,
+        lens: TileLens,
+    ) -> Result<Color3, JsValue> {
+        lens.tile_color(tile).map_err(to_js_error)
+    }
 }
 
 /// A wrapper around [terra::World] that provides a nice Wasm-friendly API.
@@ -106,8 +120,12 @@ impl WasmWorld {
     }
 
     /// See [terra::World::to_svg]
-    pub fn to_svg(&self, lens: TileLens, show_features: bool) -> String {
-        self.0.to_svg(lens, show_features)
+    pub fn to_svg(
+        &self,
+        lens: TileLens,
+        show_features: bool,
+    ) -> Result<String, JsValue> {
+        self.0.to_svg(lens, show_features).map_err(to_js_error)
     }
 
     /// See [terra::World::to_stl]

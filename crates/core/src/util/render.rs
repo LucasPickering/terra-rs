@@ -1,10 +1,11 @@
-use crate::NumRange;
+use crate::{BiomeType, GeoFeature, Meter3, NumRange, Tile, World};
 use anyhow::anyhow;
 use derive_more::{
     Add, AddAssign, Display, Div, DivAssign, From, Into, Mul, MulAssign, Neg,
     Sub, SubAssign, Sum,
 };
 use std::ops;
+use strum::EnumString;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -168,5 +169,86 @@ impl ops::Mul<f32> for Color3 {
         // It's safe to bypass the constructor here because we just clamped
         // all 3 components to the valid range
         Self { red, green, blue }
+    }
+}
+
+/// A definition of what data is used to compute a tile's color.
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[derive(Copy, Clone, Debug, EnumString)]
+#[strum(serialize_all = "snake_case")]
+pub enum TileLens {
+    /// Color is based on a combination of biome and geographic features.
+    Surface,
+    /// Color is based solely on the tile's biome. Each biome has a unique
+    /// static color.
+    Biome,
+    /// Color is a gradient based on elevation.
+    Elevation,
+    /// Color is a gradient based on humidity.
+    Humidity,
+    /// Color is based on a combination of runoff and total runoff egress.
+    Runoff,
+}
+
+impl TileLens {
+    /// Compute the color of a tile based on the lens being viewed. The lens
+    /// controls what data the color is derived from.
+    pub fn tile_color(self, tile: &Tile) -> anyhow::Result<Color3> {
+        match self {
+            TileLens::Surface => {
+                if tile.features().contains(&GeoFeature::Lake) {
+                    Ok(Color3::new_int(72, 192, 240))
+                } else {
+                    Ok(tile.biome().color())
+                }
+            }
+            TileLens::Biome => Ok(tile.biome().color()),
+            TileLens::Elevation => {
+                let normal_elev =
+                    World::ELEVATION_RANGE.normalize(tile.elevation()).0 as f32;
+                // 0 -> white
+                // 1 -> red
+                Color3::new(1.0, 1.0 - normal_elev, 1.0 - normal_elev)
+            }
+            TileLens::Humidity => {
+                let humidity = tile.humidity() as f32;
+                // 0 -> white
+                // 1 -> green
+                Color3::new(1.0 - humidity, 1.0, 1.0 - humidity)
+            }
+            TileLens::Runoff => {
+                // This coloring is based on two aspects: runoff (how much water
+                // collected on the tile) AND runoff egress (how much water
+                // flowed over the tile without staying there). Runoff controls
+                // blue, runoff egress controls green.
+                if tile.biome().biome_type() == BiomeType::Water {
+                    Color3::new(0.5, 0.5, 0.5)
+                } else {
+                    let normal_runoff = NumRange::new(Meter3(0.0), Meter3(5.0))
+                        .value(tile.runoff())
+                        .normalize()
+                        // Runoff doesn't have a fixed range so we have to clamp
+                        // this to make sure we don't overflow the color value
+                        .clamp()
+                        .convert::<f64>()
+                        .inner() as f32;
+                    let normal_runoff_egress =
+                        NumRange::new(Meter3(0.0), Meter3(1000.0))
+                            .value(tile.runoff_egress())
+                            .normalize()
+                            // Runoff egress ALSO doesn't have a fixed range so
+                            // we have to clamp it as well
+                            .clamp()
+                            .convert::<f64>()
+                            .inner() as f32;
+
+                    // (0,0) -> black
+                    // (1,0) -> blue
+                    // (0,1) -> green
+                    // (1,1) -> cyan
+                    Color3::new(0.0, normal_runoff_egress, normal_runoff)
+                }
+            }
+        }
     }
 }
