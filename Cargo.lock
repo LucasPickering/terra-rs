@@ -998,6 +998,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "terra-native"
+version = "0.1.0"
+dependencies = [
+ "terra",
+]
+
+[[package]]
 name = "terra-wasm"
 version = "0.1.0"
 dependencies = [
