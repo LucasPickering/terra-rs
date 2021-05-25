@@ -40,7 +40,8 @@ pub use crate::{
             HasHexPosition, HexAxialDirection, HexAxis, HexDirection,
             HexDirectionMap, HexPoint, HexPointMap,
         },
-        Biome, BiomeType, GeoFeature, Tile, TileLens, World,
+        tile::Tile,
+        Biome, BiomeType, GeoFeature, TileLens, World,
     },
 };
 pub use anyhow;
