@@ -28,7 +28,7 @@ class WorldRenderer {
   private tiles: Array<[Tile, number]>;
   private tileLens: TileLensType;
 
-  constructor(terra: Terra, scene: Scene, world: WasmWorld) {
+  constructor(private readonly terra: Terra, scene: Scene, world: WasmWorld) {
     // We use "thin instances" here for the tiles cause #performance
     // https://doc.babylonjs.com/divingDeeper/mesh/copies/thinInstances
     // TODO there's a section on that page called "Faster thin instances", use
@@ -76,7 +76,7 @@ class WorldRenderer {
     this.tileLens = lens;
     this.tiles.forEach(([tile, instanceIdx], i) => {
       const isLastTile = i === this.tiles.length - 1;
-      const color = tile.color(this.tileLens);
+      const color = this.terra.tile_color(tile, this.tileLens);
       this.mesh.thinInstanceSetAttributeAt(
         "color",
         instanceIdx,

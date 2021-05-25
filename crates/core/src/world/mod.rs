@@ -4,7 +4,7 @@ pub mod tile;
 
 use crate::{
     timed,
-    util::{Color3, Meter, Meter3, NumRange},
+    util::{Color3, Meter, Meter3, NumRange, TileLens},
     world::{
         generate::WorldBuilder,
         hex::{HexDirection, HexPointMap},
@@ -16,7 +16,6 @@ use anyhow::Context;
 use log::info;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, io::Read};
-use strum::EnumString;
 use validator::Validate;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
@@ -139,9 +138,14 @@ impl World {
     /// - `show_features` - Should geographic features (lakes, rivers, etc.) be
     ///   rendered? See [crate::GeoFeature] for a full list
     #[cfg(feature = "svg")]
-    pub fn to_svg(&self, lens: TileLens, show_features: bool) -> String {
+    pub fn to_svg(
+        &self,
+        lens: TileLens,
+        show_features: bool,
+    ) -> anyhow::Result<String> {
         use crate::util;
-        util::svg::world_to_svg(self, lens, show_features).to_string()
+        let svg = util::svg::world_to_svg(self, lens, show_features)?;
+        Ok(svg.to_string())
     }
 
     /// Render this world into an STL model. Return value is the STL binary
@@ -244,22 +248,4 @@ pub enum GeoFeature {
         direction: HexDirection,
         volume: Meter3,
     },
-}
-
-/// A definition of what data is used to compute a tile's color.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, EnumString)]
-#[strum(serialize_all = "snake_case")]
-pub enum TileLens {
-    /// Color is based on a combination of biome and geographic features.
-    Surface,
-    /// Color is based solely on the tile's biome. Each biome has a unique
-    /// static color.
-    Biome,
-    /// Color is a gradient based on elevation.
-    Elevation,
-    /// Color is a gradient based on humidity.
-    Humidity,
-    /// Color is based on a combination of runoff and total runoff egress.
-    Runoff,
 }

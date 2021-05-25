@@ -1,6 +1,6 @@
 use crate::{
-    world::hex::HexDirectionValues, Biome, BiomeType, Color3, GeoFeature,
-    HasHexPosition, HexPoint, Meter, Meter2, Meter3, NumRange, TileLens, World,
+    world::hex::HexDirectionValues, Biome, GeoFeature, HasHexPosition,
+    HexPoint, Meter, Meter2, Meter3, World,
 };
 use serde::{Deserialize, Serialize};
 #[cfg(target_arch = "wasm32")]
@@ -169,70 +169,6 @@ impl Tile {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn biome(&self) -> Biome {
         self.biome
-    }
-
-    /// Compute the color of a tile based on the lens being viewed. The lens
-    /// controls what data the color is derived from.
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-    pub fn color(&self, lens: TileLens) -> Color3 {
-        match lens {
-            TileLens::Surface => {
-                if self.features.contains(&GeoFeature::Lake) {
-                    Ok(Color3::new_int(72, 192, 240))
-                } else {
-                    Ok(self.biome.color())
-                }
-            }
-            TileLens::Biome => Ok(self.biome.color()),
-            TileLens::Elevation => {
-                let normal_elev =
-                    World::ELEVATION_RANGE.normalize(self.elevation()).0 as f32;
-                // 0 -> white
-                // 1 -> red
-                Color3::new(1.0, 1.0 - normal_elev, 1.0 - normal_elev)
-            }
-            TileLens::Humidity => {
-                let humidity = self.humidity() as f32;
-                // 0 -> white
-                // 1 -> green
-                Color3::new(1.0 - humidity, 1.0, 1.0 - humidity)
-            }
-            TileLens::Runoff => {
-                // This coloring is based on two aspects: runoff (how much water
-                // collected on the tile) AND runoff egress (how much water
-                // flowed over the tile without staying there). Runoff controls
-                // blue, runoff egress controls green.
-                if self.biome.biome_type() == BiomeType::Water {
-                    Color3::new(0.5, 0.5, 0.5)
-                } else {
-                    let normal_runoff = NumRange::new(Meter3(0.0), Meter3(5.0))
-                        .value(self.runoff)
-                        .normalize()
-                        // Runoff doesn't have a fixed range so we have to clamp
-                        // this to make sure we don't overflow the color value
-                        .clamp()
-                        .convert::<f64>()
-                        .inner() as f32;
-                    let normal_runoff_egress =
-                        NumRange::new(Meter3(0.0), Meter3(1000.0))
-                            .value(self.runoff_egress())
-                            .normalize()
-                            // Runoff egress ALSO doesn't have a fixed range so
-                            // we have to clamp it as well
-                            .clamp()
-                            .convert::<f64>()
-                            .inner() as f32;
-
-                    // (0,0) -> black
-                    // (1,0) -> blue
-                    // (0,1) -> green
-                    // (1,1) -> cyan
-                    Color3::new(0.0, normal_runoff_egress, normal_runoff)
-                }
-            }
-        }
-        // this is hard to remove because we can't pass an anyhow result to wasm
-        .unwrap()
     }
 }
 

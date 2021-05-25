@@ -34,14 +34,16 @@ pub use crate::{
         GeoFeatureConfig, NoiseFnConfig, NoiseFnType, RainfallConfig,
         WorldConfig,
     },
-    util::{Color3, Meter, Meter2, Meter3, NumRange, Point2, RangeValue},
+    util::{
+        Color3, Meter, Meter2, Meter3, NumRange, Point2, RangeValue, TileLens,
+    },
     world::{
         hex::{
             HasHexPosition, HexAxialDirection, HexAxis, HexDirection,
             HexDirectionMap, HexPoint, HexPointMap,
         },
         tile::Tile,
-        Biome, BiomeType, GeoFeature, TileLens, World,
+        Biome, BiomeType, GeoFeature, World,
     },
 };
 pub use anyhow;
