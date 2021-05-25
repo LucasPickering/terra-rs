@@ -24,7 +24,7 @@ pub fn world_to_svg(
     world: &World,
     lens: TileLens,
     show_features: bool,
-) -> Document {
+) -> anyhow::Result<Document> {
     // Grow the view box based on the world size. The world height will always
     // be the larger size, so scale it based on that. The +1 provides a bit of
     // buffer space
@@ -44,15 +44,19 @@ pub fn world_to_svg(
         .add(Comment::new(format!("\n{:#?}\n", world.config())));
 
     for tile in world.tiles().values() {
-        let polygon = draw_tile(tile, lens, show_features);
+        let polygon = draw_tile(tile, lens, show_features)?;
         document = document.add(polygon);
     }
 
-    document
+    Ok(document)
 }
 
 /// Generate an SVG polygon for a single tile
-fn draw_tile(tile: &Tile, lens: TileLens, show_features: bool) -> Group {
+fn draw_tile(
+    tile: &Tile,
+    lens: TileLens,
+    show_features: bool,
+) -> anyhow::Result<Group> {
     let pos = tile.position();
     let pos2d = pos.to_point2();
 
@@ -72,7 +76,7 @@ fn draw_tile(tile: &Tile, lens: TileLens, show_features: bool) -> Group {
                         })
                         .collect::<Vec<_>>(),
                 )
-                .set("fill", tile.color(lens).to_html()),
+                .set("fill", lens.tile_color(tile)?.to_html()),
         );
 
     // Add overlays for each geo feature
@@ -97,5 +101,5 @@ fn draw_tile(tile: &Tile, lens: TileLens, show_features: bool) -> Group {
         }
     }
 
-    group
+    Ok(group)
 }

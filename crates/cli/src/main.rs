@@ -150,6 +150,7 @@ fn gen_output(
                 // Render the world in 2D
                 Ok(world
                     .to_svg(render_options.lens, render_options.show_features)
+                    .context("error rendering world as SVG")?
                     .into_bytes())
             }
             OutputFormat::Stl => {
