@@ -4,10 +4,10 @@ use anyhow::bail;
 use derive_more::{Add, AddAssign, Display, Mul, MulAssign};
 use fnv::FnvBuildHasher;
 use indexmap::{map::Entry, IndexMap};
-use serde::{de::Visitor, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
-    fmt::{self, Debug},
+    fmt::Debug,
     hash::Hash,
     ops,
 };
@@ -39,7 +39,9 @@ use crate::{
 /// a radius of more than 32k (that'd be ~4 billion tiles), so this saves on
 /// memory a lot.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Display)]
+#[derive(
+    Copy, Clone, Debug, PartialEq, Eq, Hash, Display, Serialize, Deserialize,
+)]
 #[display(fmt = "({}, {}, {})", "self.x()", "self.y()", "self.z()")]
 pub struct HexPoint {
     x: i16,
@@ -129,56 +131,6 @@ impl ops::Add<HexVector> for HexPoint {
     }
 }
 
-// ==============================
-// Custom serialize for HexPoint, to serialize as a key instead of object.
-// This lets us use it as a map key in other languages that don't support
-// complex map keys.
-// ==============================
-struct HexPointVisitor;
-
-impl<'de> Visitor<'de> for HexPointVisitor {
-    type Value = HexPoint;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a string of the format `<x>,<y>`")
-    }
-
-    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        match value.split_once(',') {
-            Some((x, y)) => {
-                let x: i16 = x.parse().map_err(serde::de::Error::custom)?;
-                let y: i16 = y.parse().map_err(serde::de::Error::custom)?;
-                Ok(HexPoint { x, y })
-            }
-            None => todo!(),
-        }
-    }
-}
-
-impl Serialize for HexPoint {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(&format!("{},{}", self.x, self.y))
-    }
-}
-
-impl<'de> Deserialize<'de> for HexPoint {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_str(HexPointVisitor)
-    }
-}
-// ==============================
-// END HexPoint serialization stuff
-// ==============================
-
 /// A vector in a hex world. This is an (x,y,z) kind of vector, not a list
 /// vector. This is essentially the same as a [HexPoint], but by denoting some
 /// values explicitly as vectors rather than points, it makes a bit clearer when
@@ -227,6 +179,7 @@ pub trait HasHexPosition: Sized {
 #[derive(
     Copy, Clone, Debug, EnumIter, PartialEq, Eq, Hash, Serialize, Deserialize,
 )]
+#[serde(rename_all = "snake_case")]
 pub enum HexDirection {
     Up,
     UpRight,
@@ -436,6 +389,58 @@ pub type HexPointIndexMap<T> = IndexMap<HexPoint, T, FnvBuildHasher>;
 /// A map of hex directions to some `T`
 pub type HexDirectionMap<T> = HashMap<HexDirection, T, FnvBuildHasher>;
 
+/// A static mapping of hex directions to values. This is similar to a
+/// `HexDirectionMap<T>`, except that it always holds exactly 6 values and they
+/// can be accessed via static fields. This is more useful in some cases,
+/// especially post-world generation because we won't have to add or remove
+/// values at that point. Having static fields makes serialization in external
+/// apps a bit easier.
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct HexDirectionValues<T: Copy + Clone + Debug + PartialEq + Serialize> {
+    pub up: T,
+    pub up_right: T,
+    pub down_right: T,
+    pub down: T,
+    pub down_left: T,
+    pub up_left: T,
+}
+
+impl<T: Copy + Clone + Debug + PartialEq + Serialize> HexDirectionValues<T> {
+    /// Copy all values in this struct into an array. The ordering will be the
+    /// same as the iteration order of [HexDirection]: Clockwise, starting with
+    /// `up`.
+    pub fn as_array(&self) -> [T; 6] {
+        [
+            self.up,
+            self.up_right,
+            self.down_right,
+            self.down,
+            self.down_left,
+            self.up_left,
+        ]
+    }
+}
+
+// Convert a dynamic map into a struct with fixed fields. Missing values will
+// be populated with defaults
+impl<T: Copy + Clone + Debug + Default + PartialEq + Serialize>
+    From<HexDirectionMap<T>> for HexDirectionValues<T>
+{
+    fn from(mut map: HexDirectionMap<T>) -> Self {
+        let mut helper =
+            |dir: HexDirection| map.remove(&dir).unwrap_or_default();
+
+        Self {
+            up: helper(HexDirection::Up),
+            up_right: helper(HexDirection::UpRight),
+            down_right: helper(HexDirection::DownRight),
+            down: helper(HexDirection::Down),
+            down_left: helper(HexDirection::DownLeft),
+            up_left: helper(HexDirection::UpLeft),
+        }
+    }
+}
+
 /// A cluster is a set of contiguous hex points. All items in a cluster are
 /// adjacent to at least one other item in the cluster (unless the cluster is a
 /// singular item).
@@ -617,5 +622,41 @@ mod tests {
         assert_eq!(p1.distance_to(p2), 3);
         assert_eq!(p1.distance_to(p3), 4);
         assert_eq!(p2.distance_to(p3), 2);
+    }
+
+    #[test]
+    fn test_hex_direction_map_to_values() {
+        // Make sure each direction is mapped correctly
+        let mut map: HexDirectionMap<usize> = HexDirectionMap::default();
+        map.insert(HexDirection::Up, 1);
+        map.insert(HexDirection::UpRight, 2);
+        map.insert(HexDirection::DownRight, 3);
+        map.insert(HexDirection::Down, 4);
+        map.insert(HexDirection::DownLeft, 5);
+        map.insert(HexDirection::UpLeft, 6);
+        assert_eq!(
+            HexDirectionValues::from(map),
+            HexDirectionValues {
+                up: 1,
+                up_right: 2,
+                down_right: 3,
+                down: 4,
+                down_left: 5,
+                up_left: 6,
+            }
+        );
+
+        // Should populate missing fields with the default
+        assert_eq!(
+            HexDirectionValues::from(HexDirectionMap::default()),
+            HexDirectionValues {
+                up: 0,
+                up_right: 0,
+                down_right: 0,
+                down: 0,
+                down_left: 0,
+                up_left: 0,
+            }
+        );
     }
 }

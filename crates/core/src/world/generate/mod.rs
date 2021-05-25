@@ -203,7 +203,7 @@ impl TileBuilder {
             runoff: self.runoff()?,
             biome: self.biome()?,
             features: self.features,
-            runoff_traversed: self.runoff_traversed,
+            runoff_traversed: self.runoff_traversed.into(),
         })
     }
 

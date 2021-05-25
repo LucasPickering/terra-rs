@@ -7,7 +7,7 @@ use crate::{
     world::{
         generate::WorldBuilder,
         hex::{
-            HasHexPosition, HexDirection, HexDirectionMap, HexPoint,
+            HasHexPosition, HexDirection, HexDirectionValues, HexPoint,
             HexPointMap,
         },
     },
@@ -16,7 +16,7 @@ use crate::{
 use anyhow::Context;
 use log::info;
 use serde::{Deserialize, Serialize};
-use std::io::Read;
+use std::{fmt::Debug, io::Read};
 use strum::EnumString;
 use validator::Validate;
 #[cfg(target_arch = "wasm32")]
@@ -35,6 +35,7 @@ pub enum BiomeType {
 /// https://en.wikipedia.org/wiki/Biome
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Biome {
     // Water
     Ocean,
@@ -84,6 +85,7 @@ impl Biome {
 /// one). Some feature combinations may be invalid (e.g. lake+beach) but that
 /// isn't codified in the type system. Try not to mess it up.
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum GeoFeature {
     /// Lakes are generated based on where water runoff collects. A lake takes
     /// up an entire tile. [See here](https://en.wikipedia.org/wiki/Lake) for
@@ -111,15 +113,32 @@ pub enum GeoFeature {
 /// A fully generated world. Contains a collection of tiles as well the
 /// configuration that was used to generate this world.
 ///
+/// ## Serialization
+/// Worlds can be serialized and deserialized through multiple formats: JSON and
+/// binary.
 ///
-/// ## Binary Format
+/// ### JSON Format
+/// The JSON format is fairly self-explanatory. It's intended to be as
+/// consistent as possible, so all fields and values use snake casing. Some
+/// external apps that consume this format may not support dynamic JSON objects,
+/// so serialization avoids that by using either static sets of fields where
+/// possible, and arrays of values rather than keyed objects in other cases.
+///
+/// ### Binary Format
 /// Worlds can be saved and exported in a binary format via [World::to_bin] and
 /// reloaded via [World::from_bin]. Currently the binary format is just msgpack,
 /// but that is subject to change so beware of that if you write other programs
 /// that load the format.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
+    /// The config used to generate this world. World generation is
+    /// deterministic based on world config, and once the world has been
+    /// generated, the config can never change.
     config: WorldConfig,
+
+    /// The tiles that make up this world, keyed by their position.
+    // Serialize as a vec because hex points can't be keys
+    #[serde(with = "crate::util::hex_point_map_to_vec_serde")]
     tiles: HexPointMap<Tile>,
 }
 
@@ -245,27 +264,28 @@ pub struct Tile {
     /// description of the coordinate system. Every tile in the world has a
     /// unique position.
     position: HexPoint,
+
     /// The elevation of this tile, relative to sea level.
     elevation: Meter,
+
     /// Amount of rain that fell on this tile during rain simulation.
     rainfall: Meter3,
+
     /// Amount of runoff water that remains on the tile after runoff
     /// simulation.
     runoff: Meter3,
+
     /// The net amount of runoff gained/lost for this tile in each direction.
     /// Positive values indicate ingress (i.e. runoff came in from that
     /// direction) and negative values indicate egress (i.e. runoff left in
     /// that direction). The value should be positive if the neighbor in that
     /// direction is a higher elevation, and negative if it is lower.
-    ///
-    /// It's _possible_ for this map to not have 6 entries, if a tile doesn't
-    /// have 6 neighbors or if it had 0 ingress/egress with one of the
-    /// neighbors, but in most scenarios there will be an entry for all 6
-    /// neighbors.
-    runoff_traversed: HexDirectionMap<Meter3>,
+    runoff_traversed: HexDirectionValues<Meter3>,
+
     /// The biome for this tile. Every tile exists in a single biome, which
     /// describes its climate characteristics. See [Biome] for more info.
     biome: Biome,
+
     /// All geographic features on this tile. A geographic feature describes
     /// some unique formation that can appear on a tile. No two features in
     /// this vec can be identical.
@@ -364,6 +384,26 @@ impl Tile {
         self.runoff
     }
 
+    /// Get the total amount of runoff that _entered_ this tile. This is the
+    /// **gross** ingress, not the **net**.
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
+    pub fn runoff_ingress(&self) -> Meter3 {
+        std::array::IntoIter::new(self.runoff_traversed.as_array())
+            // Negative values are egress so ignore those
+            .filter(|v| *v > Meter3(0.0))
+            .sum()
+    }
+
+    /// Get the total amount of runoff that _exited_ this tile. This is the
+    /// **gross** egress, not the **net**.
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
+    pub fn runoff_egress(&self) -> Meter3 {
+        std::array::IntoIter::new(self.runoff_traversed.as_array())
+            // Positive values are egress so ignore those
+            .filter(|v| *v < Meter3(0.0))
+            .sum()
+    }
+
     /// Get the tile's biome. Every tile will have exactly on biome assigned.
     /// See [Biome] for more info.
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
@@ -413,19 +453,12 @@ impl Tile {
                         .clamp()
                         .convert::<f64>()
                         .inner() as f32;
-
-                    let runoff_egress: Meter3 = self
-                        .runoff_traversed
-                        .values()
-                        .copied()
-                        // Only include egress, ignore ingress
-                        .filter(|v| *v < Meter3(0.0))
-                        .map(|Meter3(v)| Meter3(v.abs()))
-                        .sum();
                     let normal_runoff_egress =
                         NumRange::new(Meter3(0.0), Meter3(1000.0))
-                            .value(runoff_egress)
+                            .value(self.runoff_egress())
                             .normalize()
+                            // Runoff egress ALSO doesn't have a fixed range so
+                            // we have to clamp it as well
                             .clamp()
                             .convert::<f64>()
                             .inner() as f32;

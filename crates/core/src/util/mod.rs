@@ -329,6 +329,49 @@ pub fn world_len(radius: u16) -> usize {
     3 * r * r + 3 * r + 1
 }
 
+// Serialize a HexPointMap as a list instead of a map. This is useful because
+// HexPoints generally shouldn't be used as serialized map keys, since JSON and
+// other formats don't support complex keys.
+pub mod hex_point_map_to_vec_serde {
+    use crate::{HasHexPosition, HexPointMap};
+    use serde::{
+        ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer,
+    };
+
+    /// Serialize a hex point map as a list
+    pub fn serialize<T, S>(
+        map: &HexPointMap<T>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
+    where
+        T: Serialize,
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(map.len()))?;
+        for tile in map.values() {
+            seq.serialize_element(tile)?;
+        }
+        seq.end()
+    }
+
+    /// Deserialize a list of values into a map. The deserialized type must
+    /// implement [HasHexPosition] so that we can derive a [HexPoint] for each
+    /// element to use as its map key.
+    pub fn deserialize<'de, T, D>(
+        deserializer: D,
+    ) -> Result<HexPointMap<T>, D::Error>
+    where
+        T: Deserialize<'de> + HasHexPosition,
+        D: Deserializer<'de>,
+    {
+        let vec: Vec<T> = Vec::deserialize(deserializer)?;
+        Ok(vec
+            .into_iter()
+            .map(|element| (element.position(), element))
+            .collect())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
