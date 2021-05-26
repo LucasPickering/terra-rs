@@ -7,6 +7,10 @@ name = "terra-cli"
 repository = "https://github.com/LucasPickering/terra-rs"
 version = "0.1.0"
 
+[[bin]]
+name = "terra"
+path = "src/main.rs"
+
 [dependencies]
 anyhow = "1.0"
 config = {version = "0.10", default-features = false, features = ["json", "toml"]}
