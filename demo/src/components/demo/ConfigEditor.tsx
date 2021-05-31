@@ -12,6 +12,7 @@ import ConfigSection from "./ConfigSection";
 import RangeConfigInput from "./RangeConfigInput";
 import SelectConfigInput from "./SelectConfigInput";
 import TextConfigInput from "./TextConfigInput";
+import ImportConfigButton from "./ImportConfigButton";
 import descriptions from "./descriptions";
 import { Breakpoint } from "@material-ui/core/styles/createBreakpoints";
 
@@ -59,6 +60,28 @@ const ConfigEditor: React.FC<{ inline?: boolean }> = ({ inline = false }) => {
       <Grid container spacing={4}>
         <Grid item xs={12}>
           <Typography variant="h2">Configure World</Typography>
+        </Grid>
+
+        <Grid item xs={12} container spacing={1} justify="flex-end">
+          <Grid item {...buttonSize}>
+            <Button fullWidth variant="outlined" onClick={resetConfig}>
+              Reset to Default
+            </Button>
+          </Grid>
+          <Grid item {...buttonSize}>
+            <ImportConfigButton />
+          </Grid>
+          <Grid item {...buttonSize}>
+            <Button
+              disabled={!generateWorldEnabled}
+              fullWidth
+              type="submit"
+              color="primary"
+              variant="contained"
+            >
+              {inline ? "Regenerate World" : "Generate World"}
+            </Button>
+          </Grid>
         </Grid>
 
         <Grid item {...sectionSize}>
@@ -238,25 +261,6 @@ const ConfigEditor: React.FC<{ inline?: boolean }> = ({ inline = false }) => {
               />
             </ConfigInput>
           </ConfigSection>
-        </Grid>
-
-        <Grid item xs={12} container spacing={1} justify="flex-end">
-          <Grid item {...buttonSize}>
-            <Button fullWidth variant="outlined" onClick={resetConfig}>
-              Reset to Default
-            </Button>
-          </Grid>
-          <Grid item {...buttonSize}>
-            <Button
-              disabled={!generateWorldEnabled}
-              fullWidth
-              type="submit"
-              color="primary"
-              variant="contained"
-            >
-              {inline ? "Regenerate World" : "Generate World"}
-            </Button>
-          </Grid>
         </Grid>
       </Grid>
     </form>

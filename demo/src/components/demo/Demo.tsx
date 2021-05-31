@@ -73,6 +73,7 @@ const Demo: React.FC = () => {
         config,
         generateWorldEnabled:
           world !== "generating" && config !== lastGeneratedConfig,
+        setConfig,
         setConfigValue: (key: ConfigKey, value: unknown) => {
           const newConfig = { ...config }; // Shallow copy to force a rerender
           set(newConfig, key, value);

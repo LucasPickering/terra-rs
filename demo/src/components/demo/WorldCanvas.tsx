@@ -5,8 +5,6 @@ import {
   CircularProgress,
   makeStyles,
   Paper,
-  Menu,
-  MenuItem,
 } from "@material-ui/core";
 import {
   Edit as IconEdit,
@@ -19,7 +17,6 @@ import { Location } from "history";
 import ConfigEditor from "./ConfigEditor";
 import DownloadMenu from "./DownloadMenu";
 import UnstyledLink from "../UnstyledLink";
-const { TileLens } = await import("terra-wasm");
 
 const useStyles = makeStyles(({ spacing }) => ({
   loading: {
