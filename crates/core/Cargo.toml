@@ -7,10 +7,6 @@ name = "terra"
 repository = "https://github.com/LucasPickering/terra-rs"
 version = "0.1.0"
 
-[[bench]]
-harness = false
-name = "world_gen"
-
 [features]
 bin = ["dep:rmp-serde"]
 stl = ["dep:stl_io"]
@@ -38,6 +34,3 @@ validator = {version = "0.12", features = ["derive"]}
 getrandom = {version = "*", features = ["js"]}
 wasm-bindgen = "0.2"
 web-sys = {version = "0.3", features = ["console"]}
-
-[dev-dependencies]
-criterion = "0.3"
