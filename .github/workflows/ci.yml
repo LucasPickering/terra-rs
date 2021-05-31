@@ -75,6 +75,10 @@ jobs:
         working-directory: demo
         run: npm install
 
+      - name: Lint
+        working-directory: demo
+        run: npm run lint
+
       - name: Build
         working-directory: demo
         run: npm run build
