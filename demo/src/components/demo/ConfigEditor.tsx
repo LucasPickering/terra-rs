@@ -261,6 +261,21 @@ const ConfigEditor: React.FC<{ inline?: boolean }> = ({ inline = false }) => {
             </ConfigInput>
           </ConfigSection>
         </Grid>
+
+        <Grid item {...sectionSize}>
+          <ConfigSection
+            title="Render Options"
+            description={descriptions.render.root}
+          >
+            <ConfigInput
+              field={["render", "y_scale"]}
+              label="Vertical Scale"
+              description={descriptions.render.y_scale}
+            >
+              <RangeConfigInput min={0.1} max={10.0} step={0.1} />
+            </ConfigInput>
+          </ConfigSection>
+        </Grid>
       </Grid>
     </form>
   );

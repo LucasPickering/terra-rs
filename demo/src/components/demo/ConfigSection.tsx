@@ -26,7 +26,7 @@ const ConfigSection = ({
 }: {
   title: string;
   description: string | React.ReactElement;
-  children: React.ReactNode[];
+  children: React.ReactNode | React.ReactNode[];
 }): React.ReactElement => {
   const classes = useStyles();
 
@@ -39,7 +39,7 @@ const ConfigSection = ({
         <HelpTooltip>{description}</HelpTooltip>
       </div>
 
-      {...children}
+      {children}
     </section>
   );
 };

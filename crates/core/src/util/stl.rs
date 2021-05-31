@@ -61,7 +61,7 @@ impl TileSolid {
             .map(|p| Vertex::new([p.x as f32, p.y as f32, 0.0]))
             .collect();
 
-        let top_z = tile.height().0 as f32;
+        let top_z = world.tile_render_height(tile) as f32;
         let top_perimeter_vertices: Vec<_> = perimeter_points_2d
             .iter()
             .map(|p| Vertex::new([p.x as f32, p.y as f32, top_z]))
@@ -73,7 +73,7 @@ impl TileSolid {
             .filter_map(|dir| {
                 let adj_pos = pos + dir.to_vector();
                 let adj_tile = tiles.get(&adj_pos)?;
-                Some((dir, adj_tile.height().0 as f32))
+                Some((dir, world.tile_render_height(adj_tile) as f32))
             })
             .collect();
 

@@ -110,6 +110,10 @@ impl WasmWorld {
             .unchecked_into()
     }
 
+    pub fn tile_render_height(&self, tile: &Tile) -> f64 {
+        self.0.tile_render_height(tile)
+    }
+
     /// See [terra::World::to_json]
     pub fn to_json(&self) -> Result<String, JsValue> {
         self.0.to_json().map_err(to_js_error)
@@ -169,6 +173,9 @@ export interface WorldConfigObject {
         lacunarity: number;
         persistence: number;
         exponent: number;
+    };
+    render: {
+        y_scale: number;
     };
 }
 "#;

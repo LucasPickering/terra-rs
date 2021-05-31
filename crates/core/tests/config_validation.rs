@@ -1,6 +1,6 @@
 use terra::{
     GeoFeatureConfig, Meter3, NoiseFnConfig, NoiseFnType, RainfallConfig,
-    World, WorldConfig,
+    RenderConfig, World, WorldConfig,
 };
 use validator::ValidationErrors;
 
@@ -31,6 +31,7 @@ fn test_config_validation() {
             persistence: -1.0, // valid (but weird)
             exponent: -1.0,    // valid (but weird)
         },
+        render: RenderConfig { y_scale: 0.0 },
     };
 
     // This is a bit of a lazy check but it works well enough
@@ -44,7 +45,13 @@ fn test_config_validation() {
     error_fields.sort_unstable();
     assert_eq!(
         error_fields,
-        vec!["edge_buffer_fraction", "elevation", "radius", "rainfall"],
+        vec![
+            "edge_buffer_fraction",
+            "elevation",
+            "radius",
+            "rainfall",
+            "y_scale"
+        ],
         "incorrect validation errors in {:#?}",
         validation_errors
     );

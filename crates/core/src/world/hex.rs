@@ -590,7 +590,9 @@ impl<T: Debug> Cluster<T> {
     /// here.
     pub fn join(&mut self, other: Cluster<T>) {
         self.tiles.extend(other.tiles);
-        // TODO make this more efficient somehow
+        // There may be a more efficient way to do this, but the naive method
+        // is very easy to let's do that. We can optimize this if it ends up
+        // being a bottleneck
         self.adjacents = self
             .adjacents
             .iter()
