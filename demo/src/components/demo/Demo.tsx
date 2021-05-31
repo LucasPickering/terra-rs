@@ -41,9 +41,8 @@ const Demo: React.FC = () => {
     }
     return terra.default_config();
   });
-  const [lastGeneratedConfig, setLastGeneratedConfig] = useState<
-    WorldConfigObject | undefined
-  >();
+  const [lastGeneratedConfig, setLastGeneratedConfig] =
+    useState<WorldConfigObject | undefined>();
 
   const [world, setWorld] = useState<WasmWorld | "generating" | undefined>();
   const generateWorld = async (goToWorld: boolean): Promise<void> => {
