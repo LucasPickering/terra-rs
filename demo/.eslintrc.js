@@ -19,6 +19,11 @@ module.exports = {
     Atomics: "readonly",
     SharedArrayBuffer: "readonly",
   },
+  settings: {
+    react: {
+      version: "detect",
+    },
+  },
   rules: {
     "no-console": "warn",
     "no-unused-vars": "off", // use the TS rule

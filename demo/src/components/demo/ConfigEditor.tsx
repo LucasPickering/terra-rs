@@ -35,9 +35,8 @@ function formatMeter3(value: number): string {
  * Edit the current world config
  */
 const ConfigEditor: React.FC<{ inline?: boolean }> = ({ inline = false }) => {
-  const { generateWorldEnabled, resetConfig, generateWorld } = useContext(
-    DemoContext
-  );
+  const { generateWorldEnabled, resetConfig, generateWorld } =
+    useContext(DemoContext);
   // TODO figure out how to make this properly dynamic so breakpoints are based
   // on parent size rather than screen size
   const sectionSize: Partial<Record<Breakpoint, GridSize>> = inline
