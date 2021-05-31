@@ -51,6 +51,7 @@ impl Terra {
         config.validate().map_err::<JsValue, _>(|err| {
             format!("Invalid config: {:?}", err).into()
         })?;
+        // Re-serialize it back into a JS object
         Ok(JsValue::from_serde(&config).unwrap().unchecked_into())
     }
 

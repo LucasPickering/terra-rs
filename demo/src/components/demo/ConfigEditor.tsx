@@ -12,6 +12,7 @@ import ConfigSection from "./ConfigSection";
 import RangeConfigInput from "./RangeConfigInput";
 import SelectConfigInput from "./SelectConfigInput";
 import TextConfigInput from "./TextConfigInput";
+import ImportConfigButton from "./ImportConfigButton";
 import descriptions from "./descriptions";
 import { Breakpoint } from "@material-ui/core/styles/createBreakpoints";
 
@@ -66,6 +67,9 @@ const ConfigEditor: React.FC<{ inline?: boolean }> = ({ inline = false }) => {
             <Button fullWidth variant="outlined" onClick={resetConfig}>
               Reset to Default
             </Button>
+          </Grid>
+          <Grid item {...buttonSize}>
+            <ImportConfigButton />
           </Grid>
           <Grid item {...buttonSize}>
             <Button

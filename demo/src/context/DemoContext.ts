@@ -12,6 +12,7 @@ export interface DemoContextType {
   terra: Terra;
   config: WorldConfigObject;
   generateWorldEnabled: boolean;
+  setConfig: (config: WorldConfigObject) => void;
   setConfigValue: (key: ConfigKey, value: unknown) => void;
   resetConfig: () => void; // Reset to default value
   world: WasmWorld | "generating" | undefined;
