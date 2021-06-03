@@ -43,7 +43,7 @@ const POINTS: &[BiomePoint] = &[
 pub struct BiomeGenerator;
 
 impl Generate for BiomeGenerator {
-    fn generate(&self, world: &mut WorldBuilder) -> anyhow::Result<()> {
+    fn generate(&self, world: &mut WorldBuilder) {
         // We're going to normalize all the elevations so we can use a
         // consistent set of coefficients below. We don't want to map from the
         // full range though, because 99% of the tiles below sea level we won't
@@ -62,8 +62,8 @@ impl Generate for BiomeGenerator {
         {
             // Normalize these values so we don't have to update this code when
             // we change the elevation/humidity range bounds
-            let elevation_norm = elev_input_range.normalize(tile.elevation()?);
-            let humidity = tile.humidity()?;
+            let elevation_norm = elev_input_range.normalize(tile.elevation());
+            let humidity = tile.humidity();
 
             // Do a naive search to find the nearest point. This is O(n) which
             // isn't particularly efficient, but since the number of points is
@@ -75,7 +75,5 @@ impl Generate for BiomeGenerator {
                 .unwrap(); // safe because we know POINTS is never empty
             tile.set_biome(biome);
         }
-
-        Ok(())
     }
 }

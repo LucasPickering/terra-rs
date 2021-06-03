@@ -1,4 +1,4 @@
-use anyhow::{bail, Context};
+use anyhow::{anyhow, bail, Context};
 use config::{Config, File};
 use log::{info, LevelFilter};
 use simple_logger::SimpleLogger;
@@ -10,7 +10,7 @@ use std::{
 };
 use structopt::StructOpt;
 use strum::{Display, EnumString};
-use terra::{timed, unwrap_or_bail, TileLens, World, WorldConfig};
+use terra::{timed, TileLens, World, WorldConfig};
 
 /// CLI for generating worlds via the Terra generation kit.
 #[derive(Debug, StructOpt)]
@@ -109,12 +109,11 @@ pub struct RenderOptions {
 fn load_config(config_path: &Path) -> anyhow::Result<WorldConfig> {
     // Load config
     let mut settings = Config::new();
+    let config_path = config_path.to_str().ok_or_else(|| {
+        anyhow!("invalid character in path {:?}", config_path)
+    })?;
     settings
-        .merge(File::with_name(unwrap_or_bail!(
-            config_path.to_str(),
-            "invalid character in path {:?}",
-            config_path
-        )))
+        .merge(File::with_name(config_path))
         .context("error reading config file")?;
     settings.try_into().context("error reading config")
 }
@@ -130,7 +129,7 @@ fn gen_output(
         output_format: OutputFormat,
         world: &World,
         render_options: RenderOptions,
-    ) -> anyhow::Result<Vec<u8>> {
+    ) -> Vec<u8> {
         match output_format {
             OutputFormat::Bin => {
                 // Serialize the entire world via msgpack
@@ -138,20 +137,20 @@ fn gen_output(
             }
             OutputFormat::Cfg => {
                 // Serialize just the world config via toml
-                let cfg_string = toml::to_string_pretty(world.config())
-                    .context("error serializing config")?;
-                Ok(cfg_string.into_bytes())
+                toml::to_string_pretty(world.config())
+                    // Panics only if config format isn't serializable (a bug)
+                    .expect("error serializing config")
+                    .into_bytes()
             }
             OutputFormat::Json => {
                 // Serialize the entire world via JSON
-                serde_json::to_vec(world).context("error serializing world")
+                world.to_json().into()
             }
             OutputFormat::Svg => {
                 // Render the world in 2D
-                Ok(world
+                world
                     .to_svg(render_options.lens, render_options.show_features)
-                    .context("error rendering world as SVG")?
-                    .into_bytes())
+                    .into_bytes()
             }
             OutputFormat::Stl => {
                 // Render the world in 3D
@@ -171,7 +170,7 @@ fn gen_output(
         ),
         log::Level::Info,
         {
-            let bytes = generate_bytes(output_format, world, render_options)?;
+            let bytes = generate_bytes(output_format, world, render_options);
             let mut file = OpenOptions::new()
                 .write(true)
                 .create(true)

@@ -13,12 +13,12 @@ use crate::{
 pub struct WaterFeatureGenerator;
 
 impl Generate for WaterFeatureGenerator {
-    fn generate(&self, world: &mut WorldBuilder) -> anyhow::Result<()> {
+    fn generate(&self, world: &mut WorldBuilder) {
         let cfg = world.config.geo_feature;
         for tile in world.tiles.values_mut() {
             // Lake
-            if tile.runoff()? >= cfg.lake_runoff_threshold {
-                tile.add_feature(GeoFeature::Lake)?;
+            if tile.runoff() >= cfg.lake_runoff_threshold {
+                tile.add_feature(GeoFeature::Lake);
             }
 
             // River exit
@@ -33,15 +33,14 @@ impl Generate for WaterFeatureGenerator {
                     tile.add_feature(GeoFeature::RiverEntrance {
                         direction: dir,
                         volume: runoff_net,
-                    })?;
+                    });
                 } else if runoff_net < -cfg.river_runoff_traversed_threshold {
                     tile.add_feature(GeoFeature::RiverExit {
                         direction: dir,
                         volume: -runoff_net,
-                    })?;
+                    });
                 }
             }
         }
-        Ok(())
     }
 }

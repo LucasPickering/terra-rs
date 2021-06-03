@@ -93,7 +93,10 @@ impl World {
     }
 
     /// Generate a new world with the given config. This operation could take
-    /// several seconds, depending on the world size and complexity.
+    /// several seconds, depending on the world size and complexity. Returns
+    /// an error if the given config is invalid. Panics only in the case of
+    /// internal bugs in the generation algorithm. Please report any panics
+    /// on the git repo.
     pub fn generate(config: WorldConfig) -> anyhow::Result<Self> {
         info!("Generating world with config {:#?}", config);
 
@@ -102,9 +105,7 @@ impl World {
         let tiles = timed!(
             "World generation",
             log::Level::Info,
-            WorldBuilder::new(config)
-                .generate_world()
-                .context("error during world validation")?
+            WorldBuilder::new(config).generate_world()
         );
 
         Ok(Self { config, tiles })
@@ -117,10 +118,10 @@ impl World {
     }
 
     /// Serializes this world into JSON. This is a recoverable format, which can
-    /// be loaded back into a [World] with [World::from_json].  A failure
-    /// here indicates a bug in Terra that prevents serialization.
-    pub fn to_json(&self) -> anyhow::Result<String> {
-        serde_json::to_string(self).context("error serializing world")
+    /// be loaded back into a [World] with [World::from_json].
+    pub fn to_json(&self) -> String {
+        // Panic here indicates an internal bug in the data format
+        serde_json::to_string(self).expect("error serializing world")
     }
 
     /// Deserialize a world from binary format. A world can be serialized into
@@ -135,11 +136,11 @@ impl World {
     /// Serializes this world into a binary format. This is a recoverable
     /// format, which can be loaded back into a [World] with [World::from_bin].
     /// See the struct-level [World] documentation for a description of the
-    /// binary format. A failure here indicates a bug in Terra that prevents
-    /// serialization.
+    /// binary format.
     #[cfg(feature = "bin")]
-    pub fn to_bin(&self) -> anyhow::Result<Vec<u8>> {
-        rmp_serde::to_vec_named(self).context("error serializing world")
+    pub fn to_bin(&self) -> Vec<u8> {
+        // Panic here indicates an internal bug in the data format
+        rmp_serde::to_vec_named(self).expect("error serializing world")
     }
 
     /// Render this world as a 2D SVG, from a top-down perspective. Returns the
@@ -151,27 +152,24 @@ impl World {
     /// - `show_features` - Should geographic features (lakes, rivers, etc.) be
     ///   rendered? See [crate::GeoFeature] for a full list
     #[cfg(feature = "svg")]
-    pub fn to_svg(
-        &self,
-        lens: TileLens,
-        show_features: bool,
-    ) -> anyhow::Result<String> {
+    pub fn to_svg(&self, lens: TileLens, show_features: bool) -> String {
         use crate::util;
-        let svg = util::svg::world_to_svg(self, lens, show_features)?;
-        Ok(svg.to_string())
+        let svg = util::svg::world_to_svg(self, lens, show_features);
+        svg.to_string()
     }
 
     /// Render this world into an STL model. Return value is the STL binary
     /// data. Returns an error if serialization fails, which indicates a bug
     /// in terra or stl_io.
     #[cfg(feature = "stl")]
-    pub fn to_stl(&self) -> anyhow::Result<Vec<u8>> {
+    pub fn to_stl(&self) -> Vec<u8> {
         use crate::util;
         let mesh = util::stl::world_to_stl(self);
         let mut buffer = Vec::<u8>::new();
+        // Panic here indicates a bug in our STL mesh format
         stl_io::write_stl(&mut buffer, mesh.iter())
-            .context("error serializing STL")?;
-        Ok(buffer)
+            .expect("error serializing STL");
+        buffer
     }
 }
 

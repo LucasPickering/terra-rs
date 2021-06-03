@@ -16,7 +16,7 @@ use std::iter;
 pub struct RainfallGenerator;
 
 impl Generate for RainfallGenerator {
-    fn generate(&self, world: &mut WorldBuilder) -> anyhow::Result<()> {
+    fn generate(&self, world: &mut WorldBuilder) {
         // This generator works as a one-pass rainfall simulator. Imagine a line
         // (our clouds) that runs perpendicular to the wind, and is as wide as
         // the world at its fattest point (i.e. it always covers the
@@ -29,15 +29,13 @@ impl Generate for RainfallGenerator {
         // and drop rain (where the amount is based on elevation).
 
         let mut cloud_line =
-            CloudLine::new(&world.config, world.wind_direction()?);
+            CloudLine::new(&world.config, world.wind_direction());
 
         let radius = world.config.radius as i16;
         for _ in -radius..=radius {
-            cloud_line.precipitate_and_evaporate(&mut world.tiles)?;
+            cloud_line.precipitate_and_evaporate(&mut world.tiles);
             cloud_line.advance();
         }
-
-        Ok(())
     }
 }
 
@@ -101,13 +99,13 @@ impl<'a> CloudLine<'a> {
     /// Calculate a scaling factor for how much rain a tile should get. Higher
     /// tiles get more rain. This simulates the clouds getting stuck up against
     /// mountains.
-    fn calc_rainfall_factor(&self, tile: &TileBuilder) -> anyhow::Result<f64> {
-        Ok(World::ELEVATION_RANGE
-            .value(tile.elevation()?)
+    fn calc_rainfall_factor(&self, tile: &TileBuilder) -> f64 {
+        World::ELEVATION_RANGE
+            .value(tile.elevation())
             .convert::<f64>()
             .map_to(self.rainfall_factor_range)
             .clamp()
-            .inner())
+            .inner()
     }
 
     /// Calculate how much water vapor this tile produces when the clouds pass
@@ -127,7 +125,7 @@ impl<'a> CloudLine<'a> {
     fn precipitate_and_evaporate(
         &mut self,
         tiles: &mut HexPointMap<TileBuilder>,
-    ) -> anyhow::Result<()> {
+    ) {
         let mut evaporation: Vec<Meter3> = iter::repeat(Meter3(0.0))
             .take(self.cloud_volumes.len())
             .collect();
@@ -141,9 +139,9 @@ impl<'a> CloudLine<'a> {
                 // Each tile receives some fraction of the current water
                 // available in the cloud
                 let rainfall =
-                    self.cloud_volumes[i] * self.calc_rainfall_factor(tile)?;
+                    self.cloud_volumes[i] * self.calc_rainfall_factor(tile);
                 self.cloud_volumes[i] -= rainfall;
-                tile.set_rainfall(rainfall)?;
+                tile.set_rainfall(rainfall);
             }
         }
 
@@ -166,8 +164,6 @@ impl<'a> CloudLine<'a> {
                 .sum();
             *v += evap;
         }
-
-        Ok(())
     }
 
     fn advance(&mut self) {

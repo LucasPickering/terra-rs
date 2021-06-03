@@ -12,7 +12,7 @@ use crate::{
 pub struct ElevationGenerator;
 
 impl Generate for ElevationGenerator {
-    fn generate(&self, world: &mut WorldBuilder) -> anyhow::Result<()> {
+    fn generate(&self, world: &mut WorldBuilder) {
         let config = world.config;
         let normal_range = NumRange::normal_range();
         let noise_fn: TileNoiseFn<Meter> =
@@ -63,9 +63,7 @@ impl Generate for ElevationGenerator {
                 .convert::<Meter>()
                 .map_to(elev_range)
                 .inner();
-            tile.set_elevation(elev)?;
+            tile.set_elevation(elev);
         }
-
-        Ok(())
     }
 }

@@ -1,5 +1,4 @@
 use crate::{BiomeType, GeoFeature, Meter3, NumRange, Tile, World};
-use anyhow::anyhow;
 use derive_more::{
     Add, AddAssign, Display, Div, DivAssign, From, Into, Mul, MulAssign, Neg,
     Sub, SubAssign, Sum,
@@ -107,30 +106,27 @@ impl Color3 {
     /// The valid range of values for each component in RGB
     const COMPONENT_RANGE: NumRange<f32> = NumRange::new(0.0, 1.0);
 
-    /// Create a new RGB color. Return if any of the components are out of
-    /// the range [0.0, 1.0].
-    pub fn new(red: f32, green: f32, blue: f32) -> anyhow::Result<Self> {
-        fn check_component(
-            component_name: &str,
-            value: f32,
-        ) -> anyhow::Result<f32> {
+    /// Create a new RGB color with components in the range [0.0, 1.0]. Panic
+    /// if any of the components are out of range
+    pub fn new(red: f32, green: f32, blue: f32) -> Self {
+        fn check_component(component_name: &str, value: f32) -> f32 {
             if Color3::COMPONENT_RANGE.contains(value) {
-                Ok(value)
+                value
             } else {
-                Err(anyhow!(
+                panic!(
                     "Color component {} must be in {}, but was {}",
                     component_name,
                     Color3::COMPONENT_RANGE,
                     value
-                ))
+                )
             }
         }
 
-        Ok(Self {
-            red: check_component("red", red)?,
-            green: check_component("green", green)?,
-            blue: check_component("blue", blue)?,
-        })
+        Self {
+            red: check_component("red", red),
+            green: check_component("green", green),
+            blue: check_component("blue", blue),
+        }
     }
 
     /// Create a new RGB color from integer components in the [0,255] range.
@@ -193,16 +189,16 @@ pub enum TileLens {
 impl TileLens {
     /// Compute the color of a tile based on the lens being viewed. The lens
     /// controls what data the color is derived from.
-    pub fn tile_color(self, tile: &Tile) -> anyhow::Result<Color3> {
+    pub fn tile_color(self, tile: &Tile) -> Color3 {
         match self {
             TileLens::Surface => {
                 if tile.features().contains(&GeoFeature::Lake) {
-                    Ok(Color3::new_int(72, 192, 240))
+                    Color3::new_int(72, 192, 240)
                 } else {
-                    Ok(tile.biome().color())
+                    tile.biome().color()
                 }
             }
-            TileLens::Biome => Ok(tile.biome().color()),
+            TileLens::Biome => tile.biome().color(),
             TileLens::Elevation => {
                 let normal_elev =
                     World::ELEVATION_RANGE.normalize(tile.elevation()).0 as f32;

@@ -10,6 +10,7 @@
 //! let world = World::generate(config).unwrap();
 //! println!("{}", world.tiles().len());
 //! // From here you can display/use the world however you like.
+//! // See other methods on the World struct for possible output formats.
 //! ```
 //!
 //! See [WorldConfig] for details on how the world generation can be customized.

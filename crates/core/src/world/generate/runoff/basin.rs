@@ -1,5 +1,5 @@
 use crate::{
-    unwrap_or_bail,
+    unwrap,
     util::{Meter, Meter3},
     world::{
         generate::{
@@ -10,7 +10,6 @@ use crate::{
         Tile,
     },
 };
-use anyhow::anyhow;
 use derive_more::{Display, From, Into};
 use fnv::FnvBuildHasher;
 use log::trace;
@@ -91,16 +90,16 @@ pub struct Basin {
 impl Basin {
     /// Initialize a new basin around the given terminal tile. This will remove
     /// any runoff on the tile and move it into the basin's runoff storage.
-    pub fn new(terminal: &mut TileBuilder) -> anyhow::Result<Self> {
+    pub fn new(terminal: &mut TileBuilder) -> Self {
         let term_pos = terminal.position();
-        Ok(Self {
+        Self {
             key: ResolvedBasinKey(term_pos),
             terminals: vec![term_pos],
             tiles: Cluster::new(iter::once((term_pos, ())).collect()),
-            total_elev: terminal.elevation()?,
-            runoff: terminal.clear_runoff()?,
+            total_elev: terminal.elevation(),
+            runoff: terminal.clear_runoff(),
             prev_donors: HashSet::default(),
-        })
+        }
     }
 
     pub fn tiles(&self) -> &Cluster<()> {
@@ -121,10 +120,9 @@ impl Basin {
     }
 
     /// Add a tile to this basin.
-    pub fn add_tile(&mut self, tile: &TileBuilder) -> anyhow::Result<()> {
-        self.tiles.insert(tile.position(), ())?;
-        self.total_elev += tile.elevation()?;
-        Ok(())
+    pub fn add_tile(&mut self, tile: &TileBuilder) {
+        self.tiles.insert(tile.position(), ());
+        self.total_elev += tile.elevation();
     }
 
     /// "Runoff elevation" is elevation+runoff for any tile, i.e. the elevation
@@ -241,21 +239,19 @@ impl Basins {
     /// runoff data, we will assume that any tile with runoff on it is a
     /// terminal. As such, this should only be called **after** runoff has
     /// been pushed out to all the terminal tiles.
-    pub fn new(
-        continent: &mut HexPointIndexMap<&mut TileBuilder>,
-    ) -> anyhow::Result<Self> {
+    pub fn new(continent: &mut HexPointIndexMap<&mut TileBuilder>) -> Self {
         // Create one basin per terminal tile
         let mut basins = HashMap::default();
         for tile in continent.values_mut() {
-            if tile.runoff()? > Meter3(0.0) {
-                let basin = Basin::new(tile)?;
+            if tile.runoff() > Meter3(0.0) {
+                let basin = Basin::new(tile);
                 basins.insert(basin.key, basin);
             }
         }
-        Ok(Self {
+        Self {
             basins,
             aliases: HashMap::default(),
-        })
+        }
     }
 
     /// Resolve a basin key, which could possibly be an alias. **The returned
@@ -287,24 +283,22 @@ impl Basins {
     /// be resolved to find the correct basin. Under normal circumstances, we
     /// would never expect a basin lookup to fail, because anything that we
     /// think is a basin key _should_ be a basin key. So as a convenience
-    /// measure, this returns a `Result` instead of an `Option`.
-    pub fn get(&self, key: HexPoint) -> anyhow::Result<&Basin> {
+    /// measure, this panics in the case of an unknown key, instead of returning
+    /// an `Option`.
+    pub fn get(&self, key: HexPoint) -> &Basin {
         let key = self.resolve(key.into());
-        self.basins
-            .get(&key)
-            .ok_or_else(|| anyhow!("unknown basin key {}", key))
+        unwrap!(self.basins.get(&key), "unknown basin key {}", key)
     }
 
     /// Get a mutable reference to a basin. If the given key is an alias, the
     /// alias will be resolved to find the correct basin. Under normal
     /// circumstances, we would never expect a basin lookup to fail, because
     /// anything that we think is a basin key _should_ be a basin key. So as a
-    /// convenience measure, this returns a `Result` instead of an `Option`.
-    pub fn get_mut(&mut self, key: HexPoint) -> anyhow::Result<&mut Basin> {
+    /// convenience measure, this panics in the case of an unknown key, instead
+    /// of returning an `Option`.
+    pub fn get_mut(&mut self, key: HexPoint) -> &mut Basin {
         let key = self.resolve(key.into());
-        self.basins
-            .get_mut(&key)
-            .ok_or_else(|| anyhow!("unknown basin key {}", key))
+        unwrap!(self.basins.get_mut(&key), "unknown basin key {}", key)
     }
 
     /// Has `donor` overflowed into `donee` in the past?
@@ -312,9 +306,9 @@ impl Basins {
         &self,
         donor: HexPoint,
         donee: HexPoint,
-    ) -> anyhow::Result<bool> {
-        let donee_basin = self.get(donee)?;
-        Ok(donee_basin.prev_donors.contains(&donor.into()))
+    ) -> bool {
+        let donee_basin = self.get(donee);
+        donee_basin.prev_donors.contains(&donor.into())
     }
 
     /// Join one basin into another, and add some amount of residual overflow
@@ -327,7 +321,7 @@ impl Basins {
         a: HexPoint,
         b: HexPoint,
         overflow: Meter3,
-    ) -> anyhow::Result<&Basin> {
+    ) -> &Basin {
         let a: BasinKey = a.into();
         let b: BasinKey = b.into();
         trace!("Joining basin {} into basin {}", b, a);
@@ -343,7 +337,7 @@ impl Basins {
         // mostly a no-op (we just need to add in the overflow we were given
         // still).
         let b_basin = if a_res != b_res {
-            let b_basin = unwrap_or_bail!(
+            let b_basin = unwrap!(
                 self.basins.remove(&b_res),
                 "unknown basin: {} (resolved from {})",
                 b_res,
@@ -369,7 +363,7 @@ impl Basins {
             None
         };
 
-        let basin = unwrap_or_bail!(
+        let basin = unwrap!(
             self.basins.get_mut(&a_res),
             "unknown basin: {} (resolved from {})",
             a_res,
@@ -383,6 +377,6 @@ impl Basins {
         // Add in whatever overflow we were given
         basin.runoff += overflow;
 
-        Ok(basin)
+        basin
     }
 }
