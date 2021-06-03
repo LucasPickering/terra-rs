@@ -4,7 +4,7 @@ pub mod tile;
 
 use crate::{
     timed,
-    util::{Color3, Meter, Meter3, NumRange, TileLens},
+    util::{Meter, Meter3, NumRange},
     world::{
         generate::WorldBuilder,
         hex::{HexDirection, HexPointMap},
@@ -39,6 +39,7 @@ use wasm_bindgen::prelude::*;
 /// reloaded via [World::from_bin]. Currently the binary format is just msgpack,
 /// but that is subject to change so beware of that if you write other programs
 /// that load the format.
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
     /// The config used to generate this world. World generation is
@@ -52,6 +53,7 @@ pub struct World {
     tiles: HexPointMap<Tile>,
 }
 
+// Non-Wasm API
 impl World {
     /// All tiles above this elevation are guaranteed to be non-ocean. All tiles
     /// at OR below _could_ be ocean, but the actual chance depends upon the
@@ -79,19 +81,6 @@ impl World {
         &self.tiles
     }
 
-    /// Get the height that a tile's geometry should have. This will convert
-    /// the tile's elevation to a zero-based scale, then multiplicatively scale
-    /// it based on the pre-configured Y scale of the world. See
-    /// [RenderConfig::y_scale] for more info on what exactly the vertical scale
-    /// means.
-    pub fn tile_render_height(&self, tile: &Tile) -> f64 {
-        // Map elevation to a zero-based scale
-        let zeroed_elevation = World::ELEVATION_RANGE
-            .map_to(&World::ELEVATION_RANGE.zeroed(), tile.elevation);
-        // Multiply by render scale
-        zeroed_elevation.0 * self.config.render.y_scale
-    }
-
     /// Generate a new world with the given config. This operation could take
     /// several seconds, depending on the world size and complexity. Returns
     /// an error if the given config is invalid. Panics only in the case of
@@ -117,13 +106,6 @@ impl World {
         serde_json::from_str(json).context("error deserializing world")
     }
 
-    /// Serializes this world into JSON. This is a recoverable format, which can
-    /// be loaded back into a [World] with [World::from_json].
-    pub fn to_json(&self) -> String {
-        // Panic here indicates an internal bug in the data format
-        serde_json::to_string(self).expect("error serializing world")
-    }
-
     /// Deserialize a world from binary format. A world can be serialized into
     /// binary with [World::to_bin]. See the struct-level [World] documentation
     /// for a description of the binary format. Will fail if the input is
@@ -131,6 +113,17 @@ impl World {
     #[cfg(feature = "bin")]
     pub fn from_bin(read: impl Read) -> anyhow::Result<Self> {
         rmp_serde::from_read(read).context("error deserializing world")
+    }
+}
+
+// Wasm-friendly API
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+impl World {
+    /// Serializes this world into JSON. This is a recoverable format, which can
+    /// be loaded back into a [World] with [World::from_json].
+    pub fn to_json(&self) -> String {
+        // Panic here indicates an internal bug in the data format
+        serde_json::to_string(self).expect("error serializing world")
     }
 
     /// Serializes this world into a binary format. This is a recoverable
@@ -141,35 +134,6 @@ impl World {
     pub fn to_bin(&self) -> Vec<u8> {
         // Panic here indicates an internal bug in the data format
         rmp_serde::to_vec_named(self).expect("error serializing world")
-    }
-
-    /// Render this world as a 2D SVG, from a top-down perspective. Returns the
-    /// SVG in a string.
-    ///
-    /// ## Params
-    /// - `lens` - The [crate::TileLens] to use when determining each tile's
-    ///   color
-    /// - `show_features` - Should geographic features (lakes, rivers, etc.) be
-    ///   rendered? See [crate::GeoFeature] for a full list
-    #[cfg(feature = "svg")]
-    pub fn to_svg(&self, lens: TileLens, show_features: bool) -> String {
-        use crate::util;
-        let svg = util::svg::world_to_svg(self, lens, show_features);
-        svg.to_string()
-    }
-
-    /// Render this world into an STL model. Return value is the STL binary
-    /// data. Returns an error if serialization fails, which indicates a bug
-    /// in terra or stl_io.
-    #[cfg(feature = "stl")]
-    pub fn to_stl(&self) -> Vec<u8> {
-        use crate::util;
-        let mesh = util::stl::world_to_stl(self);
-        let mut buffer = Vec::<u8>::new();
-        // Panic here indicates a bug in our STL mesh format
-        stl_io::write_stl(&mut buffer, mesh.iter())
-            .expect("error serializing STL");
-        buffer
     }
 }
 
@@ -212,21 +176,6 @@ impl Biome {
             | Self::Jungle
             | Self::Forest
             | Self::Plains => BiomeType::Land,
-        }
-    }
-
-    /// Get a pretty color unique to this biome
-    pub fn color(self) -> Color3 {
-        match self {
-            Self::Ocean => Color3::new_int(20, 77, 163),
-            Self::Coast => Color3::new_int(32, 166, 178),
-
-            Self::Snow => Color3::new_int(191, 191, 191),
-            Self::Desert => Color3::new_int(214, 204, 107),
-            Self::Alpine => Color3::new_int(99, 122, 99),
-            Self::Jungle => Color3::new_int(43, 179, 31),
-            Self::Forest => Color3::new_int(23, 122, 0),
-            Self::Plains => Color3::new_int(173, 201, 115),
         }
     }
 }

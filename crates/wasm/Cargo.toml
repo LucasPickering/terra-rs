@@ -21,6 +21,7 @@ test = false
 console_error_panic_hook = "0.1"
 js-sys = "0.3"
 log = "0.4"
+serde = "1.0"
 terra = {path = "../core", features = ["bin", "svg", "stl"]}
 wasm-bindgen = {version = "0.2", features = ["serde-serialize"]}
 wasm-logger = "0.2"

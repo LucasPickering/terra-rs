@@ -12,7 +12,7 @@ const ImportConfigButton: React.FC = () => {
     try {
       const data = await file.text();
       const configString = JSON.parse(data);
-      const validConfig = terra.validate_config(configString);
+      const validConfig = terra.validate_world_config(configString);
       setConfig(validConfig);
     } catch (error) {
       window.alert("Failed to load config: " + error);

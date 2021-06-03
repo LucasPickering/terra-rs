@@ -30,8 +30,8 @@ function ConfigInput<T>({
   const classes = useStyles();
   const id = `input-${field}`;
   const tooltipId = `tooltip-${field}`;
-  const { config, setConfigValue } = useContext(DemoContext);
-  const value: T = get(config, field);
+  const { worldConfig, setConfigValue } = useContext(DemoContext);
+  const value: T = get(worldConfig, field);
   const onChange = (value: T): void => {
     setConfigValue(field, value);
   };
