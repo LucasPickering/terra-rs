@@ -82,12 +82,8 @@ impl Terra {
     /// doesn't support impls on enums so we have to do this
     /// https://github.com/rustwasm/wasm-bindgen/issues/1715
     #[wasm_bindgen]
-    pub fn tile_color(
-        &self,
-        tile: &Tile,
-        lens: TileLens,
-    ) -> Result<Color3, JsValue> {
-        lens.tile_color(tile).map_err(to_js_error)
+    pub fn tile_color(&self, tile: &Tile, lens: TileLens) -> Color3 {
+        lens.tile_color(tile)
     }
 }
 
@@ -110,32 +106,29 @@ impl WasmWorld {
             .unchecked_into()
     }
 
+    /// See [terra::World::tile_render_height]
     pub fn tile_render_height(&self, tile: &Tile) -> f64 {
         self.0.tile_render_height(tile)
     }
 
     /// See [terra::World::to_json]
-    pub fn to_json(&self) -> Result<String, JsValue> {
-        self.0.to_json().map_err(to_js_error)
+    pub fn to_json(&self) -> String {
+        self.0.to_json()
     }
 
     /// See [terra::World::to_bin]
-    pub fn to_bin(&self) -> Result<Vec<u8>, JsValue> {
-        self.0.to_bin().map_err(to_js_error)
+    pub fn to_bin(&self) -> Vec<u8> {
+        self.0.to_bin()
     }
 
     /// See [terra::World::to_svg]
-    pub fn to_svg(
-        &self,
-        lens: TileLens,
-        show_features: bool,
-    ) -> Result<String, JsValue> {
-        self.0.to_svg(lens, show_features).map_err(to_js_error)
+    pub fn to_svg(&self, lens: TileLens, show_features: bool) -> String {
+        self.0.to_svg(lens, show_features)
     }
 
     /// See [terra::World::to_stl]
-    pub fn to_stl(&self) -> Result<Vec<u8>, JsValue> {
-        self.0.to_stl().map_err(to_js_error)
+    pub fn to_stl(&self) -> Vec<u8> {
+        self.0.to_stl()
     }
 }
 

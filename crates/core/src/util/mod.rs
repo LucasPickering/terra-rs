@@ -21,18 +21,16 @@ use std::{
     ops,
 };
 
-/// A macro to unwrap an option to its `Some` value, and bail out of the current
-/// function with an [anyhow::Error] if not. Can only be used in functions that
-/// return an [anyhow::Result].
+/// A macro to unwrap an option to its `Some` value, and panic if `None`. This
+/// is the same as [Option::unwrap], except that it accepts a format string
+/// and format arguments, allowing for more flexibility in error messages.
 #[macro_export]
-macro_rules! unwrap_or_bail {
-    // ($msg:literal $(,)?) => { ... };
-    // ($err:expr $(,)?) => { ... };
+macro_rules! unwrap {
     ($opt:expr, $fmt:expr, $($arg:tt)*) => {
         match $opt {
             Some(v) => v,
             // None => bail!($fmt, $($arg)*)
-            None => return Err(anyhow::anyhow!($fmt, $($arg)*)),
+            None => panic!($fmt, $($arg)*),
         }
     };
 }
