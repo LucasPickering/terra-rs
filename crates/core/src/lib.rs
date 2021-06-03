@@ -27,17 +27,17 @@
 #![feature(const_fn_trait_bound)]
 
 mod config;
+mod render;
 mod util;
 mod world;
 
 pub use crate::{
     config::{
         GeoFeatureConfig, NoiseFnConfig, NoiseFnType, RainfallConfig,
-        RenderConfig, WorldConfig,
+        WorldConfig,
     },
-    util::{
-        Color3, Meter, Meter2, Meter3, NumRange, Point2, RangeValue, TileLens,
-    },
+    render::{Color3, Point2, RenderConfig, TileLens, WorldRenderer},
+    util::{Meter, Meter2, Meter3, NumRange, RangeValue},
     world::{
         hex::{
             HasHexPosition, HexAxialDirection, HexAxis, HexDirection,

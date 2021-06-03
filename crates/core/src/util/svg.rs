@@ -1,6 +1,6 @@
 use crate::{
-    Color3, GeoFeature, HasHexPosition, HexAxialDirection, Tile, TileLens,
-    World,
+    render::{Color3, WorldRenderer},
+    GeoFeature, HasHexPosition, HexAxialDirection, Tile, World,
 };
 use svg::{
     node::{
@@ -13,23 +13,17 @@ use svg::{
 const RIVER_COLOR: Color3 = Color3::new_int(72, 192, 240);
 
 /// Render a world as an SVG. This will be a 2D top-down rendering, in full
-/// color.
-///
-/// ## Params
-/// - `world` - The world to render
-/// - `lens` - The [TileLens] to use when determining each tile's color
-/// - `show_features` - Should geographic features (lakes, rivers, etc.) be
-///   rendered? See [crate::GeoFeature] for a full list
-pub fn world_to_svg(
-    world: &World,
-    lens: TileLens,
-    show_features: bool,
-) -> Document {
+/// color
+pub fn world_to_svg(world: &World, renderer: &WorldRenderer) -> Document {
     // Grow the view box based on the world size. The world height will always
     // be the larger size, so scale it based on that. The +1 provides a bit of
     // buffer space
+
+    // TODO make this smarter by rendering all the tiles, _then_ calculating
+    // bounds so we don't have to guess
+    let world_config = world.config();
     let view_box_size =
-        ((world.config().radius as f64 + 1.0) * Tile::HEIGHT).ceil();
+        ((world_config.radius as f64 + 1.0) * Tile::HEIGHT).ceil();
     let mut document = Document::new()
         .set(
             "viewBox",
@@ -41,10 +35,10 @@ pub fn world_to_svg(
             ),
         )
         .set("shape-rendering", "crispEdges")
-        .add(Comment::new(format!("\n{:#?}\n", world.config())));
+        .add(Comment::new(format!("\n{:#?}\n", world_config)));
 
     for tile in world.tiles().values() {
-        let polygon = draw_tile(tile, lens, show_features);
+        let polygon = draw_tile(renderer, tile);
         document = document.add(polygon);
     }
 
@@ -52,7 +46,7 @@ pub fn world_to_svg(
 }
 
 /// Generate an SVG polygon for a single tile
-fn draw_tile(tile: &Tile, lens: TileLens, show_features: bool) -> Group {
+fn draw_tile(world_renderer: &WorldRenderer, tile: &Tile) -> Group {
     let pos = tile.position();
     let pos2d = pos.to_point2();
 
@@ -72,11 +66,11 @@ fn draw_tile(tile: &Tile, lens: TileLens, show_features: bool) -> Group {
                         })
                         .collect::<Vec<_>>(),
                 )
-                .set("fill", lens.tile_color(tile).to_html()),
+                .set("fill", world_renderer.tile_color(tile).to_html()),
         );
 
     // Add overlays for each geo feature
-    if show_features {
+    if world_renderer.render_config().show_features {
         for feature in tile.features() {
             match feature {
                 GeoFeature::Lake => {} // This is covered by TileLens::Surface

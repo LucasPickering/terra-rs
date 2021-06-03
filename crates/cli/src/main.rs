@@ -10,7 +10,7 @@ use std::{
 };
 use structopt::StructOpt;
 use strum::{Display, EnumString};
-use terra::{timed, TileLens, World, WorldConfig};
+use terra::{timed, RenderConfig, TileLens, World, WorldConfig, WorldRenderer};
 
 /// CLI for generating worlds via the Terra generation kit.
 #[derive(Debug, StructOpt)]
@@ -123,12 +123,12 @@ fn gen_output(
     output_dir: &Path,
     output_format: OutputFormat,
     world: &World,
-    render_options: RenderOptions,
+    renderer: &WorldRenderer,
 ) -> anyhow::Result<()> {
     fn generate_bytes(
         output_format: OutputFormat,
         world: &World,
-        render_options: RenderOptions,
+        renderer: &WorldRenderer,
     ) -> Vec<u8> {
         match output_format {
             OutputFormat::Bin => {
@@ -148,13 +148,11 @@ fn gen_output(
             }
             OutputFormat::Svg => {
                 // Render the world in 2D
-                world
-                    .to_svg(render_options.lens, render_options.show_features)
-                    .into_bytes()
+                renderer.render_as_svg(world).into_bytes()
             }
             OutputFormat::Stl => {
                 // Render the world in 3D
-                world.to_stl()
+                renderer.render_as_stl(world)
             }
         }
     }
@@ -170,7 +168,7 @@ fn gen_output(
         ),
         log::Level::Info,
         {
-            let bytes = generate_bytes(output_format, world, render_options);
+            let bytes = generate_bytes(output_format, world, renderer);
             let mut file = OpenOptions::new()
                 .write(true)
                 .create(true)
@@ -230,12 +228,15 @@ fn run(opt: Opt) -> anyhow::Result<()> {
             bail!("output dir was specified, but no output formats were given")
         }
         fs::create_dir_all(&output_dir)?;
-        let render_options = RenderOptions {
-            lens: opt.lens,
+
+        let renderer = WorldRenderer::new(RenderConfig {
+            tile_lens: opt.lens,
             show_features: !opt.hide_features,
-        };
+            ..Default::default()
+        })
+        .context("invalid render config")?;
         for output_format in opt.output_formats {
-            gen_output(&output_dir, output_format, &world, render_options)?;
+            gen_output(&output_dir, output_format, &world, &renderer)?;
         }
     }
 
