@@ -32,7 +32,7 @@ mod world;
 pub use crate::{
     config::{
         GeoFeatureConfig, NoiseFnConfig, NoiseFnType, RainfallConfig,
-        WorldConfig,
+        RenderConfig, WorldConfig,
     },
     util::{
         Color3, Meter, Meter2, Meter3, NumRange, Point2, RangeValue, TileLens,

@@ -60,6 +60,11 @@ pub struct WorldConfig {
     /// Config for the noise function used to generate elevation values
     #[validate]
     pub elevation: NoiseFnConfig,
+
+    /// Config for render-only options. These don't impact world generation,
+    /// only how the world is rendered
+    #[validate]
+    pub render: RenderConfig,
 }
 
 /// Configuration related to rainfall and evaporation simulation. These params
@@ -164,6 +169,23 @@ pub struct NoiseFnConfig {
     pub exponent: f64,
 }
 
+/// Configuration specific to visually rendering a world. These options have
+/// absolutely no bearing on world _generation_, only on the visual
+/// presentation. In other words, if you generate a world then output to a
+/// non-visual format (e.g. JSON or binary), these options will **never**
+/// affect that output.
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
+pub struct RenderConfig {
+    /// The vertical scale factor applied to each tile. This impacts the
+    /// _presentation_ of each tile's elevation, but **does not factor into**
+    /// the tile's underlying elevation value. With a scale of 1.0, one meter
+    /// of elevation will be the same distance as the length of one side of a
+    /// tile's top or bottom face, i.e. one sixth of the tile's perimeter.
+    #[validate(range(min = 0.001))]
+    pub y_scale: f64,
+}
+
 /// The different types of supported noise functions. These are all expected to
 /// be seedable and multi-fractal. See
 /// https://docs.rs/noise/0.7.0/noise/trait.MultiFractal.html for a list of
@@ -203,6 +225,7 @@ impl Default for WorldConfig {
                 persistence: 0.3,
                 exponent: 0.9,
             },
+            render: RenderConfig::default(),
         }
     }
 }
@@ -225,6 +248,12 @@ impl Default for GeoFeatureConfig {
             lake_runoff_threshold: Meter3(10.0),
             river_runoff_traversed_threshold: Meter3(100.0),
         }
+    }
+}
+
+impl Default for RenderConfig {
+    fn default() -> Self {
+        Self { y_scale: 1.0 }
     }
 }
 

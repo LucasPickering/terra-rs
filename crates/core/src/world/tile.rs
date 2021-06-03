@@ -101,15 +101,6 @@ impl Tile {
         self.elevation
     }
 
-    /// Tile elevation, but mapped to a zero-based range so the value is
-    /// guaranteed to be non-negative. This makes it safe to use for vertical
-    /// scaling during rendering.
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
-    pub fn height(&self) -> Meter {
-        World::ELEVATION_RANGE
-            .map_to(&World::ELEVATION_RANGE.zeroed(), self.elevation)
-    }
-
     /// Total amount of water that fell on this tile during rain simulation.
     /// This value is guaranteed to be non-negative, but has no hard maximum.
     /// If you need to map a rainfall value to some bounded range, you can use

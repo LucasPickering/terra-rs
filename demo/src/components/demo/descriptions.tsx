@@ -261,6 +261,33 @@ const descriptions = {
       </>
     ),
   },
+  render: {
+    root: (
+      <>
+        Render options are strictly limited to controlling how a Terra world is
+        visually rendered.{" "}
+        <strong>They have no impact on world generation.</strong> These options
+        serve two purposes. First, they instruct Terra itself how to render
+        tiles, and second they serve as a reference to external renderers for
+        how to render the world. For example, a Terra world can be rendered by a
+        3rd party application, and that application could choose whatever factor
+        of Y-scaling that it wants. But it is <em>suggested</em> to use the Y
+        scale value from this config, for consistency.
+      </>
+    ),
+    y_scale: (
+      <>
+        Visual vertical scaling factor for each individual tile. At 1.0, 1 meter
+        of elevation will be visually equivalent to the length of one side of a
+        tile. Note that, because this is a render option, this has no impact on
+        the elevation values generated for a world.{" "}
+        <strong>
+          It solely impacts how those elevations are converted to visible units
+          during rendering.
+        </strong>
+      </>
+    ),
+  },
 };
 
 export default descriptions;

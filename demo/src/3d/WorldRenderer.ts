@@ -54,12 +54,13 @@ class WorldRenderer {
       // Convert hex coords to pixel coords
       // https://www.redblobgames.com/grids/hexagons/#coordinates-cube
       const pos2d = tile.pos.to_point2();
+      const tileHeight = world.tile_render_height(tile);
       const transformMatrix = Matrix.Translation(
         pos2d.x,
-        tile.height[0],
+        tileHeight,
         pos2d.y
         // I'm not entirely sure why this scaling works, but it does
-      ).add(Matrix.Scaling(0, tile.height[0], 0));
+      ).add(Matrix.Scaling(0, tileHeight, 0));
 
       // Refresh meshes if this is the last tile in the list
       const isLastTile = i === tiles.length - 1;

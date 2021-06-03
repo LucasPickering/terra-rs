@@ -79,6 +79,19 @@ impl World {
         &self.tiles
     }
 
+    /// Get the height that a tile's geometry should have. This will convert
+    /// the tile's elevation to a zero-based scale, then multiplicatively scale
+    /// it based on the pre-configured Y scale of the world. See
+    /// [RenderConfig::y_scale] for more info on what exactly the vertical scale
+    /// means.
+    pub fn tile_render_height(&self, tile: &Tile) -> f64 {
+        // Map elevation to a zero-based scale
+        let zeroed_elevation = World::ELEVATION_RANGE
+            .map_to(&World::ELEVATION_RANGE.zeroed(), tile.elevation);
+        // Multiply by render scale
+        zeroed_elevation.0 * self.config.render.y_scale
+    }
+
     /// Generate a new world with the given config. This operation could take
     /// several seconds, depending on the world size and complexity.
     pub fn generate(config: WorldConfig) -> anyhow::Result<Self> {
