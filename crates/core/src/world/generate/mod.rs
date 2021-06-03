@@ -8,7 +8,7 @@ mod water_feature;
 mod wind;
 
 use crate::{
-    timed,
+    timed, unwrap,
     util::{self, Meter3},
     world::{
         generate::{
@@ -27,7 +27,6 @@ use crate::{
         Biome, BiomeType, GeoFeature, Meter, Tile, World, WorldConfig,
     },
 };
-use anyhow::{anyhow, Context};
 use fnv::FnvBuildHasher;
 use log::info;
 use rand::SeedableRng;
@@ -106,39 +105,34 @@ impl WorldBuilder {
         }
     }
 
-    /// Get the prevailing wind direction of this world. Returns an error if
+    /// Get the prevailing wind direction of this world. Panics if
     /// the wind direction hasn't be initialized yet.
-    pub fn wind_direction(&self) -> anyhow::Result<HexAxialDirection> {
-        self.wind_direction
-            .ok_or_else(|| anyhow!("wind direction not initialized"))
+    pub fn wind_direction(&self) -> HexAxialDirection {
+        self.wind_direction.expect("wind direction not initialized")
     }
 
     /// Generate a world by running a series of generation steps sequentially.
     /// Must be run from a blank slate. Outputs the finalized set of tiles.
-    pub fn generate_world(mut self) -> anyhow::Result<HexPointMap<Tile>> {
+    pub fn generate_world(mut self) -> HexPointMap<Tile> {
         // Run each generation step. The order is very important!
-        self.apply_generator(ElevationGenerator)?;
-        self.apply_generator(WindGenerator)?;
-        self.apply_generator(OceanGenerator)?;
-        self.apply_generator(RainfallGenerator)?;
-        self.apply_generator(RunoffGenerator)?;
-        self.apply_generator(WaterFeatureGenerator)?;
-        self.apply_generator(BiomeGenerator)?;
+        self.apply_generator(ElevationGenerator);
+        self.apply_generator(WindGenerator);
+        self.apply_generator(OceanGenerator);
+        self.apply_generator(RainfallGenerator);
+        self.apply_generator(RunoffGenerator);
+        self.apply_generator(WaterFeatureGenerator);
+        self.apply_generator(BiomeGenerator);
 
         // Build each tile into its final value
         self.tiles
             .into_iter()
-            .map(|(pos, tile)| Ok((pos, tile.build()?)))
+            .map(|(pos, tile)| (pos, tile.build()))
             .collect()
     }
 
     /// A helper to run a generation step on this builder.
-    fn apply_generator(
-        &mut self,
-        generator: impl Debug + Generate,
-    ) -> anyhow::Result<()> {
+    fn apply_generator(&mut self, generator: impl Debug + Generate) {
         timed!(&format!("{:?}", generator), generator.generate(self))
-            .with_context(|| format!("error in {:?}", generator))
     }
 }
 
@@ -149,12 +143,11 @@ impl WorldBuilder {
 trait Generate {
     /// Apply some generation step to the given world. This can mutate the
     /// world's tiles, but can never add/remove tiles, or change their positions
-    /// in any way. Any failure that occurs in this function should be
-    /// considered an internal failure, meaning a bug in the code, rather than
-    /// anything invalid about the input. Any implementation of this function
-    /// _should_ be able to handle any input without returning an error, so
-    /// any error is considered exceptional.
-    fn generate(&self, world: &mut WorldBuilder) -> anyhow::Result<()>;
+    /// in any way. This function _can_ panic, but only because of internal
+    /// bugs. Any implementation of this function _should_ be able to handle
+    /// any input without returning an error, so any error is considered
+    /// exceptional.
+    fn generate(&self, world: &mut WorldBuilder);
 }
 
 /// A partially built [Tile]. This should only be used while the world is being
@@ -192,62 +185,59 @@ impl TileBuilder {
         }
     }
 
-    /// Finalize this builder to create a [Tile]. Returns an error if any fields
+    /// Finalize this builder to create a [Tile]. Panics if any fields
     /// on this builder are uninitialized.
-    pub fn build(self) -> anyhow::Result<Tile> {
+    pub fn build(self) -> Tile {
         let position = self.position;
-        Ok(Tile {
+        Tile {
             position,
-            elevation: self.elevation()?,
-            rainfall: self.rainfall()?,
-            runoff: self.runoff()?,
-            biome: self.biome()?,
+            elevation: self.elevation(),
+            rainfall: self.rainfall(),
+            runoff: self.runoff(),
+            biome: self.biome(),
             features: self.features,
             runoff_traversed: self.runoff_traversed.into(),
-        })
-    }
-
-    /// See [Tile::elevation]. Returns an error if elevation is unset.
-    pub fn elevation(&self) -> anyhow::Result<Meter> {
-        self.elevation
-            .ok_or_else(|| anyhow!("elevation not initialized for {:?}", self))
-    }
-
-    /// Set the elevation for this tile. Returns an error if the elevation value
-    /// is out of [World::ELEVATION_RANGE].
-    pub fn set_elevation(&mut self, elevation: Meter) -> anyhow::Result<()> {
-        World::ELEVATION_RANGE.ensure_contains(elevation)?;
-        self.elevation = Some(elevation);
-        Ok(())
-    }
-
-    /// See [Tile::rainfall]. Returns an error if rainfall is unset.
-    pub fn rainfall(&self) -> anyhow::Result<Meter3> {
-        self.rainfall
-            .ok_or_else(|| anyhow!("rainfall not initialized for {:?}", self))
-    }
-
-    /// Set the rainfall for this tile. Returns an error if the given value is
-    /// negative.
-    pub fn set_rainfall(&mut self, rainfall: Meter3) -> anyhow::Result<()> {
-        if rainfall >= Meter3(0.0) {
-            self.rainfall = Some(rainfall);
-            Ok(())
-        } else {
-            Err(anyhow!("cannot set negative rainfall {}"))
         }
     }
 
-    /// See [Tile::humidity]. Returns an error if humidity is unset.
-    pub fn humidity(&self) -> anyhow::Result<f64> {
-        let rainfall =
-            self.rainfall().context("failed to calculate humidity")?;
-        Ok(World::RAINFALL_SOFT_RANGE
+    /// See [Tile::elevation]. Panics if elevation is unset.
+    pub fn elevation(&self) -> Meter {
+        unwrap!(self.elevation, "elevation not initialized for {:?}", self)
+    }
+
+    /// Set the elevation for this tile. Panics if the elevation value
+    /// is out of [World::ELEVATION_RANGE].
+    pub fn set_elevation(&mut self, elevation: Meter) {
+        World::ELEVATION_RANGE
+            .ensure_contains(elevation)
+            .expect("elevation out of range");
+        self.elevation = Some(elevation);
+    }
+
+    /// See [Tile::rainfall]. Panics if rainfall is unset.
+    pub fn rainfall(&self) -> Meter3 {
+        unwrap!(self.rainfall, "rainfall not initialized for {:?}", self)
+    }
+
+    /// Set the rainfall for this tile. Panics if the given value is
+    /// negative.
+    pub fn set_rainfall(&mut self, rainfall: Meter3) {
+        if rainfall >= Meter3(0.0) {
+            self.rainfall = Some(rainfall);
+        } else {
+            panic!("cannot set negative rainfall {}", rainfall)
+        }
+    }
+
+    /// See [Tile::humidity]. Panics if humidity is unset.
+    pub fn humidity(&self) -> f64 {
+        let rainfall = self.rainfall();
+        World::RAINFALL_SOFT_RANGE
             .value(rainfall)
             .clamp()
             .convert::<f64>()
             .normalize()
-            .inner())
+            .inner()
     }
 
     /// Set the biome for this tile.
@@ -256,12 +246,14 @@ impl TileBuilder {
     }
 
     /// Get a reference to this tile's runoff pattern. The runoff pattern gives
-    /// info about how runoff flows out of this tile. Returns an error if the
+    /// info about how runoff flows out of this tile. Panics if the
     /// runoff pattern is uninitialized.
-    pub fn runoff_pattern(&self) -> anyhow::Result<&RunoffPattern> {
-        self.runoff_pattern.as_ref().ok_or_else(|| {
-            anyhow!("runoff_pattern not initialized for {:?}", self)
-        })
+    pub fn runoff_pattern(&self) -> &RunoffPattern {
+        unwrap!(
+            self.runoff_pattern.as_ref(),
+            "runoff_pattern not initialized for {:?}",
+            self
+        )
     }
 
     /// Initialize the runoff pattern for this tile.
@@ -269,20 +261,18 @@ impl TileBuilder {
         self.runoff_pattern = Some(runoff_pattern);
     }
 
-    /// See [Tile::runoff]. Returns an error if runoff is unset.
-    pub fn runoff(&self) -> anyhow::Result<Meter3> {
-        self.runoff
-            .ok_or_else(|| anyhow!("runoff not initialized for {:?}", self))
+    /// See [Tile::runoff]. Panics if runoff is unset.
+    pub fn runoff(&self) -> Meter3 {
+        unwrap!(self.runoff, "runoff not initialized for {:?}", self)
     }
 
     /// Set the runoff level of this tile (any existing runoff will be deleted).
-    /// Returns an error if the runoff value is negative.
-    pub fn set_runoff(&mut self, runoff: Meter3) -> anyhow::Result<()> {
+    /// Panics if the runoff value is negative.
+    pub fn set_runoff(&mut self, runoff: Meter3) {
         if runoff >= Meter3(0.0) {
             self.runoff = Some(runoff);
-            Ok(())
         } else {
-            Err(anyhow!("cannot set negative runoff {}", runoff))
+            panic!("cannot set negative runoff {}", runoff)
         }
     }
 
@@ -290,18 +280,13 @@ impl TileBuilder {
     /// `from_direction` indicates which direction the runoff is coming
     /// from, which will be used to track this runoff as ingress.  Returns
     /// an error if the amount is negative or runoff is uninitialized.
-    pub fn add_runoff(
-        &mut self,
-        runoff: Meter3,
-        from_direction: HexDirection,
-    ) -> anyhow::Result<()> {
+    pub fn add_runoff(&mut self, runoff: Meter3, from_direction: HexDirection) {
         if runoff >= Meter3(0.0) {
-            self.runoff = Some(self.runoff()? + runoff);
+            self.runoff = Some(self.runoff() + runoff);
             // Track this runoff ingress
             *self.runoff_traversed.entry(from_direction).or_default() += runoff;
-            Ok(())
         } else {
-            Err(anyhow!("cannot add negative runoff {}", runoff))
+            panic!("cannot add negative runoff {}", runoff)
         }
     }
 
@@ -310,11 +295,9 @@ impl TileBuilder {
     /// **all** runoff from this tile, and that runoff will be tracked as
     /// egress on this tile. The returned map should be used to add that amount
     /// of runoff to neighboring tiles.
-    pub fn distribute_runoff(
-        &mut self,
-    ) -> anyhow::Result<HexDirectionMap<Meter3>> {
+    pub fn distribute_runoff(&mut self) -> HexDirectionMap<Meter3> {
         let distribution =
-            self.runoff_pattern()?.distribute_exits(self.runoff()?);
+            self.runoff_pattern().distribute_exits(self.runoff());
 
         // If we have anywhere to distribute (i.e. if this tile isn't a
         // terminal), then clear our runoff and count it as egress
@@ -327,15 +310,15 @@ impl TileBuilder {
             }
         }
 
-        Ok(distribution)
+        distribution
     }
 
     /// Reset the runoff on this tile to 0 and return whatever amount was here.
-    /// Returns an error if runoff is unset.
-    pub fn clear_runoff(&mut self) -> anyhow::Result<Meter3> {
-        let runoff = self.runoff()?;
+    /// Panics if runoff is unset.
+    pub fn clear_runoff(&mut self) -> Meter3 {
+        let runoff = self.runoff();
         self.runoff = Some(Meter3(0.0));
-        Ok(runoff)
+        runoff
     }
 
     /// See [Tile::runoff_traversed].
@@ -343,14 +326,13 @@ impl TileBuilder {
         &self.runoff_traversed
     }
 
-    /// See [Tile::biome]. Returns an error if biome is unset.
-    pub fn biome(&self) -> anyhow::Result<Biome> {
-        self.biome
-            .ok_or_else(|| anyhow!("biome not initialized for {:?}", self))
+    /// See [Tile::biome]. Panics if biome is unset.
+    pub fn biome(&self) -> Biome {
+        unwrap!(self.biome, "biome not initialized for {:?}", self)
     }
 
     /// Get this tile's biome as an `Option`, meaning if the biome is unset, we
-    /// return `None` (as opposed to [Self::biome], which returns an error).
+    /// return `None` (as opposed to [Self::biome], which panics).
     pub fn biome_opt(&self) -> Option<Biome> {
         self.biome
     }
@@ -364,18 +346,13 @@ impl TileBuilder {
         }
     }
 
-    /// Add a new geographic feature to this tile. Returns an error if the tile
+    /// Add a new geographic feature to this tile. Panics if the tile
     /// already has that feature.
-    pub fn add_feature(&mut self, feature: GeoFeature) -> anyhow::Result<()> {
-        if self.features.contains(&feature) {
-            Err(anyhow!(
-                "feature {:?} already exists for {:?}",
-                feature,
-                self
-            ))
-        } else {
+    pub fn add_feature(&mut self, feature: GeoFeature) {
+        if !self.features.contains(&feature) {
             self.features.push(feature);
-            Ok(())
+        } else {
+            panic!("feature {:?} already exists for {:?}", feature, self)
         }
     }
 }

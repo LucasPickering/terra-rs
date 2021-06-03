@@ -9,3 +9,4 @@ crates/cli/world/
 
 *.d.ts
 !declarations.d.ts
+.DS_Store
