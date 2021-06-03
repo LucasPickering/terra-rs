@@ -5,7 +5,7 @@ import WorldCanvas from "./WorldCanvas";
 import NotFound from "../NotFound";
 import useStaticValue from "hooks/useStaticValue";
 import DemoContext, { ConfigKey } from "context/DemoContext";
-import type { WasmWorld, WorldConfigObject } from "terra-wasm";
+import type { World, WorldConfigObject } from "terra-wasm";
 import useQueryParams from "hooks/useQueryParams";
 import { set } from "../../util";
 const { Terra } = await import("terra-wasm");
@@ -22,9 +22,9 @@ const Demo: React.FC = () => {
   // Initialize the Terra singleton, which will be our interface into all wasm
   const terra = useStaticValue(() => new Terra());
 
-  // Store the config as a JS object. We'll deserialize it into a Rust value
-  // before world generation.
-  const [config, setConfig] = useState<WorldConfigObject>(() => {
+  // Store the world config as a JS object. We'll deserialize it into a Rust
+  // value before world generation.
+  const [worldConfig, setWorldConfig] = useState<WorldConfigObject>(() => {
     // If there's a config object in the URL query, use that. If not (or if
     // parsing the query fails), fall back to the default.
     const queryConfigStr = queryParams.get(CONFIG_QUERY_PARAM);
@@ -33,25 +33,25 @@ const Demo: React.FC = () => {
         const queryConfigObj = JSON.parse(queryConfigStr);
         // Make sure this is a valid config. If not, this will throw.
         // This will also populate defaults where missing
-        return terra.validate_config(queryConfigObj);
+        return terra.validate_world_config(queryConfigObj);
       } catch (e) {
         // eslint-disable-next-line no-console
         console.warn("Error parsing config from query params:", e);
       }
     }
-    return terra.default_config();
+    return terra.default_world_config();
   });
   const [lastGeneratedConfig, setLastGeneratedConfig] =
     useState<WorldConfigObject | undefined>();
 
-  const [world, setWorld] = useState<WasmWorld | "generating" | undefined>();
+  const [world, setWorld] = useState<World | "generating" | undefined>();
   const generateWorld = async (goToWorld: boolean): Promise<void> => {
     setWorld("generating");
-    setLastGeneratedConfig(config);
+    setLastGeneratedConfig(worldConfig);
 
     // Update the config query param
     const newParams = new URLSearchParams();
-    newParams.set(CONFIG_QUERY_PARAM, JSON.stringify(config));
+    newParams.set(CONFIG_QUERY_PARAM, JSON.stringify(worldConfig));
     const search = newParams.toString();
     if (goToWorld) {
       history.push({ pathname: "/demo/world", search });
@@ -61,7 +61,9 @@ const Demo: React.FC = () => {
 
     // Defer world gen to idle time, so the browser prioritizes UI updates
     window.requestIdleCallback(() => {
-      setWorld(terra.generate_world(terra.deserialize_config(config)));
+      setWorld(
+        terra.generate_world(terra.deserialize_world_config(worldConfig))
+      );
     });
   };
 
@@ -69,14 +71,15 @@ const Demo: React.FC = () => {
     <DemoContext.Provider
       value={{
         terra,
-        config,
+        worldConfig,
+        renderConfig: terra.default_render_config(),
         generateWorldEnabled:
-          world !== "generating" && config !== lastGeneratedConfig,
-        setConfig,
+          world !== "generating" && worldConfig !== lastGeneratedConfig,
+        setConfig: setWorldConfig,
         setConfigValue: (key: ConfigKey, value: unknown) => {
-          const newConfig = { ...config }; // Shallow copy to force a rerender
+          const newConfig = { ...worldConfig }; // Shallow copy to force a rerender
           set(newConfig, key, value);
-          setConfig(newConfig);
+          setWorldConfig(newConfig);
         },
         resetConfig: () => {
           if (
@@ -84,7 +87,7 @@ const Demo: React.FC = () => {
               "Are you sure? You will lose all your current settings."
             )
           ) {
-            setConfig(terra.default_config());
+            setWorldConfig(terra.default_world_config());
           }
         },
         world,

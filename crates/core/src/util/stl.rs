@@ -2,22 +2,24 @@
 //! with the "stl" feature enabled.
 
 use crate::{
-    HasHexPosition, HexAxialDirection, HexDirection, HexDirectionMap, Point2,
-    Tile, World,
+    render::{Point2, WorldRenderer},
+    HasHexPosition, HexAxialDirection, HexDirection, HexDirectionMap, Tile,
+    World,
 };
 use stl_io::{Normal, Triangle, Vertex};
 use strum::IntoEnumIterator;
 
 /// Render the given world as an STL model. STL only carries geometric data,
 /// so no colors/textures. There's no dominant convention around which axis
-/// should be up in an STL, so here we consider the **Z axis to be up and
-/// down**.
-pub fn world_to_stl(world: &World) -> Vec<Triangle> {
+/// should be up in an STL, so here we consider the **Y axis to be up and
+/// down** to be consistent with the demo.
+pub fn world_to_stl(world: &World, renderer: &WorldRenderer) -> Vec<Triangle> {
+    let tiles = world.tiles();
     let mut mesh =
-        Vec::with_capacity(world.tiles().len() * TileSolid::TRIANGLES_PER_TILE);
+        Vec::with_capacity(tiles.len() * TileSolid::TRIANGLES_PER_TILE);
 
-    for tile in world.tiles().values() {
-        let solid = TileSolid::new(world, tile);
+    for tile in tiles.values() {
+        let solid = TileSolid::new(world, renderer, tile);
         solid.add_to_mesh(&mut mesh);
     }
 
@@ -29,9 +31,9 @@ pub fn world_to_stl(world: &World) -> Vec<Triangle> {
 struct TileSolid {
     perimeter_points_2d: Vec<Point2>,
     bottom_perimeter_vertices: Vec<Vertex>,
-    top_z: f32,
+    top_y: f32,
     top_perimeter_vertices: Vec<Vertex>,
-    adjacents_z: HexDirectionMap<f32>,
+    adjacents_y: HexDirectionMap<f32>,
 }
 
 impl TileSolid {
@@ -48,9 +50,9 @@ impl TileSolid {
     const FACE_INDICES: &'static [[usize; 3]] =
         &[[0, 3, 1], [0, 4, 3], [1, 3, 2], [0, 5, 4]];
 
-    fn new(world: &World, tile: &Tile) -> Self {
+    fn new(world: &World, renderer: &WorldRenderer, tile: &Tile) -> Self {
         let center_2d = tile.position().to_point2();
-        let perimeter_points_2d: Vec<_> = HexAxialDirection::CLOCKWISE
+        let perimeter_points_2d: Vec<Point2> = HexAxialDirection::CLOCKWISE
             .iter()
             .cloned()
             .map(|dir| center_2d + dir.to_vector2())
@@ -58,31 +60,30 @@ impl TileSolid {
 
         let bottom_perimeter_vertices: Vec<_> = perimeter_points_2d
             .iter()
-            .map(|p| Vertex::new([p.x as f32, p.y as f32, 0.0]))
+            .map(|p| Vertex::new([p.x as f32, 0.0, p.y as f32]))
             .collect();
 
-        let top_z = world.tile_render_height(tile) as f32;
+        let top_y = renderer.tile_height(tile) as f32;
         let top_perimeter_vertices: Vec<_> = perimeter_points_2d
             .iter()
-            .map(|p| Vertex::new([p.x as f32, p.y as f32, top_z]))
+            .map(|p| Vertex::new([p.x as f32, top_y, p.y as f32]))
             .collect();
 
         let pos = tile.position();
-        let tiles = world.tiles();
-        let adjacents_z = HexDirection::iter()
+        let adjacents_y = HexDirection::iter()
             .filter_map(|dir| {
                 let adj_pos = pos + dir.to_vector();
-                let adj_tile = tiles.get(&adj_pos)?;
-                Some((dir, world.tile_render_height(adj_tile) as f32))
+                let adj_tile = world.tiles().get(&adj_pos)?;
+                Some((dir, renderer.tile_height(adj_tile) as f32))
             })
             .collect();
 
         Self {
             perimeter_points_2d,
             bottom_perimeter_vertices,
-            top_z,
+            top_y,
             top_perimeter_vertices,
-            adjacents_z,
+            adjacents_y,
         }
     }
 
@@ -116,11 +117,11 @@ impl TileSolid {
 
         // For each side of the hexagon, draw 2 triangles
         for (i, dir) in HexDirection::iter().enumerate() {
-            let bottom_z = *self.adjacents_z.get(&dir).unwrap_or(&0.0);
+            let bottom_y = *self.adjacents_y.get(&dir).unwrap_or(&0.0);
 
             // If the adjacent tile in this direction is taller, then no need
             // to draw a side here because it won't be visible.
-            if bottom_z <= self.top_z {
+            if bottom_y <= self.top_y {
                 // Some setup variables
                 let i1 = i;
                 let i2 = (i + 1) % 6;
@@ -128,9 +129,9 @@ impl TileSolid {
                 let p2 = self.perimeter_points_2d[i2];
 
                 let bottom_v1 =
-                    Vertex::new([p1.x as f32, p1.y as f32, bottom_z]);
+                    Vertex::new([p1.x as f32, bottom_y, p1.y as f32]);
                 let bottom_v2 =
-                    Vertex::new([p2.x as f32, p2.y as f32, bottom_z]);
+                    Vertex::new([p2.x as f32, bottom_y, p2.y as f32]);
 
                 let top_v1 = self.top_perimeter_vertices[i1];
                 let top_v2 = self.top_perimeter_vertices[i2];

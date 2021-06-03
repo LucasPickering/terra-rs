@@ -1,11 +1,11 @@
 use terra::{
     GeoFeatureConfig, Meter3, NoiseFnConfig, NoiseFnType, RainfallConfig,
-    RenderConfig, World, WorldConfig,
+    RenderConfig, TileLens, World, WorldConfig, WorldRenderer,
 };
 use validator::ValidationErrors;
 
 #[test]
-fn test_config_validation() {
+fn test_world_config_validation() {
     let config = WorldConfig {
         seed: 0,
         radius: 10001,              // invalid (too big)
@@ -31,7 +31,6 @@ fn test_config_validation() {
             persistence: -1.0, // valid (but weird)
             exponent: -1.0,    // valid (but weird)
         },
-        render: RenderConfig { y_scale: 0.0 },
     };
 
     // This is a bit of a lazy check but it works well enough
@@ -45,13 +44,32 @@ fn test_config_validation() {
     error_fields.sort_unstable();
     assert_eq!(
         error_fields,
-        vec![
-            "edge_buffer_fraction",
-            "elevation",
-            "radius",
-            "rainfall",
-            "render"
-        ],
+        vec!["edge_buffer_fraction", "elevation", "radius", "rainfall"],
+        "incorrect validation errors in {:#?}",
+        validation_errors
+    );
+}
+
+#[test]
+fn test_render_config_validation() {
+    let render_config = RenderConfig {
+        vertical_scale: 0.0,          // invalid
+        tile_lens: TileLens::Surface, // valid
+        show_features: false,         // valid
+    };
+
+    // This is a bit of a lazy check but it works well enough
+    let err = WorldRenderer::new(render_config).unwrap_err();
+    let validation_errors = err.downcast::<ValidationErrors>().unwrap();
+    let mut error_fields = validation_errors
+        .errors()
+        .keys()
+        .copied()
+        .collect::<Vec<&str>>();
+    error_fields.sort_unstable();
+    assert_eq!(
+        error_fields,
+        vec!["vertical_scale"],
         "incorrect validation errors in {:#?}",
         validation_errors
     );

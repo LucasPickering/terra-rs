@@ -713,6 +713,7 @@ dependencies = [
  "console_error_panic_hook",
  "js-sys",
  "log",
+ "serde",
  "terra",
  "wasm-bindgen",
  "wasm-logger",

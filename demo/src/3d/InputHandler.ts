@@ -1,7 +1,6 @@
 import { KeyboardEventTypes, KeyboardInfo } from "@babylonjs/core";
 import { assertUnreachable } from "../util";
 import WorldScene from "./WorldScene";
-const { TileLens } = await import("terra-wasm");
 
 const INPUT_ACTIONS = [
   "toggleDebugOverlay",
@@ -75,19 +74,19 @@ class InputHandler {
         this.scene.toggleDebugOverlay();
         break;
       case "lensSurface":
-        this.scene.setTileLens(TileLens.Surface);
+        this.scene.setTileLens("surface");
         break;
       case "lensBiome":
-        this.scene.setTileLens(TileLens.Biome);
+        this.scene.setTileLens("biome");
         break;
       case "lensElevation":
-        this.scene.setTileLens(TileLens.Elevation);
+        this.scene.setTileLens("elevation");
         break;
       case "lensHumidity":
-        this.scene.setTileLens(TileLens.Humidity);
+        this.scene.setTileLens("humidity");
         break;
       case "lensRunoff":
-        this.scene.setTileLens(TileLens.Runoff);
+        this.scene.setTileLens("runoff");
         break;
       // Make sure this switch is exhaustive
       default:

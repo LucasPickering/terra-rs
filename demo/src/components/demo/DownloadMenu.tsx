@@ -1,16 +1,15 @@
 import React, { useContext } from "react";
 import { saveAs } from "file-saver";
 import { Menu, MenuItem } from "@material-ui/core";
-import type { WasmWorld } from "terra-wasm";
+import type { World } from "terra-wasm";
 import DemoContext from "context/DemoContext";
-const { TileLens } = await import("terra-wasm");
 
 interface Props extends React.ComponentProps<typeof Menu> {
-  world: WasmWorld;
+  world: World;
 }
 
 const DownloadMenu: React.FC<Props> = ({ world, ...rest }) => {
-  const { config } = useContext(DemoContext);
+  const { terra, worldConfig, renderConfig } = useContext(DemoContext);
 
   return (
     <Menu {...rest}>
@@ -27,7 +26,7 @@ const DownloadMenu: React.FC<Props> = ({ world, ...rest }) => {
       </MenuItem>
       <MenuItem
         onClick={() => {
-          const jsonString = JSON.stringify(config);
+          const jsonString = JSON.stringify(worldConfig);
           saveAs(
             new Blob([jsonString], { type: "application/json" }),
             "terra_config.json"
@@ -49,7 +48,9 @@ const DownloadMenu: React.FC<Props> = ({ world, ...rest }) => {
       </MenuItem>
       <MenuItem
         onClick={() => {
-          const svg = world.to_svg(TileLens.Biome, true);
+          const cfg = terra.deserialize_render_config(renderConfig);
+          const renderer = terra.build_renderer(cfg);
+          const svg = renderer.render_as_svg(world);
           saveAs(new Blob([svg], { type: "image/svg+xml" }), "terra.svg");
         }}
       >
@@ -57,7 +58,9 @@ const DownloadMenu: React.FC<Props> = ({ world, ...rest }) => {
       </MenuItem>
       <MenuItem
         onClick={() => {
-          const bytes = world.to_stl();
+          const cfg = terra.deserialize_render_config(renderConfig);
+          const renderer = terra.build_renderer(cfg);
+          const bytes = renderer.render_as_stl(world);
           saveAs(new Blob([bytes], { type: "model/stl" }), "terra.stl");
         }}
       >

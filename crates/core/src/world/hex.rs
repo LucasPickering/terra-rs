@@ -14,10 +14,7 @@ use strum::{EnumIter, IntoEnumIterator};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
-use crate::{
-    util::{Point2, Vector2},
-    Tile,
-};
+use crate::{render::Vector2, Point2, Tile};
 
 /// A point in a hexagon-tiled world. Each point has an x, y, and z component.
 ///

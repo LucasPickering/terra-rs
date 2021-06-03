@@ -5,9 +5,9 @@ import {
   HemisphericLight,
   Vector3,
 } from "@babylonjs/core";
-import WorldRenderer from "./WorldRenderer";
+import WorldRenderManager from "./WorldRenderManager";
 import InputHandler from "./InputHandler";
-import type { Terra, TileLens, WasmWorld } from "terra-wasm";
+import type { RenderConfigObject, Terra, World } from "terra-wasm";
 import { hexCodeToColor4 } from "../util";
 import theme from "../theme";
 
@@ -61,13 +61,13 @@ function initScene(engine: Engine): Scene {
 class WorldScene {
   private inputHandler: InputHandler;
   private scene: Scene;
-  private worldRenderer: WorldRenderer;
+  private renderManager: WorldRenderManager;
 
-  constructor(terra: Terra, engine: Engine, world: WasmWorld) {
+  constructor(terra: Terra, engine: Engine, world: World) {
     // Init world scene
     this.scene = initScene(engine);
 
-    this.worldRenderer = new WorldRenderer(terra, this.scene, world);
+    this.renderManager = new WorldRenderManager(terra, this.scene, world);
     this.scene.freezeActiveMeshes();
 
     this.inputHandler = new InputHandler(this);
@@ -85,8 +85,8 @@ class WorldScene {
     }
   }
 
-  setTileLens(lens: TileLens): void {
-    this.worldRenderer.updateTileColors(lens);
+  setTileLens(lens: RenderConfigObject["tile_lens"]): void {
+    this.renderManager.updateTileColors(lens);
   }
 
   render(): void {
