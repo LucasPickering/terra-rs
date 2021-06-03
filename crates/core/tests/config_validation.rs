@@ -50,7 +50,7 @@ fn test_config_validation() {
             "elevation",
             "radius",
             "rainfall",
-            "y_scale"
+            "render"
         ],
         "incorrect validation errors in {:#?}",
         validation_errors
