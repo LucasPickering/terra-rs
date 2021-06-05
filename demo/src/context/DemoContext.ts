@@ -1,3 +1,4 @@
+import { ConfigHandler } from "hooks/useConfigHandler";
 import React from "react";
 import type {
   Terra,
@@ -5,22 +6,12 @@ import type {
   World,
   RenderConfigObject,
 } from "terra-wasm";
-import { Path } from "../util";
-
-/**
- * Type-safe paths into the config. Pure wizardry ripped from
- * https://stackoverflow.com/a/58436959/1907353
- */
-export type ConfigKey = Path<WorldConfigObject>;
 
 export interface DemoContextType {
   terra: Terra;
-  worldConfig: WorldConfigObject;
+  worldConfigHandler: ConfigHandler<WorldConfigObject>;
   renderConfig: RenderConfigObject;
   generateWorldEnabled: boolean;
-  setConfig: (config: WorldConfigObject) => void;
-  setConfigValue: (key: ConfigKey, value: unknown) => void;
-  resetConfig: () => void; // Reset to default value
   world: World | "generating" | undefined;
   generateWorld: (goToWorld: boolean) => void;
 }

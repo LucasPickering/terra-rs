@@ -1,8 +1,9 @@
 import React, { useContext } from "react";
 import { makeStyles } from "@material-ui/core";
-import DemoContext, { ConfigKey } from "context/DemoContext";
-import { get } from "../../../util";
+import DemoContext from "context/DemoContext";
+import { get, Path } from "../../../util";
 import HelpTooltip from "components/HelpTooltip";
+import { WorldConfigObject } from "terra-wasm";
 
 const useStyles = makeStyles(({ spacing }) => ({
   configInputWrapper: {
@@ -11,7 +12,7 @@ const useStyles = makeStyles(({ spacing }) => ({
 }));
 
 interface Props<T> {
-  field: ConfigKey;
+  field: Path<WorldConfigObject>;
   label: string;
   description: string | React.ReactElement;
   children: React.ReactElement<{
@@ -30,10 +31,10 @@ function ConfigInput<T>({
   const classes = useStyles();
   const id = `input-${field}`;
   const tooltipId = `tooltip-${field}`;
-  const { worldConfig, setConfigValue } = useContext(DemoContext);
-  const value: T = get(worldConfig, field);
+  const { worldConfigHandler } = useContext(DemoContext);
+  const value: T = get(worldConfigHandler.config, field);
   const onChange = (value: T): void => {
-    setConfigValue(field, value);
+    worldConfigHandler.setField(field, value);
   };
 
   return (

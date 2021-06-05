@@ -9,7 +9,7 @@ interface Props extends React.ComponentProps<typeof Menu> {
 }
 
 const DownloadMenu: React.FC<Props> = ({ world, ...rest }) => {
-  const { terra, worldConfig, renderConfig } = useContext(DemoContext);
+  const { terra, worldConfigHandler, renderConfig } = useContext(DemoContext);
 
   return (
     <Menu {...rest}>
@@ -26,7 +26,7 @@ const DownloadMenu: React.FC<Props> = ({ world, ...rest }) => {
       </MenuItem>
       <MenuItem
         onClick={() => {
-          const jsonString = JSON.stringify(worldConfig);
+          const jsonString = JSON.stringify(worldConfigHandler.config);
           saveAs(
             new Blob([jsonString], { type: "application/json" }),
             "terra_config.json"
@@ -48,8 +48,7 @@ const DownloadMenu: React.FC<Props> = ({ world, ...rest }) => {
       </MenuItem>
       <MenuItem
         onClick={() => {
-          const cfg = terra.deserialize_render_config(renderConfig);
-          const renderer = terra.build_renderer(cfg);
+          const renderer = terra.build_renderer(renderConfig);
           const svg = renderer.render_as_svg(world);
           saveAs(new Blob([svg], { type: "image/svg+xml" }), "terra.svg");
         }}
@@ -58,8 +57,7 @@ const DownloadMenu: React.FC<Props> = ({ world, ...rest }) => {
       </MenuItem>
       <MenuItem
         onClick={() => {
-          const cfg = terra.deserialize_render_config(renderConfig);
-          const renderer = terra.build_renderer(cfg);
+          const renderer = terra.build_renderer(renderConfig);
           const bytes = renderer.render_as_stl(world);
           saveAs(new Blob([bytes], { type: "model/stl" }), "terra.stl");
         }}

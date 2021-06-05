@@ -183,6 +183,7 @@ impl WorldRenderer {
 /// for each field will list which formats it applies to.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
+#[serde(default)]
 pub struct RenderConfig {
     /// The vertical scale factor applied to each tile. This impacts the
     /// _presentation_ of each tile's elevation, but **does not factor into**
