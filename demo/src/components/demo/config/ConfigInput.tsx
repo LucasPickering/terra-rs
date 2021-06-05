@@ -1,8 +1,8 @@
 import React, { useContext } from "react";
 import { makeStyles } from "@material-ui/core";
 import DemoContext, { ConfigKey } from "context/DemoContext";
-import { get } from "../../util";
-import HelpTooltip from "../HelpTooltip";
+import { get } from "../../../util";
+import HelpTooltip from "components/HelpTooltip";
 
 const useStyles = makeStyles(({ spacing }) => ({
   configInputWrapper: {
