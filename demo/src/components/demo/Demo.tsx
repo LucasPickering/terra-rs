@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Redirect, Route, Switch, useHistory } from "react-router-dom";
-import ConfigEditor from "./ConfigEditor";
+import ConfigEditor from "./config/ConfigEditor";
 import WorldCanvas from "./WorldCanvas";
 import NotFound from "../NotFound";
 import useStaticValue from "hooks/useStaticValue";

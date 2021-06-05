@@ -1,6 +1,6 @@
 import React from "react";
 import { makeStyles, Typography } from "@material-ui/core";
-import HelpTooltip from "../HelpTooltip";
+import HelpTooltip from "components/HelpTooltip";
 
 const useStyles = makeStyles(({ spacing }) => ({
   configSection: {
