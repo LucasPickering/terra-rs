@@ -1,9 +1,11 @@
 use serde::{Deserialize, Serialize};
-use std::{marker::PhantomData, ops::Deref};
-use terra::{anyhow, validator::Validate, RenderConfig, WorldConfig};
+use std::fmt::Display;
+use terra::validator::Validate;
 use wasm_bindgen::{prelude::*, JsCast};
 
-use crate::{RenderConfigObject, WorldConfigObject};
+pub fn to_js_error(error: impl Display) -> JsValue {
+    js_sys::Error::new(&error.to_string()).into()
+}
 
 /// An extension trait for `Result` to allow us to add custom methods
 pub trait ResultExt<T, E> {
@@ -11,64 +13,32 @@ pub trait ResultExt<T, E> {
     fn into_js(self) -> Result<T, JsValue>;
 }
 
-impl<T> ResultExt<T, anyhow::Error> for Result<T, anyhow::Error> {
+impl<T, E: Display> ResultExt<T, E> for Result<T, E> {
     fn into_js(self) -> Result<T, JsValue> {
-        self.map_err(|error| {
-            format!("{:?}\n{}", error, error.backtrace()).into()
-        })
+        self.map_err(to_js_error)
     }
 }
 
-/// A little container for consolidating functionality related to mapping
-/// config objects between JS values and Rust values.
-pub struct ConfigHelper<T, J>
+/// Verify that the given JS object is a valid config. Return the validated
+/// config, with all defaults populated, if it's valid. The return value will be
+/// **re-serialized** into a strictly typed object. So it will be a JS object,
+/// not a Rust value, BUT it will have TS type safety. Return an error if input
+/// isn't valid.
+///
+/// Because validation populates missing fields, you can "validate" an empty
+/// object to get the default config.
+pub fn validate_config<R, O>(input: JsValue) -> Result<O, JsValue>
 where
-    T: Default + Serialize + for<'a> Deserialize<'a> + Validate,
-    J: Deref<Target = JsValue> + JsCast,
+    R: Serialize + for<'a> Deserialize<'a> + Validate,
+    O: JsCast,
 {
-    phantom_t: PhantomData<T>,
-    phantom_j: PhantomData<J>,
+    // Deserialize the config then validate it manually
+    let config: R = JsValue::into_serde(&input).into_js()?;
+    config.validate().into_js()?;
+
+    // Re-serialize it back into a JS object. This assumes that
+    // the TS interface type correctly matches the serialization
+    // format for the Rust config type. Not great, but it's the
+    // best option.
+    Ok(JsValue::from_serde(&config).unwrap().unchecked_into())
 }
-
-impl<T, J> ConfigHelper<T, J>
-where
-    T: Default + Serialize + for<'a> Deserialize<'a> + Validate,
-    J: Deref<Target = JsValue> + JsCast,
-{
-    pub fn new() -> Self {
-        Self {
-            phantom_t: PhantomData,
-            phantom_j: PhantomData,
-        }
-    }
-
-    /// Get the default world config as a JS object.
-    pub fn default(&self) -> J {
-        JsValue::from_serde(&T::default()).unwrap().unchecked_into()
-    }
-
-    /// Deserialize a JS object into a [WorldConfig]. The input should be an
-    /// **object**, not a JSON string. Will return an error if deserialization
-    /// fails in any way.
-    pub fn deserialize(&self, input: J) -> Result<T, JsValue> {
-        JsValue::into_serde(&input).map_err(|err| {
-            format!("Error deserializing value: {:?}", err).into()
-        })
-    }
-
-    /// Verify that the given JS object is a valid Terra world config. Return
-    /// the validated config, with all defaults populated, if it's valid. Return
-    /// an error if it isn't.
-    pub fn validate(&self, input: J) -> Result<J, JsValue> {
-        // Deserialize the config then validate it manually
-        let config = self.deserialize(input)?;
-        config.validate().map_err::<JsValue, _>(|err| {
-            format!("Invalid value: {:?}", err).into()
-        })?;
-        // Re-serialize it back into a JS object
-        Ok(JsValue::from_serde(&config).unwrap().unchecked_into())
-    }
-}
-
-pub type WorldConfigHelper = ConfigHelper<WorldConfig, WorldConfigObject>;
-pub type RenderConfigHelper = ConfigHelper<RenderConfig, RenderConfigObject>;

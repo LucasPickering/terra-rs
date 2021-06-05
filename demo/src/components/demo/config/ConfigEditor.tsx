@@ -35,7 +35,7 @@ function formatMeter3(value: number): string {
  * Edit the current world config
  */
 const ConfigEditor: React.FC<{ inline?: boolean }> = ({ inline = false }) => {
-  const { generateWorldEnabled, resetConfig, generateWorld } =
+  const { generateWorldEnabled, worldConfigHandler, generateWorld } =
     useContext(DemoContext);
   // TODO figure out how to make this properly dynamic so breakpoints are based
   // on parent size rather than screen size
@@ -63,7 +63,11 @@ const ConfigEditor: React.FC<{ inline?: boolean }> = ({ inline = false }) => {
 
         <Grid item xs={12} container spacing={1} justify="flex-end">
           <Grid item {...buttonSize}>
-            <Button fullWidth variant="outlined" onClick={resetConfig}>
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => worldConfigHandler.reset(true)}
+            >
               Reset to Default
             </Button>
           </Grid>

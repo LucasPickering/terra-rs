@@ -35,7 +35,7 @@ pub use crate::{
         GeoFeatureConfig, NoiseFnConfig, NoiseFnType, RainfallConfig,
         WorldConfig,
     },
-    render::{Color3, Point2, RenderConfig, TileLens, WorldRenderer},
+    render::{config::RenderConfig, Color3, Point2, TileLens, WorldRenderer},
     util::{Meter, Meter2, Meter3, NumRange, RangeValue},
     world::{
         hex::{

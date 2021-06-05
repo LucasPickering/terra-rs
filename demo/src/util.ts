@@ -1,9 +1,9 @@
 import { Color4 } from "@babylonjs/core";
 
 type PathTree<T> = {
-  [P in keyof T]: T[P] extends Record<string, unknown>
-    ? [P, ...Path<T[P]>]
-    : [P];
+  // Yes we really want `object`, it doesn't work with Record
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  [P in keyof T]: T[P] extends object ? [P, ...Path<T[P]>] : [P];
 };
 
 /**
@@ -39,17 +39,17 @@ export function get(obj: any, path: string[]): any {
  * the ass so not worth it.
  */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types,@typescript-eslint/no-explicit-any
-export function set(obj: any, path: string[], value: unknown): void {
+export function set(obj: any, path: unknown[], value: unknown): void {
   if (path.length === 0) {
     throw new Error("Cannot set value for empty key");
   }
 
-  const field = path[0];
+  const field = path[0] as string;
 
   if (path.length === 1) {
     obj[field] = value;
   } else {
-    set(obj[path[0]], path.slice(1), value);
+    set(obj[field], path.slice(1), value);
   }
 }
 

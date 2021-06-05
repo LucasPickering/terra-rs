@@ -1,5 +1,5 @@
 import React from "react";
-import Link from "../Link";
+import Link from "../../Link";
 
 /**
  * The help text we show for each element on the config page. This object

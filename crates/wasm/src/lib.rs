@@ -12,7 +12,7 @@
 
 mod util;
 
-use crate::util::{RenderConfigHelper, ResultExt, WorldConfigHelper};
+use crate::util::ResultExt;
 use terra::{RenderConfig, World, WorldConfig, WorldRenderer};
 use wasm_bindgen::{prelude::*, JsCast};
 
@@ -32,72 +32,54 @@ impl Terra {
         Self
     }
 
-    /// Generate a new world with the given config.
-    pub fn generate_world(
-        &self,
-        config: WorldConfig,
-    ) -> Result<World, JsValue> {
-        World::generate(config).into_js()
-    }
-
-    /// Get the default world config as a JS object.
-    pub fn default_world_config(&self) -> WorldConfigObject {
-        WorldConfigHelper::new().default()
-    }
-
-    /// Verify that the given JS object is a valid Terra world config. Return
-    /// the validated config, with all defaults populated, if it's valid. Return
-    /// an error if it isn't.
+    /// Validate the given config and return it as a strictly typed JS object.
+    /// Any missing values will be populated with defaults. If the given value
+    /// fails to serialize, or has any invalid values, this will fail.
     pub fn validate_world_config(
         &self,
-        input: WorldConfigObject,
+        input: JsValue,
     ) -> Result<WorldConfigObject, JsValue> {
-        WorldConfigHelper::new().validate(input)
+        util::validate_config::<WorldConfig, WorldConfigObject>(input)
     }
 
-    /// Deserialize a JS object into a [terra::WorldConfig]. The input should be
-    /// an **object**, not a JSON string. Will return an error if
-    /// deserialization fails in any way.
-    pub fn deserialize_world_config(
-        &self,
-        input: WorldConfigObject,
-    ) -> Result<WorldConfig, JsValue> {
-        WorldConfigHelper::new().deserialize(input)
-    }
-
-    /// Get the default render config as a JS object.
-    pub fn default_render_config(&self) -> RenderConfigObject {
-        RenderConfigHelper::new().default()
-    }
-
-    /// Verify that the given JS object is a valid Terra render config. Return
-    /// the validated config, with all defaults populated, if it's valid. Return
-    /// an error if it isn't.
+    /// Validate the given config and return it as a strictly typed JS object.
+    /// Any missing values will be populated with defaults. If the given value
+    /// fails to serialize, or has any invalid values, this will fail.
     pub fn validate_render_config(
         &self,
-        input: RenderConfigObject,
+        input: JsValue,
     ) -> Result<RenderConfigObject, JsValue> {
-        RenderConfigHelper::new().validate(input)
+        util::validate_config::<RenderConfig, RenderConfigObject>(input)
     }
 
-    /// Deserialize a JS object into a [terra::RenderConfig]. The input should
-    /// be an **object**, not a JSON string. Will return an error if
-    /// deserialization fails in any way.
-    pub fn deserialize_render_config(
+    /// Generate a new world with the given config.
+    ///
+    /// The config is given as a JS object. It will be deserialized and
+    /// validated, and if either of those fail this will return an error.
+    pub fn generate_world(
         &self,
-        input: RenderConfigObject,
-    ) -> Result<RenderConfig, JsValue> {
-        RenderConfigHelper::new().deserialize(input)
+        world_config: WorldConfigObject,
+    ) -> Result<World, JsValue> {
+        // Deserialize the config JS object into a Rust value
+        let world_config = JsValue::into_serde(&world_config).into_js()?;
+        // This will validate the config
+        World::generate(world_config).into_js()
     }
 
     /// Create a world renderer that can be used to render any world into
     /// various visual formats. A renderer must be configured at creation
     /// using the given config, but from then it can be used to render any
     /// number of worlds.
+    ///
+    /// The config is given as a JS object. It will be deserialized and
+    /// validated, and if either of those fail this will return an error.
     pub fn build_renderer(
         &self,
-        render_config: RenderConfig,
+        render_config: RenderConfigObject,
     ) -> Result<WorldRenderer, JsValue> {
+        // Deserialize the config JS object into a Rust value
+        let render_config = JsValue::into_serde(&render_config).into_js()?;
+        // This will validate the config
         WorldRenderer::new(render_config).into_js()
     }
 

@@ -14,7 +14,7 @@ import {
 } from "@material-ui/icons";
 import DemoContext from "context/DemoContext";
 import { Location } from "history";
-import ConfigEditor from "./ConfigEditor";
+import ConfigEditor from "./config/ConfigEditor";
 import DownloadMenu from "./DownloadMenu";
 import UnstyledLink from "../UnstyledLink";
 

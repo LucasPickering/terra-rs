@@ -3,12 +3,9 @@ use fnv::FnvHasher;
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
 use validator::Validate;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
 
 /// Configuration that defines a world gen process. Two worlds generated with
 /// same config will always be identical.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
 #[serde(default)]
 pub struct WorldConfig {
@@ -67,7 +64,6 @@ pub struct WorldConfig {
 /// Configuration related to rainfall and evaporation simulation. These params
 /// control how rainfall is generated for the world, which in turn has a major
 /// impact on runoff and feature generation.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
 #[serde(default)]
 pub struct RainfallConfig {
@@ -110,7 +106,6 @@ pub struct RainfallConfig {
 
 /// Configuration surrounding how geographic features are generated. See
 /// [GeoFeature](crate::GeoFeature) for more info.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
 #[serde(default)]
 pub struct GeoFeatureConfig {
@@ -132,7 +127,6 @@ pub struct GeoFeatureConfig {
 /// https://crates.io/crates/noise for noise generation. This type is generic,
 /// i.e. not specific to a particular noise function, so as such it has no
 /// default implementation.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
 pub struct NoiseFnConfig {
     pub noise_type: NoiseFnType,
@@ -170,7 +164,6 @@ pub struct NoiseFnConfig {
 /// be seedable and multi-fractal. See
 /// https://docs.rs/noise/0.7.0/noise/trait.MultiFractal.html for a list of
 /// types that could possibly be supported here.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NoiseFnType {

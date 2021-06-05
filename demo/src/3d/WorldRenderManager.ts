@@ -1,5 +1,5 @@
 import { Matrix, Mesh, MeshBuilder, Scene } from "@babylonjs/core";
-import type {
+import {
   Tile,
   World,
   Terra,
@@ -47,10 +47,8 @@ class WorldRenderManager {
     this.mesh.convertToUnIndexedMesh();
     this.mesh.thinInstanceRegisterAttribute("color", 4);
 
-    this.renderConfig = this.terra.default_render_config();
-    this.renderer = this.terra.build_renderer(
-      this.terra.deserialize_render_config(this.renderConfig)
-    );
+    this.renderConfig = this.terra.validate_render_config({});
+    this.renderer = this.terra.build_renderer(this.renderConfig);
 
     // This call allocates a whole new array, so we store the array instead of
     // the full world object.
@@ -82,9 +80,7 @@ class WorldRenderManager {
     // Update the tile lens in the config, and build a new renderer
     // Renderers are super cheap to build so this will be zoomer fast
     this.renderConfig.tile_lens = lens;
-    this.renderer = this.terra.build_renderer(
-      this.terra.deserialize_render_config(this.renderConfig)
-    );
+    this.renderer = this.terra.build_renderer(this.renderConfig);
 
     this.tiles.forEach(([tile, instanceIdx], i) => {
       const isLastTile = i === this.tiles.length - 1;
