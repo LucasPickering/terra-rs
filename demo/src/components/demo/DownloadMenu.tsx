@@ -5,8 +5,7 @@ import { World } from "terra-wasm";
 import DemoContext from "context/DemoContext";
 
 const DownloadMenu: React.FC<React.ComponentProps<typeof Menu>> = (props) => {
-  const { terra, world, worldConfigHandler, renderConfigHandler } =
-    useContext(DemoContext);
+  const { terra, world, renderConfigHandler } = useContext(DemoContext);
 
   // We _shouldn't_ ever render this if the world isn't present, but just need
   // this check to tell TS that
@@ -26,17 +25,6 @@ const DownloadMenu: React.FC<React.ComponentProps<typeof Menu>> = (props) => {
         }}
       >
         Download as JSON
-      </MenuItem>
-      <MenuItem
-        onClick={() => {
-          const jsonString = JSON.stringify(worldConfigHandler.config);
-          saveAs(
-            new Blob([jsonString], { type: "application/json" }),
-            "terra_config.json"
-          );
-        }}
-      >
-        Download as JSON (Config Only)
       </MenuItem>
       <MenuItem
         onClick={() => {
