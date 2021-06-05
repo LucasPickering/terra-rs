@@ -2,7 +2,7 @@ import "@babylonjs/core/Debug/debugLayer";
 import "@babylonjs/loaders/glTF";
 import { Engine } from "@babylonjs/core";
 import WorldScene from "./WorldScene";
-import type { Terra, World } from "terra-wasm";
+import type { RenderConfigObject, Terra, World } from "terra-wasm";
 import { debounce } from "../util";
 
 // This dependency is huge so only pull it in for dev
@@ -13,10 +13,16 @@ if (process.env.NODE_ENV === "development") {
 /**
  * First level of the babylon.js world
  */
-export default class WorldDemo {
+class WorldDemo {
   private readonly engine: Engine;
+  private readonly scene: WorldScene;
 
-  constructor(canvas: HTMLCanvasElement, terra: Terra, world: World) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    terra: Terra,
+    world: World,
+    renderConfig: RenderConfigObject
+  ) {
     // initialize babylon scene and engine
     this.engine = new Engine(canvas, true, { audioEngine: false }, false);
 
@@ -25,12 +31,16 @@ export default class WorldDemo {
       resizeEngine();
     };
 
-    const scene = new WorldScene(terra, this.engine, world);
+    this.scene = new WorldScene(terra, this.engine, world, renderConfig);
 
     // run the main render loop
     this.engine.runRenderLoop(() => {
-      scene.render();
+      this.scene.render();
     });
+  }
+
+  updateRenderConfig(renderConfig: RenderConfigObject): void {
+    this.scene.updateRenderConfig(renderConfig);
   }
 
   /**
@@ -40,3 +50,5 @@ export default class WorldDemo {
     this.engine.dispose();
   }
 }
+
+export default WorldDemo;

@@ -1,49 +1,16 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef } from "react";
 import WorldDemo from "3d/WorldDemo";
-import {
-  IconButton,
-  CircularProgress,
-  makeStyles,
-  Paper,
-} from "@material-ui/core";
-import {
-  Edit as IconEdit,
-  Close as IconClose,
-  ArrowBack as IconArrowBack,
-  GetApp as IconGetApp,
-} from "@material-ui/icons";
+import { CircularProgress, makeStyles } from "@material-ui/core";
 import DemoContext from "context/DemoContext";
-import { Location } from "history";
-import ConfigEditor from "./config/ConfigEditor";
-import DownloadMenu from "./DownloadMenu";
-import UnstyledLink from "../UnstyledLink";
+import useDebouncedValue from "hooks/useDebouncedValue";
 
-const useStyles = makeStyles(({ spacing }) => ({
+const useStyles = makeStyles(() => ({
   loading: {
-    margin: "auto 0",
-  },
-  canvasWrapper: {
-    position: "relative",
     width: "100%",
     height: "100%",
-    overflow: "hidden",
-  },
-  canvasOverlay: {
-    position: "absolute",
     display: "flex",
-    flexDirection: "column",
-    width: "40%",
-    maxWidth: 600,
-    maxHeight: "100%",
-    padding: spacing(1),
-    paddingRight: 0,
-  },
-  buttons: {
-    marginBottom: spacing(1),
-  },
-  configOverlay: {
-    overflowY: "auto",
-    padding: `${spacing(1)}px ${spacing(4)}px`,
+    alignItems: "center",
+    justifyContent: "center",
   },
 }));
 
@@ -53,13 +20,11 @@ const useStyles = makeStyles(({ spacing }) => ({
  * everything below this belongs to the filthy peasants of Babylon.js-topia.
  */
 const WorldCanvas: React.FC = () => {
-  const { terra, world, generateWorld } = useContext(DemoContext);
+  const { terra, renderConfigHandler, world, generateWorld } =
+    useContext(DemoContext);
   const classes = useStyles();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const downloadMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const worldDemoRef = useRef<WorldDemo | undefined>();
-  const [configOpen, setConfigOpen] = useState<boolean>(false);
-  const [downloadMenuOpen, setDownloadMenuOpen] = useState<boolean>(false);
 
   // If we ever hit this page with no world present, then generate one
   useEffect(() => {
@@ -88,62 +53,36 @@ const WorldCanvas: React.FC = () => {
       }
 
       // World is ready, render it.
-      worldDemoRef.current = new WorldDemo(canvasRef.current, terra, world);
+      worldDemoRef.current = new WorldDemo(
+        canvasRef.current,
+        terra,
+        world,
+        renderConfigHandler.config
+      );
     }
-  }, [terra, world]);
+  }, [terra, renderConfigHandler, world]);
+
+  // Whenever the render config changes, re-render the world. The config should
+  // only change when a user actually provides input, not on every React
+  // re-render. And debounce the changes so dragging a slider doesn't trigger
+  // a ton of updates.
+  const debouncedRenderConfig = useDebouncedValue(
+    renderConfigHandler.config,
+    500
+  );
+  useEffect(() => {
+    worldDemoRef.current?.updateRenderConfig(debouncedRenderConfig);
+  }, [debouncedRenderConfig, worldDemoRef]);
 
   if (!world || world === "generating") {
-    return <CircularProgress className={classes.loading} size="10rem" />;
+    return (
+      <div className={classes.loading}>
+        <CircularProgress size="10rem" />
+      </div>
+    );
   }
 
-  return (
-    <div className={classes.canvasWrapper}>
-      <div className={classes.canvasOverlay}>
-        <div className={classes.buttons}>
-          <IconButton
-            aria-label="back to config"
-            component={UnstyledLink}
-            to={(location: Location) => ({
-              ...location,
-              pathname: "/demo/new",
-            })}
-          >
-            <IconArrowBack />
-          </IconButton>
-          <IconButton
-            ref={downloadMenuButtonRef}
-            aria-controls="download-menu"
-            aria-haspopup="true"
-            onClick={() => setDownloadMenuOpen(true)}
-          >
-            <IconGetApp />
-          </IconButton>
-          <IconButton
-            aria-label={configOpen ? "close config" : "edit config"}
-            onClick={() => setConfigOpen((old) => !old)}
-          >
-            {configOpen ? <IconClose /> : <IconEdit />}
-          </IconButton>
-          <DownloadMenu
-            world={world}
-            id="download-menu"
-            anchorEl={downloadMenuButtonRef.current}
-            open={downloadMenuOpen}
-            getContentAnchorEl={null}
-            anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-            onClose={() => setDownloadMenuOpen(false)}
-          />
-        </div>
-        {configOpen && (
-          <Paper className={classes.configOverlay}>
-            <ConfigEditor inline />
-          </Paper>
-        )}
-      </div>
-
-      <canvas ref={canvasRef} />
-    </div>
-  );
+  return <canvas ref={canvasRef} />;
 };
 
 export default WorldCanvas;

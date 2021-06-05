@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Redirect, Route, Switch, useHistory } from "react-router-dom";
-import ConfigEditor from "./config/ConfigEditor";
-import WorldCanvas from "./WorldCanvas";
+import WorldCanvasWrapper from "./WorldCanvasWrapper";
 import NotFound from "../NotFound";
 import useStaticValue from "hooks/useStaticValue";
 import DemoContext from "context/DemoContext";
@@ -12,6 +11,7 @@ import {
   WorldConfigObject,
 } from "terra-wasm";
 import { useConfigHandler } from "hooks/useConfigHandler";
+import WorldConfigEditor from "./config/WorldConfigEditor";
 
 /**
  * Configure and generate a demo Terra world.
@@ -55,8 +55,7 @@ const Demo: React.FC = () => {
       value={{
         terra,
         worldConfigHandler,
-        // TODO first class render config support
-        renderConfig: renderConfigHandler.config,
+        renderConfigHandler,
         generateWorldEnabled: world !== "generating",
         world,
         generateWorld,
@@ -66,11 +65,11 @@ const Demo: React.FC = () => {
         <Redirect from="/demo" to="/demo/new" exact />
 
         <Route path="/demo/new" exact>
-          <ConfigEditor />
+          <WorldConfigEditor fullscreen />
         </Route>
 
         <Route path="/demo/world" exact>
-          <WorldCanvas />
+          <WorldCanvasWrapper />
         </Route>
 
         <Route path="*" exact>
