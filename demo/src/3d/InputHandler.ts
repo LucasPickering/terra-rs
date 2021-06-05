@@ -2,14 +2,7 @@ import { KeyboardEventTypes, KeyboardInfo } from "@babylonjs/core";
 import { assertUnreachable } from "../util";
 import WorldScene from "./WorldScene";
 
-const INPUT_ACTIONS = [
-  "toggleDebugOverlay",
-  "lensSurface",
-  "lensBiome",
-  "lensElevation",
-  "lensHumidity",
-  "lensRunoff",
-] as const;
+const INPUT_ACTIONS = ["toggleDebugOverlay"] as const;
 type InputAction = typeof INPUT_ACTIONS[number];
 
 export interface InputConfig {
@@ -28,11 +21,6 @@ function isInputAction(s: string): s is InputAction {
 const DEFAULT_INPUT_CONFIG: InputConfig = {
   bindings: {
     toggleDebugOverlay: "`",
-    lensSurface: "1",
-    lensBiome: "2",
-    lensElevation: "3",
-    lensHumidity: "4",
-    lensRunoff: "5",
   },
 };
 
@@ -72,21 +60,6 @@ class InputHandler {
     switch (action) {
       case "toggleDebugOverlay":
         this.scene.toggleDebugOverlay();
-        break;
-      case "lensSurface":
-        this.scene.setTileLens("surface");
-        break;
-      case "lensBiome":
-        this.scene.setTileLens("biome");
-        break;
-      case "lensElevation":
-        this.scene.setTileLens("elevation");
-        break;
-      case "lensHumidity":
-        this.scene.setTileLens("humidity");
-        break;
-      case "lensRunoff":
-        this.scene.setTileLens("runoff");
         break;
       // Make sure this switch is exhaustive
       default:

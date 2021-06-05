@@ -49,7 +49,7 @@ struct Opt {
 
     /// The lens used to determine the color of each tile. Only relevant for
     /// rendered output formats, such as SVG.
-    // TODO include link to TileLens docs here
+    // TODO include link to TileLens docs here after core crate is published
     #[structopt(long, default_value = "surface")]
     lens: TileLens,
 

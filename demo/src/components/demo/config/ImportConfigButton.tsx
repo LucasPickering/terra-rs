@@ -1,17 +1,21 @@
-import React, { useContext } from "react";
+import React from "react";
 import { Button } from "@material-ui/core";
-import DemoContext from "context/DemoContext";
+import { ConfigHandler } from "hooks/useConfigHandler";
 
-const ImportConfigButton: React.FC = () => {
-  const { worldConfigHandler } = useContext(DemoContext);
+interface Props<T> {
+  configHandler: ConfigHandler<T>;
+}
 
+function ImportConfigButton<T>({
+  configHandler,
+}: Props<T>): React.ReactElement {
   /**
-   * Load a terra config from the given JSON file
+   * Load a generic config from the given JSON file
    */
   const loadConfig = async (file: File): Promise<void> => {
     try {
       const json = await file.text();
-      worldConfigHandler.setFromJson(json);
+      configHandler.setFromJson(json);
     } catch (error) {
       window.alert("Failed to load config: " + error);
     }
@@ -41,6 +45,6 @@ const ImportConfigButton: React.FC = () => {
       />
     </>
   );
-};
+}
 
 export default ImportConfigButton;
