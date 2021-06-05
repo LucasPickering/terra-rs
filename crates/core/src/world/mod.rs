@@ -15,7 +15,7 @@ use crate::{
 use anyhow::Context;
 use log::info;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Debug, io::Read};
+use std::fmt::Debug;
 use validator::Validate;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
@@ -111,7 +111,7 @@ impl World {
     /// for a description of the binary format. Will fail if the input is
     /// malformed.
     #[cfg(feature = "bin")]
-    pub fn from_bin(read: impl Read) -> anyhow::Result<Self> {
+    pub fn from_bin(read: impl std::io::Read) -> anyhow::Result<Self> {
         rmp_serde::from_read(read).context("error deserializing world")
     }
 }
