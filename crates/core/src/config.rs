@@ -1,5 +1,7 @@
 use crate::Meter3;
+use fnv::FnvHasher;
 use serde::{Deserialize, Serialize};
+use std::hash::{Hash, Hasher};
 use validator::Validate;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
@@ -180,6 +182,19 @@ pub enum NoiseFnType {
     RidgedMulti,
 }
 
+impl WorldConfig {
+    /// Convert a string to a numeric value that can be used as a 64-bit RNG
+    /// seed in a world config. This will attempt to parse the string as a
+    /// number. If that fails, it will hash the string into a number.
+    pub fn str_to_seed(seed_str: &str) -> u64 {
+        seed_str.parse::<u64>().unwrap_or_else(|_| {
+            let mut hasher = FnvHasher::default();
+            seed_str.hash(&mut hasher);
+            hasher.finish()
+        })
+    }
+}
+
 impl Default for WorldConfig {
     fn default() -> Self {
         // This should be the general source of truth for a "nice world", but
@@ -231,13 +246,9 @@ impl Default for GeoFeatureConfig {
 /// The seed field has some fancy deserialization behavior implemented here. See
 /// the `seed` field definition for a description.
 mod serde_seed {
-    use fnv::FnvHasher;
+    use super::WorldConfig;
     use serde::{de::Visitor, Deserializer};
-    use std::{
-        convert::TryInto,
-        fmt,
-        hash::{Hash, Hasher},
-    };
+    use std::{convert::TryInto, fmt};
 
     /// Macro to make it easier to implement visit logic for different types
     macro_rules! impl_visit {
@@ -278,14 +289,7 @@ mod serde_seed {
         where
             E: serde::de::Error,
         {
-            match value.parse::<u64>() {
-                Ok(seed) => Ok(seed),
-                Err(_) => {
-                    let mut hasher = FnvHasher::default();
-                    value.hash(&mut hasher);
-                    Ok(hasher.finish())
-                }
-            }
+            Ok(WorldConfig::str_to_seed(value))
         }
     }
 
