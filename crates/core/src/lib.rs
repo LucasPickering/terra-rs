@@ -22,7 +22,6 @@
 //! - `stl` - Render worlds in 3D STL format ([World::to_stl])
 //! - `svg` - Render worlds in 2D SVG format ([World::to_svg])
 
-#![feature(const_fn)]
 #![feature(const_fn_floating_point_arithmetic)]
 #![feature(const_fn_trait_bound)]
 
