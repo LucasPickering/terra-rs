@@ -98,11 +98,8 @@ impl Terra {
     }
 }
 
-// TODO attempt to consolidate these types back into the originals, and just
-// use the wasm types in TS
 #[wasm_bindgen(typescript_custom_section)]
 const TS_APPEND_CONTENT: &'static str = r#"
-
 /**
  * See description in the `extern "C"` section below
  */
