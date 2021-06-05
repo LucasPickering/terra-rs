@@ -3,17 +3,15 @@ import { Button } from "@material-ui/core";
 import DemoContext from "context/DemoContext";
 
 const ImportConfigButton: React.FC = () => {
-  const { terra, setConfig } = useContext(DemoContext);
+  const { worldConfigHandler } = useContext(DemoContext);
 
   /**
-   * Load a terra config from the given file
+   * Load a terra config from the given JSON file
    */
   const loadConfig = async (file: File): Promise<void> => {
     try {
-      const data = await file.text();
-      const configString = JSON.parse(data);
-      const validConfig = terra.validate_world_config(configString);
-      setConfig(validConfig);
+      const json = await file.text();
+      worldConfigHandler.setFromJson(json);
     } catch (error) {
       window.alert("Failed to load config: " + error);
     }
