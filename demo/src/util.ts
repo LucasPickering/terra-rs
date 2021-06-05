@@ -18,12 +18,12 @@ export type Path<T> = PathTree<T>[keyof PathTree<T>];
  * the ass so not worth it.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
-export function get(obj: any, path: string[]): any {
+export function get(obj: any, path: unknown[]): any {
   if (path.length === 0) {
     throw new Error("Cannot get value for empty path");
   }
 
-  const field = path[0];
+  const field = path[0] as string;
 
   if (path.length === 1) {
     return obj[field];
@@ -89,4 +89,8 @@ export function debounce(f: () => unknown, delay: number): () => void {
     }
     timeout.id = window.setTimeout(f, delay);
   };
+}
+
+export function formatMeter3(value: number): string {
+  return `${value} m³`;
 }
