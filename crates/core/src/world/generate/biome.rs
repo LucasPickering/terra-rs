@@ -1,5 +1,5 @@
 use crate::{
-    util::{cmp_unwrap, Meter, NumRange},
+    util::{cmp_unwrap, range::NumRange, unit::Meter},
     world::{
         generate::{Generate, WorldBuilder},
         Biome, World,

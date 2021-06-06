@@ -4,7 +4,10 @@ mod pattern;
 pub use crate::world::generate::runoff::pattern::RunoffPattern;
 use crate::{
     unwrap,
-    util::{self, Meter, Meter3},
+    util::{
+        self,
+        unit::{Meter, Meter3},
+    },
     world::{
         generate::{
             runoff::{

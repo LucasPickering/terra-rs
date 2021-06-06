@@ -1,5 +1,5 @@
 use crate::{
-    util::{Meter3, NumRange},
+    util::{range::NumRange, unit::Meter3},
     world::{
         generate::{Generate, TileBuilder, WorldBuilder},
         hex::{HexAxialDirection, HexAxis, HexPoint, HexPointMap},
