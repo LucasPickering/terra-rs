@@ -68,9 +68,11 @@ const WorldCanvas: React.FC = () => {
     renderConfigHandler.config,
     500
   );
+  const { updateQueryParam } = renderConfigHandler;
   useEffect(() => {
     worldDemoRef.current?.updateRenderConfig(debouncedRenderConfig);
-  }, [debouncedRenderConfig, worldDemoRef]);
+    updateQueryParam();
+  }, [debouncedRenderConfig, worldDemoRef, updateQueryParam]);
 
   if (!world || world === "generating") {
     return (

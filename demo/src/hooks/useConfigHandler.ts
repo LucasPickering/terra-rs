@@ -40,7 +40,8 @@ export interface ConfigHandler<T> {
 
   /**
    * Write the current config value to the pre-defined query param. Will throw
-   * if no query param is defined for this config.
+   * if no query param is defined for this config. The data will be
+   * base64-encoded before being written to the URL, to save on space.
    */
   updateQueryParam: () => void;
 }
@@ -87,7 +88,8 @@ export function useConfigHandler<T extends object>({
       const queryConfigStr = queryParams.get(queryParam);
       if (queryConfigStr) {
         try {
-          const queryConfigObj = JSON.parse(queryConfigStr);
+          // base64-decode, then parse as JSON
+          const queryConfigObj = JSON.parse(window.atob(queryConfigStr));
           // Make sure this is a valid config. If not, this will throw.
           // This will also populate defaults where missing
           return validator(queryConfigObj);
@@ -122,8 +124,8 @@ export function useConfigHandler<T extends object>({
   };
   const validate = (json: string): T => {
     // If the config is malformed or invalid, this will throw!!
-    const parsed = JSON.parse(json);
-    return validator(parsed);
+    const decoded = JSON.parse(json);
+    return validator(decoded);
   };
   const setFromJson = (json: string): void => {
     // If the config is malformed or invalid, this will throw!!
@@ -135,8 +137,10 @@ export function useConfigHandler<T extends object>({
     }
 
     // Update the query param
-    const newParams = new URLSearchParams();
-    newParams.set(queryParam, JSON.stringify(config));
+    const newParams = new URLSearchParams(history.location.search);
+    // JSON stringify, then base64-encode
+    const encoded = window.btoa(JSON.stringify(config));
+    newParams.set(queryParam, encoded);
     const search = newParams.toString();
     history.replace({ ...history.location, search });
   };
