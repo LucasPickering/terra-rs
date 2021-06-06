@@ -198,6 +198,13 @@ export const worldDescriptions = {
         </ol>
       </>
     ),
+    enabled: (
+      <>
+        Enable or disable rainfall and runoff simulation. This part of world
+        generation is expensive, so disable it if you don't need it for a
+        significant improvement in performance.
+      </>
+    ),
     evaporation_default: (
       <>
         The amount of evaporation (in m³) that an ocean tile provides to the

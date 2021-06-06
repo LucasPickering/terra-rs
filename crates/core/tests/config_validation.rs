@@ -12,6 +12,7 @@ fn test_world_config_validation() {
         edge_buffer_fraction: -0.1, // invalid
         edge_buffer_exponent: -1.0, // valid (but weird)
         rainfall: RainfallConfig {
+            enabled: true,
             evaporation_default: Meter3(-1.0), // can't validate Meter3s :(
             evaporation_land_scale: -1.0,      // invalid
             evaporation_spread_distance: 0,    // valid
