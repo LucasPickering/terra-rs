@@ -72,9 +72,20 @@ impl Tile {
     /// sides, in **2D space**. See [Tile::VERTEX_RADIUS] for the rendering
     /// constant caveat.
     pub const SIDE_RADIUS: f64 = Self::VERTEX_RADIUS * 0.8660254; // sqrt(3)/2
-    /// Distance between the bottom side and top side of a tile, in **2D
+    /// Distance between any two opposite **vertices** of a tile, in **2D
     /// space**. See [Tile::VERTEX_RADIUS] for the rendering constant caveat.
+    pub const WIDTH: f64 = Self::VERTEX_RADIUS * 2.0;
+    /// Distance between any two opposite **sides** of a tile, in **2D space**.
+    /// See [Tile::VERTEX_RADIUS] for the rendering constant caveat.
     pub const HEIGHT: f64 = Self::SIDE_RADIUS * 2.0;
+    /// Distance between the center of the tiles that are aligned in the Y
+    /// and one unit apart in the X (i.e. left-to-right). See
+    /// [Tile::VERTEX_RADIUS] for the rendering constant caveat.
+    pub const CENTER_DISTANCE_X: f64 = Self::VERTEX_RADIUS * 1.5;
+    /// Distance between the center of two tiles that are aligned in the X
+    /// and one unit apart in the Y (i.e. up-and-down). See
+    /// [Tile::VERTEX_RADIUS] for the rendering constant caveat.
+    pub const CENTER_DISTANCE_Y: f64 = Self::HEIGHT;
 
     /// Get a list of geographic features that appear on this tile. See
     /// [GeoFeature] for more info.
