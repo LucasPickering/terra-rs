@@ -52,7 +52,7 @@ pub struct World {
 
     /// The tiles that make up this world, keyed by their position.
     // Serialize as a vec because hex points can't be keys
-    #[serde(with = "crate::util::hex_point_map_to_vec_serde")]
+    #[serde(with = "crate::util::serde_hex_point_map_to_vec")]
     tiles: HexPointMap<Tile>,
 }
 
