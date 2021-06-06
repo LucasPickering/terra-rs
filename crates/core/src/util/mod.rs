@@ -8,7 +8,6 @@ pub use crate::util::unit::*;
 
 use anyhow::anyhow;
 use derive_more::Display;
-use log::debug;
 use rand::{
     distributions::uniform::{SampleRange, SampleUniform, UniformSampler},
     RngCore,
@@ -135,6 +134,14 @@ impl Rangeable<f64> for Meter3 {
 }
 
 /// A range between two numeric values, inclusive on both ends.
+///
+/// ## Type Parameters
+///
+/// - `T` represents the type of values represented by this range, e.g. `f64` or
+///   `Meter`
+/// - `I` represents the underlying primitive type that we use for numberic
+///   comparisons. E.g. for `Meter` we map down to `f64`, but for `f64` it's
+///   still just `f64`
 #[derive(Copy, Clone, Debug, Display)]
 #[display(fmt = "[{}, {}]", min, max)]
 pub struct NumRange<T: Rangeable<I>, I = T> {
@@ -188,10 +195,21 @@ impl<T: Into<I> + Rangeable<I>, I> NumRange<T, I> {
         }
     }
 
-    /// Map a value from this range to the target range.
+    /// Map a value from this range to the target range. If the span of this
+    /// range is zero, we can't properly map the value because we don't know
+    /// where on the target range it should fall. In that case, we just always
+    /// return the **minimum** of the target range.
     pub fn map_to(&self, dest_range: &Self, value: T) -> T {
-        let normalized = (value - self.min) / self.span().into();
-        dest_range.min + (normalized * dest_range.span().into())
+        let span = self.span();
+        if span > T::zero() {
+            // Map down to [0,1], then map back up to the target range
+            let normalized = (value - self.min) / span.into();
+            dest_range.min + (normalized * dest_range.span().into())
+        } else {
+            // Source span is zero, so we can't do a proper mapping (which would
+            // just return NaN). Arbitrarily pick the min bound on the target
+            dest_range.min
+        }
     }
 
     /// Map a value from this range to the range [0, 1]
@@ -242,15 +260,16 @@ pub struct RangeValue<T: Rangeable<I>, I> {
     range: NumRange<T, I>,
 }
 
-impl<T: Into<I> + Rangeable<I>, I> RangeValue<T, I> {
+impl<T: Into<I> + Rangeable<I>, I: Debug> RangeValue<T, I> {
     /// Get the value from this struct
     pub fn inner(self) -> T {
         self.value
     }
 
-    pub fn debug(self) -> Self {
-        debug!("{:?}", self.value);
-        self
+    /// Print out debug info on this range. Only enabled for debug builds.
+    #[cfg(debug_assertions)]
+    pub fn dbg(self) -> Self {
+        dbg!(self)
     }
 
     /// Map this value to the range [0,1]
