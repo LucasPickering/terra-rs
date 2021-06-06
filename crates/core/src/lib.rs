@@ -36,7 +36,10 @@ pub use crate::{
         WorldConfig,
     },
     render::{config::RenderConfig, Color3, Point2, TileLens, WorldRenderer},
-    util::{Meter, Meter2, Meter3, NumRange, RangeValue},
+    util::{
+        range::{NumRange, RangeValue},
+        unit::{Meter, Meter2, Meter3},
+    },
     world::{
         hex::{
             HasHexPosition, HexAxialDirection, HexAxis, HexDirection,

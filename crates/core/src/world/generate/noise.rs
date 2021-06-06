@@ -1,5 +1,6 @@
 use crate::{
-    config::NoiseFnType, util::Rangeable, HexPoint, NoiseFnConfig, NumRange,
+    config::NoiseFnType, util::range::Rangeable, HexPoint, NoiseFnConfig,
+    NumRange,
 };
 use noise::{Fbm, MultiFractal, NoiseFn, RidgedMulti, Seedable};
 use rand::Rng;

@@ -9,7 +9,7 @@ mod wind;
 
 use crate::{
     timed, unwrap,
-    util::{self, Meter3},
+    util::{self, unit::Meter3},
     world::{
         generate::{
             biome::BiomeGenerator,
