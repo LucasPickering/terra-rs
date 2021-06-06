@@ -87,9 +87,12 @@ class TileMeshHandler {
         tileHeight,
         position2d.y
       )
-        // Remove previous scaling, then set based on height
+        // Reset scaling to (1,1,1)
         .removeRotationAndScaling()
-        .add(Matrix.Scaling(1, tileHeight, 1));
+        // Since scale values are all at 1 now, and we're **adding** to the
+        // scale, we want to subtract one from each of the desired scale values
+        // e.g. if height=5, we do (1,1,1)+(0,4,0)=(1,5,1)
+        .add(Matrix.Scaling(0, tileHeight - 1, 0));
       this.mesh.thinInstanceSetMatrixAt(
         instanceIndex,
         transformationMatrix,

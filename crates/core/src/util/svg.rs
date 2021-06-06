@@ -15,27 +15,33 @@ const RIVER_COLOR: Color3 = Color3::new_int(72, 192, 240);
 /// Render a world as an SVG. This will be a 2D top-down rendering, in full
 /// color
 pub fn world_to_svg(world: &World, renderer: &WorldRenderer) -> Document {
-    // Grow the view box based on the world size. The world height will always
-    // be the larger size, so scale it based on that. The +1 provides a bit of
-    // buffer space
+    // Set the view box based on the world size. Each of these values is the
+    // distance from the center of the viewbox to the outer edge. So the
+    // width/height will be double that value
+    let radius = world.config().radius as f64;
+    // Distance from center of origin tile to center of right-most tile,
+    // **plus** the center of that right-most tile to its right-most edge
+    let view_box_max_x =
+        (radius * Tile::CENTER_DISTANCE_X + Tile::VERTEX_RADIUS).ceil();
+    // Distance from the center of origin tile to center of bottom-most tile,
+    // **plus** the center of that bottom-most tile to its bottom edge
+    let view_box_max_y =
+        (radius * Tile::CENTER_DISTANCE_Y + Tile::SIDE_RADIUS).ceil();
 
-    // TODO make this smarter by rendering all the tiles, _then_ calculating
-    // bounds so we don't have to guess
-    let world_config = world.config();
-    let view_box_size =
-        ((world_config.radius as f64 + 1.0) * Tile::HEIGHT).ceil();
     let mut document = Document::new()
         .set(
             "viewBox",
             (
-                -view_box_size,
-                -view_box_size,
-                view_box_size * 2.0,
-                view_box_size * 2.0,
+                // Top-left corner
+                -view_box_max_x,
+                -view_box_max_y,
+                // Width and height
+                view_box_max_x * 2.0,
+                view_box_max_y * 2.0,
             ),
         )
         .set("shape-rendering", "crispEdges")
-        .add(Comment::new(format!("\n{:#?}\n", world_config)));
+        .add(Comment::new(format!("\n{:#?}\n", world.config())));
 
     for tile in world.tiles().values() {
         let polygon = draw_tile(renderer, tile);
@@ -52,13 +58,18 @@ fn draw_tile(world_renderer: &WorldRenderer, tile: &Tile) -> Group {
 
     // Start with the main tile hexagon
     let mut group = Group::new()
+        // Translate the tile to its correct position
         .set("transform", format!("translate({} {})", pos2d.x, pos2d.y))
         .add(Comment::new(pos.to_string())) // Readability!
         .add(
             Polygon::new()
+                // Generate vertices for the tile. This attribute ends up being
+                // the same for every tile, but we can't really pull this code
+                // out because the SVG lib forces us to clone the vec every
+                // time anyway. So it's just easier to leave it like this
                 .set(
                     "points",
-                    HexAxialDirection::ALL
+                    HexAxialDirection::CLOCKWISE
                         .iter()
                         .map(|dir| {
                             let v = dir.to_vector2();
@@ -66,6 +77,7 @@ fn draw_tile(world_renderer: &WorldRenderer, tile: &Tile) -> Group {
                         })
                         .collect::<Vec<_>>(),
                 )
+                // Set color
                 .set("fill", world_renderer.tile_color(tile).to_html()),
         );
 
