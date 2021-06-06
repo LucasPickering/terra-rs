@@ -28,13 +28,20 @@ impl Generate for RainfallGenerator {
         // up moisture (where the amount is based on whether or not it's water),
         // and drop rain (where the amount is based on elevation).
 
-        let mut cloud_line =
-            CloudLine::new(&world.config, world.wind_direction());
+        // This step can be disabled to improve performance
+        if world.config.rainfall.enabled {
+            let mut cloud_line =
+                CloudLine::new(&world.config, world.wind_direction());
 
-        let radius = world.config.radius as i16;
-        for _ in -radius..=radius {
-            cloud_line.precipitate_and_evaporate(&mut world.tiles);
-            cloud_line.advance();
+            let radius = world.config.radius as i16;
+            for _ in -radius..=radius {
+                cloud_line.precipitate_and_evaporate(&mut world.tiles);
+                cloud_line.advance();
+            }
+        } else {
+            for tile in world.tiles.values_mut() {
+                tile.set_rainfall(Meter3(0.0));
+            }
         }
     }
 }

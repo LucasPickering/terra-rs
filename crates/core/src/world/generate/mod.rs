@@ -269,11 +269,13 @@ impl TileBuilder {
     /// Set the runoff level of this tile (any existing runoff will be deleted).
     /// Panics if the runoff value is negative.
     pub fn set_runoff(&mut self, runoff: Meter3) {
-        if runoff >= Meter3(0.0) {
-            self.runoff = Some(runoff);
-        } else {
-            panic!("cannot set negative runoff {}", runoff)
-        }
+        assert!(
+            runoff >= Meter3(0.0),
+            "cannot set negative runoff {} for {:?}",
+            runoff,
+            self
+        );
+        self.runoff = Some(runoff);
     }
 
     /// Add some amount of runoff from another tile to this one.
@@ -281,13 +283,16 @@ impl TileBuilder {
     /// from, which will be used to track this runoff as ingress.  Returns
     /// an error if the amount is negative or runoff is uninitialized.
     pub fn add_runoff(&mut self, runoff: Meter3, from_direction: HexDirection) {
-        if runoff >= Meter3(0.0) {
-            self.runoff = Some(self.runoff() + runoff);
-            // Track this runoff ingress
-            *self.runoff_traversed.entry(from_direction).or_default() += runoff;
-        } else {
-            panic!("cannot add negative runoff {}", runoff)
-        }
+        assert!(
+            runoff >= Meter3(0.0),
+            "cannot add negative runoff {} for {:?}",
+            runoff,
+            self
+        );
+
+        self.runoff = Some(self.runoff() + runoff);
+        // Track this runoff ingress
+        *self.runoff_traversed.entry(from_direction).or_default() += runoff;
     }
 
     /// Clear all runoff from this tile, and return it in a map that determines

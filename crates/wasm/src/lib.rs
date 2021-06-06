@@ -99,6 +99,7 @@ export interface WorldConfigObject {
     edge_buffer_fraction: number;
     edge_buffer_exponent: number;
     rainfall: {
+        enabled: boolean;
         evaporation_default: number;
         evaporation_land_scale: number;
         evaporation_spread_distance: number;
