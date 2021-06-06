@@ -92,7 +92,7 @@ impl Rangeable<f64> for Meter3 {
 /// - `I` represents the underlying primitive type that we use for numberic
 ///   comparisons. E.g. for `Meter` we map down to `f64`, but for `f64` it's
 ///   still just `f64`
-#[derive(Copy, Clone, Debug, Display)]
+#[derive(Copy, Clone, Debug, Display, PartialEq)]
 #[display(fmt = "[{}, {}]", min, max)]
 pub struct NumRange<T: Rangeable<I>, I = T> {
     pub min: T,
@@ -114,15 +114,14 @@ impl<T: Into<I> + Rangeable<I>, I> NumRange<T, I> {
         Self::new(T::zero(), T::one())
     }
 
+    /// Create a [RangeValue] in this range, which is convenient for chaining
+    ///  operations on a single value.
+    pub fn value(self, value: T) -> RangeValue<T, I> {
+        RangeValue { value, range: self }
+    }
     /// Max minus min
     pub fn span(&self) -> T {
         self.max - self.min
-    }
-
-    /// Create a [RangeValue] in this range, which can be more convenient for
-    /// chaining operations.
-    pub fn value(self, value: T) -> RangeValue<T, I> {
-        RangeValue { value, range: self }
     }
 
     /// Create a new range that has the same span (max-min) as this range, but
@@ -275,5 +274,96 @@ impl<T: Into<I> + Rangeable<I>, I: Debug> RangeValue<T, I> {
         let range =
             NumRange::new(U::from(self.range.min), U::from(self.range.max));
         RangeValue { value, range }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use assert_approx_eq::assert_approx_eq;
+
+    #[test]
+    fn test_normal_range() {
+        let range: NumRange<f64> = NumRange::normal_range();
+        assert_approx_eq!(range.min, 0.0);
+        assert_approx_eq!(range.max, 1.0);
+    }
+
+    #[test]
+    fn test_span() {
+        let range: NumRange<f64> = NumRange::new(1.0, 3.0);
+        assert_approx_eq!(range.span(), 2.0);
+    }
+
+    #[test]
+    fn test_zeroed() {
+        assert_eq!(NumRange::new(1.0, 3.0).zeroed(), NumRange::new(0.0, 2.0));
+        assert_eq!(NumRange::new(-3.0, -1.0).zeroed(), NumRange::new(0.0, 2.0));
+    }
+
+    #[test]
+    fn test_contains() {
+        let range: NumRange<f64> = NumRange::new(1.0, 3.0);
+        assert!(!range.contains(0.9));
+        assert!(range.contains(1.0));
+        assert!(range.contains(2.0));
+        assert!(range.contains(3.0));
+        assert!(!range.contains(3.1));
+
+        // Test a zero-length span, it should contain exactly one value
+        let range: NumRange<f64> = NumRange::new(1.0, 1.0);
+        assert!(!range.contains(0.9));
+        assert!(range.contains(1.0));
+        assert!(!range.contains(1.1));
+    }
+
+    #[test]
+    fn test_map_to() {
+        let input_range: NumRange<f64> = NumRange::new(1.0, 3.0);
+        let output_range: NumRange<f64> = NumRange::new(20.0, 40.0);
+        assert_approx_eq!(input_range.map_to(&output_range, 0.0), 10.0);
+        assert_approx_eq!(input_range.map_to(&output_range, 1.0), 20.0);
+        assert_approx_eq!(input_range.map_to(&output_range, 2.0), 30.0);
+        assert_approx_eq!(input_range.map_to(&output_range, 3.0), 40.0);
+        assert_approx_eq!(input_range.map_to(&output_range, 6.0), 70.0);
+
+        // Test a zero-length span, it should always map to the min of the
+        // output range
+        let input_range: NumRange<f64> = NumRange::new(1.0, 1.0);
+        assert_approx_eq!(input_range.map_to(&output_range, 0.0), 20.0);
+        assert_approx_eq!(input_range.map_to(&output_range, 1.0), 20.0);
+        assert_approx_eq!(input_range.map_to(&output_range, 1.5), 20.0);
+    }
+
+    #[test]
+    fn test_normalize() {
+        let range: NumRange<f64> = NumRange::new(1.0, 3.0);
+        assert_approx_eq!(range.normalize(0.0), -0.5);
+        assert_approx_eq!(range.normalize(1.0), 0.0);
+        assert_approx_eq!(range.normalize(2.0), 0.5);
+        assert_approx_eq!(range.normalize(3.0), 1.0);
+        assert_approx_eq!(range.normalize(6.0), 2.5);
+
+        // Test a zero-length span, it should always map to zero
+        let range: NumRange<f64> = NumRange::new(1.0, 1.0);
+        assert_approx_eq!(range.normalize(0.0), 0.0);
+        assert_approx_eq!(range.normalize(1.0), 0.0);
+        assert_approx_eq!(range.normalize(1.5), 0.0);
+    }
+
+    #[test]
+    fn test_clamp() {
+        let range: NumRange<f64> = NumRange::new(1.0, 3.0);
+        assert_approx_eq!(range.clamp(0.0), 1.0);
+        assert_approx_eq!(range.clamp(1.0), 1.0);
+        assert_approx_eq!(range.clamp(2.0), 2.0);
+        assert_approx_eq!(range.clamp(3.0), 3.0);
+        assert_approx_eq!(range.clamp(6.0), 3.0);
+
+        // Test a zero-length span, it should always map to the same value
+        let range: NumRange<f64> = NumRange::new(1.0, 1.0);
+        assert_approx_eq!(range.clamp(0.0), 1.0);
+        assert_approx_eq!(range.clamp(1.0), 1.0);
+        assert_approx_eq!(range.clamp(1.5), 1.0);
     }
 }
