@@ -1,9 +1,24 @@
-import React from "react";
-import { Button, Grid, GridSize, Typography } from "@material-ui/core";
-import ImportConfigButton from "./ImportConfigButton";
+import React, { useState } from "react";
+import {
+  Button,
+  Grid,
+  GridSize,
+  IconButton,
+  makeStyles,
+  Typography,
+} from "@material-ui/core";
 import { Breakpoint } from "@material-ui/core/styles/createBreakpoints";
 import { ConfigHandler } from "hooks/useConfigHandler";
+import { Description as IconDescription } from "@material-ui/icons";
 import ConfigEditorContext from "./ConfigEditorContext";
+import ConfigJsonEditor from "./ConfigJsonEditor";
+
+const useStyles = makeStyles(() => ({
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+  },
+}));
 
 interface Props<T> {
   configHandler: ConfigHandler<T>;
@@ -26,6 +41,8 @@ function ConfigEditor<T>({
   submitButton,
   children,
 }: Props<T>): React.ReactElement {
+  const classes = useStyles();
+  const [editAsJson, setEditAsJson] = useState<boolean>(false);
   const buttonSize: Partial<Record<Breakpoint, GridSize>> = fullscreen
     ? { xs: 12, sm: 6, md: 4, lg: 3, xl: 2 }
     : { xs: 12 };
@@ -42,28 +59,38 @@ function ConfigEditor<T>({
       >
         <Grid container spacing={4}>
           <Grid item xs={12}>
-            <Typography variant="h2">{title}</Typography>
+            <div className={classes.header}>
+              <Typography variant="h2">{title}</Typography>
+              <IconButton onClick={() => setEditAsJson((old) => !old)}>
+                <IconDescription />
+              </IconButton>
+            </div>
           </Grid>
-          <Grid item xs={12} container spacing={1} justify="flex-end">
-            <Grid item {...buttonSize}>
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={() => configHandler.reset(true)}
-              >
-                Reset to Default
-              </Button>
+          {editAsJson ? (
+            <Grid item xs={12} container spacing={1}>
+              <ConfigJsonEditor configHandler={configHandler} />
             </Grid>
-            <Grid item {...buttonSize}>
-              <ImportConfigButton configHandler={configHandler} />
-            </Grid>
-            {submitButton && (
-              <Grid item {...buttonSize}>
-                {submitButton}
+          ) : (
+            <>
+              <Grid item xs={12} container spacing={1} justify="flex-end">
+                <Grid item {...buttonSize}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={() => configHandler.reset(true)}
+                  >
+                    Reset to Default
+                  </Button>
+                </Grid>
+                {submitButton && (
+                  <Grid item {...buttonSize}>
+                    {submitButton}
+                  </Grid>
+                )}
               </Grid>
-            )}
-          </Grid>
-          {children}
+              {children}
+            </>
+          )}
         </Grid>
       </form>
     </ConfigEditorContext.Provider>

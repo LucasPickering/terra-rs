@@ -25,9 +25,16 @@ export interface ConfigHandler<T> {
   reset: (confirm: boolean) => void;
 
   /**
+   * Parse the given JSON into a config, and validate it. This will also
+   * populate defaults. Returns the parsed and validated config. Throws if
+   * the JSON fails to parse or validate.
+   */
+  validate: (json: string) => T;
+
+  /**
    * Parse and validate a config value out of the given JSON, and replace the
    * current config  with the parsed value. This will also populate defaults as
-   * needed.
+   * needed. Throws if the JSON fails to parse or validate.
    */
   setFromJson: (json: string) => void;
 
@@ -113,11 +120,14 @@ export function useConfigHandler<T extends object>({
       setConfig(validator({}));
     }
   };
-  const setFromJson = (json: string): void => {
+  const validate = (json: string): T => {
     // If the config is malformed or invalid, this will throw!!
     const parsed = JSON.parse(json);
-    const config = validator(parsed);
-    setConfig(config);
+    return validator(parsed);
+  };
+  const setFromJson = (json: string): void => {
+    // If the config is malformed or invalid, this will throw!!
+    setConfig(validate(json));
   };
   const updateQueryParam = (): void => {
     if (!queryParam) {
@@ -131,5 +141,5 @@ export function useConfigHandler<T extends object>({
     history.replace({ ...history.location, search });
   };
 
-  return { config, setField, reset, setFromJson, updateQueryParam };
+  return { config, setField, reset, setFromJson, validate, updateQueryParam };
 }
