@@ -22,6 +22,7 @@ use crate::{
         Tile, World,
     },
 };
+use assert_approx_eq::assert_approx_eq;
 use fnv::FnvBuildHasher;
 use log::trace;
 use std::{
@@ -103,9 +104,47 @@ impl<'a> Continent<'a> {
     fn sim_continent_runoff(&mut self) {
         trace!("Simulating runoff for continent {}", self.id);
         self.calc_runoff_patterns();
+
+        // Set initial runoff based on rainfall
+        // We include sanity checks here to make sure we don't introduce any
+        // new runoff after initialization
         self.initialize_runoff();
+        let total_initial = self.total_runoff();
+
+        // Push runoff downhill. In most cases this will eliminate a lot of
+        // runoff from the system by pushing into the ocean
         self.push_downhill();
-        self.sim_backflow();
+        // Sanity check
+        let total_after_push = self.total_runoff();
+        assert!(
+            // Use a small delta to account for floating point error
+            total_after_push <= total_initial + Meter3(1.0e-6),
+            "Total runoff increased after pushing: continent={}, {} => {}",
+            self.id,
+            total_initial,
+            total_after_push
+        );
+
+        // Simulate water backflowing. This can also eliminate more runoff if
+        // backflow causes basins to overflow into the ocean
+        self.simulate_backflow();
+        // Sanity check
+        let total_after_backflow = self.total_runoff();
+        assert!(
+            // Use a small delta to account for floating point error
+            total_after_backflow <= total_after_push + Meter3(1.0e-6),
+            "Total runoff increased after backflow: continent={} {} => {}",
+            self.id,
+            total_after_push,
+            total_after_backflow
+        );
+    }
+
+    /// Get the total amount of runoff on this continent. We use this for sanity
+    /// checks, to make sure we're not accidentally introducing runoff during
+    /// the simulation.
+    fn total_runoff(&self) -> Meter3 {
+        self.tiles.values().map(|tile| tile.runoff()).sum()
     }
 
     /// For each tile, calculate its runoff pattern. This pattern makes it easy
@@ -244,16 +283,20 @@ impl<'a> Continent<'a> {
     /// runoff on the terminal can be neatly distributed in its area, but in
     /// some cases it will overflow the terminal's basin, and some of it
     /// will end up flowing over into the ocean. We also need to handle
-    /// cases where two terminal clusters join to form a larger lake, or
-    /// when one cluster overflows into another but they DON'T join.
-    fn sim_backflow(&mut self) {
-        // For each terminal, map it to its constituents (all the other tiles
-        // that it will spread to)
+    /// cases where two terminal basins join to form a larger lake, or
+    /// when one basin overflows into another but they DON'T join.
+    fn simulate_backflow(&mut self) {
+        // Initialize a basin for each terminal
         let mut basins = Basins::new(&mut self.tiles);
 
+        // For each basin, attempt to spread out to its constituents. If one
+        // basin overflows into another, then the recipient basin will be
+        // re-queued. We'll continue until all runoff is settled. This will
+        // eventually converge because we have logic to prevent cyclic overflow.
         let mut basin_queue: VecDeque<HexPoint> = basins.keys().collect();
         while let Some(basin_key) = basin_queue.pop_front() {
             let basin = basins.get_mut(basin_key);
+            // Spread out water out as far as possible
             let overflow_distribution = self.grow_basin(basin);
 
             // If this basin overflowed into other(s), then do some processing
@@ -327,9 +370,8 @@ impl<'a> Continent<'a> {
     /// 2. Overflow into the ocean/another basin
     ///
     /// The return value is the amount of runoff that has overflowed, and the
-    /// target(s) that it's overflowed to. The sum of the return map's values
-    /// will be 1.0 **iff** it is not empty. If it *is* empty, that means we
-    /// didn't overflow at all.
+    /// target(s) that it's overflowed to. If we didn't overflow, then it will
+    /// be empty.
     fn grow_basin(
         &self,
         basin: &mut Basin,
@@ -342,10 +384,12 @@ impl<'a> Continent<'a> {
         //   a. If so, then overflow onto it and repeat from step 1
         //   b. If not, then our cluster is complete
 
+        let initial_basin_total = basin.runoff();
+
         // Each iteration of this loop will add a tile to the cluster, EXCEPT
         // for the last iteration. So for n iterations, we add n-1 tiles. This
         // loop will ALWAYS run at least once. In order for it not to, we'd have
-        // to have a tile that is (1) a terminal and (2) has no land neighbors,
+        // to have a tile that (1) is a terminal and (2) has no land neighbors,
         // which doesn't make any sense.
         while let Some(candidate_tile) = basin
             .tiles()
@@ -384,6 +428,14 @@ impl<'a> Continent<'a> {
                 overflow_vol,
             );
             if !overflow_distribution.is_empty() {
+                // Make sure the amount of runoff in the basin at the beginning
+                // matches the amount at the end plus the amount we've removed
+                // as overflow
+                assert_approx_eq!(
+                    initial_basin_total.0,
+                    (basin.runoff() + overflow_vol).0
+                );
+
                 return overflow_distribution;
             }
 

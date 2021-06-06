@@ -45,3 +45,20 @@ fn test_world_gen_large() {
     let world = World::generate(config).unwrap();
     assert_eq!(world.tiles().len(), 481201);
 }
+
+/// This config had a bug where the entire world was a giant lake. Runoff was
+/// getting multipled by ~1000x during simulation. Runoff simluation contains
+/// some safety checks to ensure simluation doesn't accidentally introduce
+/// new runoff. One of those checks will fail if this bug is present, so as long
+/// as we complete generation without panicking, the bug is gone.
+#[test]
+fn test_world_gen_mega_lake() {
+    let config = WorldConfig {
+        seed: 12507776774975058000,
+        radius: 60,
+        edge_buffer_fraction: 0.025,
+        ..Default::default()
+    };
+    let world = World::generate(config).unwrap();
+    assert_eq!(world.tiles().len(), 10981);
+}

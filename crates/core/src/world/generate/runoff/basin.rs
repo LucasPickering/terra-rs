@@ -3,13 +3,16 @@ use crate::{
     util::unit::{Meter, Meter3},
     world::{
         generate::{
-            runoff::pattern::{RunoffDestination, RunoffPattern},
+            runoff::pattern::{
+                RunoffDestination, RunoffDestinationMap, RunoffPattern,
+            },
             TileBuilder,
         },
         hex::{Cluster, HasHexPosition, HexPoint, HexPointIndexMap},
         Tile,
     },
 };
+use assert_approx_eq::assert_approx_eq;
 use derive_more::{Display, From, Into};
 use fnv::FnvBuildHasher;
 use log::trace;
@@ -35,7 +38,7 @@ struct BasinKey(HexPoint);
 impl BasinKey {
     /// **Dangerously** upgrade this key into a resolved key. This should only
     /// be used if you've actually resolved the key yourself!
-    fn upgrade(self) -> ResolvedBasinKey {
+    fn danger_upgrade(self) -> ResolvedBasinKey {
         ResolvedBasinKey(self.0)
     }
 }
@@ -119,6 +122,11 @@ impl Basin {
         self.key.into()
     }
 
+    /// Get the amount of runoff held in this basin
+    pub fn runoff(&self) -> Meter3 {
+        self.runoff
+    }
+
     /// Add a tile to this basin.
     pub fn add_tile(&mut self, tile: &TileBuilder) {
         self.tiles.insert(tile.position(), ());
@@ -169,39 +177,50 @@ impl Basin {
     /// tile to drain to this basin at all. This is useful if this basin has
     /// risen to the level of the tile in question, and you want to force it to
     /// push water elsewhere before adding it to this basin. The returned map
-    /// is guaranteed to have a sum of (approximately) 1.0, **unless* the map
-    /// is empty, which would indicate that the tile doesn't distribute anywhere
-    /// outside this basin.
+    /// is guaranteed to have a sum equal to the input runoff to this function,
+    /// **unless* the map is empty, which would indicate that the tile doesn't
+    /// distribute anywhere outside this basin.
+    ///
+    /// ## Params
+    /// - `runoff_pattern` - The pattern of the tile to distribute from. The
+    ///   tile should **not** be in this basin
+    /// - `runoff_to_distribute` - The amount of runoff to be distributed **out
+    ///   of this basin** based on the tile's runoff pattern. Remember, the goal
+    ///   here is to push water out of our basin because we've overflowed
     pub fn distribute_elsewhere(
-        &self,
+        &mut self,
         runoff_pattern: &RunoffPattern,
-        runoff: Meter3,
+        runoff_to_distribute: Meter3,
     ) -> HashMap<RunoffDestination, Meter3, FnvBuildHasher> {
-        let terminals = runoff_pattern.terminals();
-        // We need to exclude all the terminals from the pattern that fall
-        // within this basin. But we want the returned distribution to have a
-        // sum of 1.0 still, so we have to scale all the remaining distributions
-        // up to make up for the excluded ones.
-        let excl_sum: f64 = self
-            .terminals
-            .iter()
-            .filter_map(|pos| terminals.get(&RunoffDestination::Terminal(*pos)))
-            .sum();
-        let total_sum: f64 = terminals.values().sum();
-        let scale = total_sum / (total_sum - excl_sum);
+        // Figure out where the runoff will go if we exclude all the terminals
+        // that fall within this basin
+        let filtered_destinations =
+            runoff_pattern.filter_destinations(self.terminals());
 
-        terminals
+        // Calculate how much runoff we'll send to each destination
+        let distributed: RunoffDestinationMap<Meter3> = filtered_destinations
             .iter()
-            .filter(|(term_pos, _)| match term_pos {
-                // Always distribute to the ocean
-                RunoffDestination::Ocean => true,
-                // Distribute to this terminal iff it isn't in this basin
-                RunoffDestination::Terminal(term_pos) => {
-                    !self.terminals.contains(term_pos)
-                }
+            .map(|(destination, fraction)| {
+                (*destination, runoff_to_distribute * fraction)
             })
-            .map(|(term_pos, factor)| (*term_pos, runoff * factor * scale))
-            .collect()
+            .collect();
+
+        // Sanity check: Make sure we distributed the amount requested. If we
+        // have no destinations though, then obviously we couldn't have
+        // distributed anything
+        if !distributed.is_empty() {
+            assert_approx_eq!(
+                distributed.values().copied().sum::<Meter3>().0,
+                runoff_to_distribute.0
+            );
+        }
+
+        // This runoff no longer belongs to us, so remove it from this basin
+        let total_distributed_runoff: Meter3 =
+            distributed.values().copied().sum();
+        self.runoff -= total_distributed_runoff;
+
+        distributed
     }
 }
 
@@ -236,7 +255,7 @@ pub struct Basins {
 impl Basins {
     /// Initialize all basins on the given continent. This will create one basin
     /// per terminal. Since this function doesn't actually have access to
-    /// runoff data, we will assume that any tile with runoff on it is a
+    /// runoff pattern data, we will assume that any tile with runoff on it is a
     /// terminal. As such, this should only be called **after** runoff has
     /// been pushed out to all the terminal tiles.
     pub fn new(continent: &mut HexPointIndexMap<&mut TileBuilder>) -> Self {
@@ -262,7 +281,7 @@ impl Basins {
         match self.aliases.get(&key) {
             // This key isn't an alias, so upgrade it to a resolved key
             // NOTE: it could still be invalid (i.e. not in the basins map)
-            None => key.upgrade(),
+            None => key.danger_upgrade(),
             // Stored key is an alias, so do another looking
             Some(key) => self.resolve(*key),
         }
@@ -351,7 +370,7 @@ impl Basins {
             let existing =
                 self.aliases.insert(b_res.downgrade(), a_res.downgrade());
             // Sanity check that we didn't overwrite an existing alias
-            debug_assert!(
+            assert!(
                 existing.is_none(),
                 "Overwrote alias for existing key {} (was pointing to {:?})",
                 b_res.downgrade(),
