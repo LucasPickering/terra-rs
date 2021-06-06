@@ -37,6 +37,10 @@ const WorldConfigEditor: React.FC<{ fullscreen?: boolean }> = ({
   // the world screen. We only want to be on the config screen if no world
   // exists yet
   if (fullscreen && world !== undefined) {
+    // TODO https://github.com/LucasPickering/terra-rs/issues/30
+    // Currently this triggers a re-mount of Demo which leads to the world
+    // getting thrown away and generated a 2nd time. It really shouldn't be
+    // re-mounting and I can't figure out why it is.
     return <Redirect to={{ ...location, pathname: "/demo/world" }} />;
   }
 
