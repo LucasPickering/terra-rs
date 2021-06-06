@@ -8,8 +8,9 @@ import SelectConfigInput from "./SelectConfigInput";
 import TextConfigInput from "./TextConfigInput";
 import { worldDescriptions } from "./descriptions";
 import ConfigEditor from "./ConfigEditor";
-import { WorldConfigObject } from "terra-wasm";
+import type { WorldConfigObject } from "terra-wasm";
 import { formatMeter3 } from "../../../util";
+import { Redirect, useLocation } from "react-router";
 
 const NORMAL_RANGE = {
   min: 0.0,
@@ -28,8 +29,15 @@ const EXPONENT_RANGE = {
 const WorldConfigEditor: React.FC<{ fullscreen?: boolean }> = ({
   fullscreen = false,
 }) => {
-  const { generateWorldEnabled, worldConfigHandler, generateWorld } =
-    useContext(DemoContext);
+  const location = useLocation();
+  const { worldConfigHandler, world, generateWorld } = useContext(DemoContext);
+
+  // If we have started (or finished) generating a world already, then go to
+  // the world screen. We only want to be on the config screen if no world
+  // exists yet
+  if (fullscreen && world !== undefined) {
+    return <Redirect to={{ ...location, pathname: "/demo/world" }} />;
+  }
 
   // Min/max values are based from config.rs, with some extra restrictions where
   // necessary (i.e. some values don't always have a min/max so we define our
@@ -39,10 +47,10 @@ const WorldConfigEditor: React.FC<{ fullscreen?: boolean }> = ({
       configHandler={worldConfigHandler}
       title="Configure World Generation"
       fullscreen={fullscreen}
-      onSubmit={() => generateWorld(true)}
+      onSubmit={() => generateWorld()}
       submitButton={
         <Button
-          disabled={!generateWorldEnabled}
+          disabled={world === "generating"}
           fullWidth
           type="submit"
           color="primary"

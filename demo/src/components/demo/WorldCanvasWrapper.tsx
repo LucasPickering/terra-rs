@@ -12,7 +12,6 @@ import UnstyledLink from "../UnstyledLink";
 import ConfigEditorOverlay from "./ConfigEditorOverlay";
 import WorldCanvas from "./WorldCanvas";
 import DemoContext from "context/DemoContext";
-import { World } from "terra-wasm";
 
 const useStyles = makeStyles(({ spacing }) => ({
   loading: {
@@ -45,7 +44,7 @@ const WorldCanvasWrapper: React.FC = () => {
   const [overlayOpen, setOverlayOpen] = useState<boolean>(false);
   const [downloadMenuOpen, setDownloadMenuOpen] = useState<boolean>(false);
   const { world } = useContext(DemoContext);
-  const isWorldPresent = world instanceof World;
+  const isWorldPresent = world !== undefined && world !== "generating";
 
   return (
     <div className={classes.canvasWrapper}>
