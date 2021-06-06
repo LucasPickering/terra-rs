@@ -31,12 +31,13 @@ const WorldConfigEditor: React.FC<{ fullscreen?: boolean }> = ({
   fullscreen = false,
 }) => {
   const location = useLocation();
-  const { worldConfigHandler, world, generateWorld } = useContext(DemoContext);
+  const { worldConfigHandler, worldState, generateWorld } =
+    useContext(DemoContext);
 
   // If we have started (or finished) generating a world already, then go to
   // the world screen. We only want to be on the config screen if no world
   // exists yet
-  if (fullscreen && world !== undefined) {
+  if (fullscreen && worldState.phase !== "empty") {
     // TODO https://github.com/LucasPickering/terra-rs/issues/30
     // Currently this triggers a re-mount of Demo which leads to the world
     // getting thrown away and generated a 2nd time. It really shouldn't be
@@ -55,7 +56,7 @@ const WorldConfigEditor: React.FC<{ fullscreen?: boolean }> = ({
       onSubmit={() => generateWorld()}
       submitButton={
         <Button
-          disabled={world === "generating"}
+          disabled={worldState.phase === "generating"}
           fullWidth
           type="submit"
           color="primary"

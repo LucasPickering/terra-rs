@@ -1,11 +1,12 @@
 import React, { useContext, useEffect, useRef } from "react";
 import WorldDemo from "3d/WorldDemo";
-import { CircularProgress, makeStyles } from "@material-ui/core";
+import { CircularProgress, makeStyles, Typography } from "@material-ui/core";
 import DemoContext from "context/DemoContext";
 import useDebouncedValue from "hooks/useDebouncedValue";
+import Link from "components/Link";
 
 const useStyles = makeStyles(() => ({
-  loading: {
+  content: {
     width: "100%",
     height: "100%",
     display: "flex",
@@ -20,31 +21,31 @@ const useStyles = makeStyles(() => ({
  * everything below this belongs to the filthy peasants of Babylon.js-topia.
  */
 const WorldCanvas: React.FC = () => {
-  const { renderConfigHandler, world, generateWorld } = useContext(DemoContext);
+  const { renderConfigHandler, worldState, generateWorld } =
+    useContext(DemoContext);
   const classes = useStyles();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const worldDemoRef = useRef<WorldDemo | undefined>();
 
   // If we ever hit this page with no world present, then generate one
+  const worldPhase = worldState.phase;
   useEffect(() => {
-    if (world === undefined) {
+    if (worldPhase === "empty") {
       generateWorld();
     }
     // generateWorld is unstable, this is a hack to get around that
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [world]);
+  }, [worldPhase]);
 
+  // Update render state whenever the world state changes
   useEffect(() => {
     // If we have a demo rendered but the world is gone, dump the render
-    if (
-      (world === undefined || world === "generating") &&
-      worldDemoRef.current
-    ) {
+    if (worldState.phase !== "populated" && worldDemoRef.current) {
       worldDemoRef.current.dispose();
       worldDemoRef.current = undefined;
     }
 
-    if (canvasRef.current && world && world !== "generating") {
+    if (canvasRef.current && worldState.phase === "populated") {
       // The above check should always dispose of the last render, but this is
       // just a safety check in case that branch never got called
       if (worldDemoRef.current) {
@@ -54,11 +55,11 @@ const WorldCanvas: React.FC = () => {
       // World is ready, render it.
       worldDemoRef.current = new WorldDemo(
         canvasRef.current,
-        world,
+        worldState.world,
         renderConfigHandler.config
       );
     }
-  }, [renderConfigHandler, world]);
+  }, [renderConfigHandler, worldState]);
 
   // Whenever the render config changes, re-render the world. The config should
   // only change when a user actually provides input, not on every React
@@ -74,10 +75,37 @@ const WorldCanvas: React.FC = () => {
     updateQueryParam();
   }, [debouncedRenderConfig, worldDemoRef, updateQueryParam]);
 
-  if (!world || world === "generating") {
+  if (worldState.phase === "generating") {
     return (
-      <div className={classes.loading}>
+      <div className={classes.content}>
         <CircularProgress size="10rem" />
+      </div>
+    );
+  }
+
+  if (worldState.phase === "error") {
+    // Big sad
+    return (
+      <div className={classes.content}>
+        <div>
+          <Typography variant="h3">
+            An error occurred during world generation :(
+          </Typography>
+          <Typography>
+            Please{" "}
+            <Link to="https://github.com/LucasPickering/terra-rs/issues/new">
+              file an issue
+            </Link>{" "}
+            for this and <strong>include the following:</strong>
+            <ul>
+              <li>
+                The world generation config JSON (available in the config editor
+                panel on this page)
+              </li>
+              <li>The error from the browser developer console</li>
+            </ul>
+          </Typography>
+        </div>
       </div>
     );
   }
