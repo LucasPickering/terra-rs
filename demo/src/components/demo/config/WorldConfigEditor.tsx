@@ -27,8 +27,8 @@ const EXPONENT_RANGE = {
 /**
  * Edit the current world config
  */
-const WorldConfigEditor: React.FC<{ fullscreen?: boolean }> = ({
-  fullscreen = false,
+const WorldConfigEditor: React.FC<{ standalone?: boolean }> = ({
+  standalone = false,
 }) => {
   const location = useLocation();
   const { worldConfigHandler, worldState, generateWorld } =
@@ -37,7 +37,7 @@ const WorldConfigEditor: React.FC<{ fullscreen?: boolean }> = ({
   // If we have started (or finished) generating a world already, then go to
   // the world screen. We only want to be on the config screen if no world
   // exists yet
-  if (fullscreen && worldState.phase !== "empty") {
+  if (standalone && worldState.phase !== "empty") {
     // TODO https://github.com/LucasPickering/terra-rs/issues/30
     // Currently this triggers a re-mount of Demo which leads to the world
     // getting thrown away and generated a 2nd time. It really shouldn't be
@@ -52,7 +52,6 @@ const WorldConfigEditor: React.FC<{ fullscreen?: boolean }> = ({
     <ConfigEditor<WorldConfigObject>
       configHandler={worldConfigHandler}
       title="Configure World Generation"
-      fullscreen={fullscreen}
       onSubmit={() => generateWorld()}
       submitButton={
         <Button
@@ -62,7 +61,7 @@ const WorldConfigEditor: React.FC<{ fullscreen?: boolean }> = ({
           color="primary"
           variant="contained"
         >
-          {fullscreen ? "Generate World" : "Regenerate World"}
+          {standalone ? "Generate World" : "Regenerate World"}
         </Button>
       }
     >
