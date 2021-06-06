@@ -2,7 +2,7 @@ import "@babylonjs/core/Debug/debugLayer";
 import "@babylonjs/loaders/glTF";
 import { Engine } from "@babylonjs/core";
 import WorldScene from "./WorldScene";
-import type { RenderConfigObject, Terra, World } from "terra-wasm";
+import type { RenderConfigObject, World } from "terra-wasm";
 import { debounce } from "../util";
 
 // This dependency is huge so only pull it in for dev
@@ -19,7 +19,6 @@ class WorldDemo {
 
   constructor(
     canvas: HTMLCanvasElement,
-    terra: Terra,
     world: World,
     renderConfig: RenderConfigObject
   ) {
@@ -31,7 +30,7 @@ class WorldDemo {
       resizeEngine();
     };
 
-    this.scene = new WorldScene(terra, this.engine, world, renderConfig);
+    this.scene = new WorldScene(this.engine, world, renderConfig);
 
     // run the main render loop
     this.engine.runRenderLoop(() => {

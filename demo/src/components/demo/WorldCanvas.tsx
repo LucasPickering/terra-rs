@@ -20,8 +20,7 @@ const useStyles = makeStyles(() => ({
  * everything below this belongs to the filthy peasants of Babylon.js-topia.
  */
 const WorldCanvas: React.FC = () => {
-  const { terra, renderConfigHandler, world, generateWorld } =
-    useContext(DemoContext);
+  const { renderConfigHandler, world, generateWorld } = useContext(DemoContext);
   const classes = useStyles();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const worldDemoRef = useRef<WorldDemo | undefined>();
@@ -55,12 +54,11 @@ const WorldCanvas: React.FC = () => {
       // World is ready, render it.
       worldDemoRef.current = new WorldDemo(
         canvasRef.current,
-        terra,
         world,
         renderConfigHandler.config
       );
     }
-  }, [terra, renderConfigHandler, world]);
+  }, [renderConfigHandler, world]);
 
   // Whenever the render config changes, re-render the world. The config should
   // only change when a user actually provides input, not on every React
