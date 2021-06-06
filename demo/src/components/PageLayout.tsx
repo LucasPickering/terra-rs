@@ -79,12 +79,16 @@ const PageLayout: React.FC = ({ children }) => {
     <div className={classes.pageLayout}>
       <div className={classes.pageColumn}>
         {/* Header */}
-        <header className={classes.header}>
-          <Typography variant="h1">Terra</Typography>
-          <Typography variant="subtitle1">Terrain Generation System</Typography>
-        </header>
+        <div>
+          <header className={classes.header}>
+            <Typography variant="h1">Terra</Typography>
+            <Typography variant="subtitle1">
+              Terrain Generation System
+            </Typography>
+          </header>
 
-        {children}
+          {children}
+        </div>
 
         <footer className={classes.footer}>
           <Typography variant="body2">

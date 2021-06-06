@@ -22,7 +22,6 @@ const RenderConfigEditor: React.FC = () => {
     <ConfigEditor<RenderConfigObject>
       configHandler={renderConfigHandler}
       title="Configure Render Settings"
-      fullscreen={false}
     >
       <ConfigSection
         title="Render Settings"

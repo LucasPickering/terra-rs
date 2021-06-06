@@ -54,7 +54,7 @@ const Demo: React.FC = () => {
     >
       <Switch>
         <Route path="/demo/new" exact>
-          <WorldConfigEditor fullscreen />
+          <WorldConfigEditor standalone />
         </Route>
 
         <Route path="/demo/world" exact>
