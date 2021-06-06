@@ -11,6 +11,7 @@ import ConfigEditor from "./ConfigEditor";
 import type { WorldConfigObject } from "terra-wasm";
 import { formatMeter3 } from "../../../util";
 import { Redirect, useLocation } from "react-router";
+import CheckboxConfigInput from "./CheckboxConfigInput";
 
 const NORMAL_RANGE = {
   min: 0.0,
@@ -165,6 +166,14 @@ const WorldConfigEditor: React.FC<{ fullscreen?: boolean }> = ({
         title="Rainfall"
         description={worldDescriptions.rainfall.root}
       >
+        <ConfigInput<WorldConfigObject>
+          configHandler={worldConfigHandler}
+          field={["rainfall", "enabled"]}
+          label="Enabled?"
+          description={worldDescriptions.rainfall.enabled}
+        >
+          <CheckboxConfigInput />
+        </ConfigInput>
         <ConfigInput<WorldConfigObject>
           configHandler={worldConfigHandler}
           field={["rainfall", "evaporation_default"]}

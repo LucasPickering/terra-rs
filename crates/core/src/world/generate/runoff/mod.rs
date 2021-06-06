@@ -41,13 +41,23 @@ pub struct RunoffGenerator;
 
 impl Generate for RunoffGenerator {
     fn generate(&self, world: &mut WorldBuilder) {
-        let continents =
-            Cluster::predicate(&mut world.tiles, |tile| !tile.is_water_biome());
-        // Hypothetically we could run these simulations in parallel since each
-        // continent is independent, but skipping that for now cause Wasm.
-        for continent in continents {
-            let mut continent = Continent::new(continent.into_tiles());
-            continent.sim_continent_runoff();
+        // If rainfall sim is disabled then there won't be any runoff to
+        // simulate, so we might as well skip this step too
+        if world.config.rainfall.enabled {
+            let continents = Cluster::predicate(&mut world.tiles, |tile| {
+                !tile.is_water_biome()
+            });
+            // Hypothetically we could run these simulations in parallel since
+            // each continent is independent, but skipping that for
+            // now cause Wasm.
+            for continent in continents {
+                let mut continent = Continent::new(continent.into_tiles());
+                continent.sim_continent_runoff();
+            }
+        } else {
+            for tile in world.tiles.values_mut() {
+                tile.set_runoff(Meter3(0.0));
+            }
         }
     }
 }

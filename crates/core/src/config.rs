@@ -67,6 +67,11 @@ pub struct WorldConfig {
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
 #[serde(default)]
 pub struct RainfallConfig {
+    /// Should rainfall and runoff be simulated? Rainfall and runoff simulation
+    /// are fairly slow, so disable this if you need quick generation and don't
+    /// need rainfall or runoff. Useful for iterating on other things.
+    pub enabled: bool,
+
     /// The amount of evaporation that each tile provides under "default"
     /// circumstances. ATM "default" means water, but that could be subject to
     /// change. In general though, this is the base evaporation value we use,
@@ -218,6 +223,7 @@ impl Default for WorldConfig {
 impl Default for RainfallConfig {
     fn default() -> Self {
         Self {
+            enabled: true,
             evaporation_default: Meter3(3.0),
             evaporation_land_scale: 0.2,
             evaporation_spread_distance: 50,
