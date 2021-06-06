@@ -29,7 +29,7 @@ const WorldCanvas: React.FC = () => {
   // If we ever hit this page with no world present, then generate one
   useEffect(() => {
     if (world === undefined) {
-      generateWorld(false);
+      generateWorld();
     }
     // generateWorld is unstable, this is a hack to get around that
     // eslint-disable-next-line react-hooks/exhaustive-deps

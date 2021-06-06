@@ -1,7 +1,6 @@
 import React, { useContext } from "react";
 import { saveAs } from "file-saver";
 import { Menu, MenuItem } from "@material-ui/core";
-import { World } from "terra-wasm";
 import DemoContext from "context/DemoContext";
 
 const DownloadMenu: React.FC<React.ComponentProps<typeof Menu>> = (props) => {
@@ -9,7 +8,7 @@ const DownloadMenu: React.FC<React.ComponentProps<typeof Menu>> = (props) => {
 
   // We _shouldn't_ ever render this if the world isn't present, but just need
   // this check to tell TS that
-  if (!(world instanceof World)) {
+  if (world === undefined || world === "generating") {
     return null;
   }
 

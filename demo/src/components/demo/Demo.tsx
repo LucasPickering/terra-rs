@@ -1,24 +1,17 @@
 import React, { useState } from "react";
-import { Redirect, Route, Switch, useHistory } from "react-router-dom";
+import { Redirect, Route, Switch } from "react-router-dom";
 import WorldCanvasWrapper from "./WorldCanvasWrapper";
-import NotFound from "../NotFound";
 import useStaticValue from "hooks/useStaticValue";
 import DemoContext from "context/DemoContext";
-import {
-  Terra,
-  RenderConfigObject,
-  World,
-  WorldConfigObject,
-} from "terra-wasm";
+import type { RenderConfigObject, World, WorldConfigObject } from "terra-wasm";
 import { useConfigHandler } from "hooks/useConfigHandler";
 import WorldConfigEditor from "./config/WorldConfigEditor";
+const { Terra } = await import("terra-wasm");
 
 /**
  * Configure and generate a demo Terra world.
  */
 const Demo: React.FC = () => {
-  const history = useHistory();
-
   // Initialize the Terra singleton, which will be our interface into all wasm
   const terra = useStaticValue(() => new Terra());
 
@@ -35,14 +28,11 @@ const Demo: React.FC = () => {
   });
 
   const [world, setWorld] = useState<World | "generating" | undefined>();
-  const generateWorld = async (goToWorld: boolean): Promise<void> => {
+  const generateWorld = (): void => {
     setWorld("generating");
 
     // Update the config query param
     worldConfigHandler.updateQueryParam();
-    if (goToWorld) {
-      history.push({ ...history.location, pathname: "/demo/world" });
-    }
 
     // Defer world gen to idle time, so the browser prioritizes UI updates
     window.requestIdleCallback(() => {
@@ -56,14 +46,11 @@ const Demo: React.FC = () => {
         terra,
         worldConfigHandler,
         renderConfigHandler,
-        generateWorldEnabled: world !== "generating",
         world,
         generateWorld,
       }}
     >
       <Switch>
-        <Redirect from="/demo" to="/demo/new" exact />
-
         <Route path="/demo/new" exact>
           <WorldConfigEditor fullscreen />
         </Route>
@@ -72,9 +59,8 @@ const Demo: React.FC = () => {
           <WorldCanvasWrapper />
         </Route>
 
-        <Route path="*" exact>
-          <NotFound />
-        </Route>
+        {/* Redirect everything else to the config page */}
+        <Redirect from="*" to="/demo/new" exact />
       </Switch>
     </DemoContext.Provider>
   );

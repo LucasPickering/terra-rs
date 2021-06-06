@@ -11,9 +11,8 @@ export interface DemoContextType {
   terra: Terra;
   worldConfigHandler: ConfigHandler<WorldConfigObject>;
   renderConfigHandler: ConfigHandler<RenderConfigObject>;
-  generateWorldEnabled: boolean;
   world: World | "generating" | undefined;
-  generateWorld: (goToWorld: boolean) => void;
+  generateWorld: () => void;
 }
 
 const DemoContext = React.createContext<DemoContextType>(
