@@ -1,8 +1,7 @@
-//! This crate provides WebAssembly bindings for Terra. The [Terra] struct is
-//! the main interface; you'll have to initialize a single instance of [Terra]
-//! in order to do any Terra operations from JS. From there, [Terra] provides
-//! functions for creating and validating world configs, then generating a
-//! World from that config and
+//! This crate provides WebAssembly bindings for Terra. The global functions
+//! exported from this module provide all the interfaces you will need into
+//! Terra. You can modify and validate configs, generate worlds, and render
+//! them.
 //!
 //! You probably won't ever want to include this crate in another Rust project.
 //! Instead, use `wasm-pack` to build this into an npm package, then import that
@@ -16,86 +15,77 @@ use crate::util::ResultExt;
 use terra::{RenderConfig, World, WorldConfig, WorldRenderer};
 use wasm_bindgen::{prelude::*, JsCast};
 
-/// A top-level interface for interacting with Terra from Wasm.
+/// Executed when the Wasm module is first loaded
+#[wasm_bindgen(start)]
+pub fn main() {
+    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+    wasm_logger::init(wasm_logger::Config::default());
+}
+
+/// Validate the given config and return it as a strictly typed JS object.
+/// Any missing values will be populated with defaults. If the given value
+/// fails to serialize, or has any invalid values, this will fail.
 #[wasm_bindgen]
-pub struct Terra;
+pub fn validate_world_config(
+    input: JsValue,
+) -> Result<WorldConfigObject, JsValue> {
+    util::validate_config::<WorldConfig, WorldConfigObject>(input)
+}
 
+/// Validate the given config and return it as a strictly typed JS object.
+/// Any missing values will be populated with defaults. If the given value
+/// fails to serialize, or has any invalid values, this will fail.
 #[wasm_bindgen]
-impl Terra {
-    /// Initialize global state needed for world generation. Should be called
-    /// once per app instance.
-    #[wasm_bindgen(constructor)]
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
-        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-        wasm_logger::init(wasm_logger::Config::default());
-        Self
-    }
+pub fn validate_render_config(
+    input: JsValue,
+) -> Result<RenderConfigObject, JsValue> {
+    util::validate_config::<RenderConfig, RenderConfigObject>(input)
+}
 
-    /// Validate the given config and return it as a strictly typed JS object.
-    /// Any missing values will be populated with defaults. If the given value
-    /// fails to serialize, or has any invalid values, this will fail.
-    pub fn validate_world_config(
-        &self,
-        input: JsValue,
-    ) -> Result<WorldConfigObject, JsValue> {
-        util::validate_config::<WorldConfig, WorldConfigObject>(input)
-    }
+/// Generate a new world with the given config.
+///
+/// The config is given as a JS object. It will be deserialized and
+/// validated, and if either of those fail this will return an error.
+#[wasm_bindgen]
+pub fn generate_world(
+    world_config: WorldConfigObject,
+) -> Result<World, JsValue> {
+    // Deserialize the config JS object into a Rust value
+    let world_config = JsValue::into_serde(&world_config).into_js()?;
+    // This will validate the config
+    World::generate(world_config).into_js()
+}
 
-    /// Validate the given config and return it as a strictly typed JS object.
-    /// Any missing values will be populated with defaults. If the given value
-    /// fails to serialize, or has any invalid values, this will fail.
-    pub fn validate_render_config(
-        &self,
-        input: JsValue,
-    ) -> Result<RenderConfigObject, JsValue> {
-        util::validate_config::<RenderConfig, RenderConfigObject>(input)
-    }
+/// Create a world renderer that can be used to render any world into
+/// various visual formats. A renderer must be configured at creation
+/// using the given config, but from then it can be used to render any
+/// number of worlds.
+///
+/// The config is given as a JS object. It will be deserialized and
+/// validated, and if either of those fail this will return an error.
+#[wasm_bindgen]
+pub fn build_renderer(
+    render_config: RenderConfigObject,
+) -> Result<WorldRenderer, JsValue> {
+    // Deserialize the config JS object into a Rust value
+    let render_config = JsValue::into_serde(&render_config).into_js()?;
+    // This will validate the config
+    WorldRenderer::new(render_config).into_js()
+}
 
-    /// Generate a new world with the given config.
-    ///
-    /// The config is given as a JS object. It will be deserialized and
-    /// validated, and if either of those fail this will return an error.
-    pub fn generate_world(
-        &self,
-        world_config: WorldConfigObject,
-    ) -> Result<World, JsValue> {
-        // Deserialize the config JS object into a Rust value
-        let world_config = JsValue::into_serde(&world_config).into_js()?;
-        // This will validate the config
-        World::generate(world_config).into_js()
-    }
+/// A type-hacked wrapper around [terra::World::tiles]. This typing can be
+/// cleaned up after https://github.com/rustwasm/wasm-bindgen/issues/111,
+/// then we can use the built-in `.tiles()` on the world instead.
+#[wasm_bindgen]
+pub fn copy_tiles(world: &World) -> TileArray {
+    use js_sys::Array;
 
-    /// Create a world renderer that can be used to render any world into
-    /// various visual formats. A renderer must be configured at creation
-    /// using the given config, but from then it can be used to render any
-    /// number of worlds.
-    ///
-    /// The config is given as a JS object. It will be deserialized and
-    /// validated, and if either of those fail this will return an error.
-    pub fn build_renderer(
-        &self,
-        render_config: RenderConfigObject,
-    ) -> Result<WorldRenderer, JsValue> {
-        // Deserialize the config JS object into a Rust value
-        let render_config = JsValue::into_serde(&render_config).into_js()?;
-        // This will validate the config
-        WorldRenderer::new(render_config).into_js()
-    }
-
-    /// A type-hacked wrapper around [terra::World::tiles]. This typing can be
-    /// cleaned up after https://github.com/rustwasm/wasm-bindgen/issues/111,
-    /// then we can use the built-in `.tiles()` on the world instead.
-    pub fn copy_tiles(&self, world: &World) -> TileArray {
-        use js_sys::Array;
-
-        world
-            .tiles()
-            .values()
-            .map(|tile| JsValue::from(tile.clone()))
-            .collect::<Array>()
-            .unchecked_into()
-    }
+    world
+        .tiles()
+        .values()
+        .map(|tile| JsValue::from(tile.clone()))
+        .collect::<Array>()
+        .unchecked_into()
 }
 
 #[wasm_bindgen(typescript_custom_section)]

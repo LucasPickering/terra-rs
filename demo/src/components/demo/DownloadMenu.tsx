@@ -2,9 +2,10 @@ import React, { useContext } from "react";
 import { saveAs } from "file-saver";
 import { Menu, MenuItem } from "@material-ui/core";
 import DemoContext from "context/DemoContext";
+const { build_renderer } = await import("terra-wasm");
 
 const DownloadMenu: React.FC<React.ComponentProps<typeof Menu>> = (props) => {
-  const { terra, world, renderConfigHandler } = useContext(DemoContext);
+  const { world, renderConfigHandler } = useContext(DemoContext);
 
   // We _shouldn't_ ever render this if the world isn't present, but just need
   // this check to tell TS that
@@ -38,7 +39,7 @@ const DownloadMenu: React.FC<React.ComponentProps<typeof Menu>> = (props) => {
       </MenuItem>
       <MenuItem
         onClick={() => {
-          const renderer = terra.build_renderer(renderConfigHandler.config);
+          const renderer = build_renderer(renderConfigHandler.config);
           const svg = renderer.render_as_svg(world);
           saveAs(new Blob([svg], { type: "image/svg+xml" }), "terra.svg");
         }}
@@ -47,7 +48,7 @@ const DownloadMenu: React.FC<React.ComponentProps<typeof Menu>> = (props) => {
       </MenuItem>
       <MenuItem
         onClick={() => {
-          const renderer = terra.build_renderer(renderConfigHandler.config);
+          const renderer = build_renderer(renderConfigHandler.config);
           const bytes = renderer.render_as_stl(world);
           saveAs(new Blob([bytes], { type: "model/stl" }), "terra.stl");
         }}

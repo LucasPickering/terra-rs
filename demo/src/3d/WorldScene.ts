@@ -7,7 +7,7 @@ import {
 } from "@babylonjs/core";
 import TileMeshHandler from "./TileMeshHandler";
 import InputHandler from "./InputHandler";
-import type { RenderConfigObject, Terra, World } from "terra-wasm";
+import type { RenderConfigObject, World } from "terra-wasm";
 import { hexCodeToColor4 } from "../util";
 import theme from "../theme";
 
@@ -63,21 +63,11 @@ class WorldScene {
   private scene: Scene;
   private renderManager: TileMeshHandler;
 
-  constructor(
-    terra: Terra,
-    engine: Engine,
-    world: World,
-    renderConfig: RenderConfigObject
-  ) {
+  constructor(engine: Engine, world: World, renderConfig: RenderConfigObject) {
     // Init world scene
     this.scene = initScene(engine);
 
-    this.renderManager = new TileMeshHandler(
-      terra,
-      this.scene,
-      world,
-      renderConfig
-    );
+    this.renderManager = new TileMeshHandler(this.scene, world, renderConfig);
     this.scene.freezeActiveMeshes();
 
     this.inputHandler = new InputHandler(this);
