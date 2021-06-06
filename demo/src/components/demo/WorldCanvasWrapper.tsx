@@ -43,8 +43,7 @@ const WorldCanvasWrapper: React.FC = () => {
   const downloadMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const [overlayOpen, setOverlayOpen] = useState<boolean>(false);
   const [downloadMenuOpen, setDownloadMenuOpen] = useState<boolean>(false);
-  const { world } = useContext(DemoContext);
-  const isWorldPresent = world !== undefined && world !== "generating";
+  const { worldState } = useContext(DemoContext);
 
   return (
     <div className={classes.canvasWrapper}>
@@ -65,7 +64,7 @@ const WorldCanvasWrapper: React.FC = () => {
             ref={downloadMenuButtonRef}
             aria-controls="download-menu"
             aria-haspopup="true"
-            disabled={!isWorldPresent}
+            disabled={worldState.phase !== "populated"}
             onClick={() => setDownloadMenuOpen(true)}
           >
             <IconGetApp />
@@ -73,7 +72,7 @@ const WorldCanvasWrapper: React.FC = () => {
           <DownloadMenu
             id="download-menu"
             anchorEl={downloadMenuButtonRef.current}
-            open={isWorldPresent && downloadMenuOpen}
+            open={worldState.phase === "populated" && downloadMenuOpen}
             getContentAnchorEl={null}
             anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
             onClose={() => setDownloadMenuOpen(false)}

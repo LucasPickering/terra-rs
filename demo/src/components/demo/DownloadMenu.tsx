@@ -5,14 +5,15 @@ import DemoContext from "context/DemoContext";
 const { build_renderer } = await import("terra-wasm");
 
 const DownloadMenu: React.FC<React.ComponentProps<typeof Menu>> = (props) => {
-  const { world, renderConfigHandler } = useContext(DemoContext);
+  const { worldState, renderConfigHandler } = useContext(DemoContext);
 
   // We _shouldn't_ ever render this if the world isn't present, but just need
   // this check to tell TS that
-  if (world === undefined || world === "generating") {
+  if (worldState.phase !== "populated") {
     return null;
   }
 
+  const { world } = worldState;
   return (
     <Menu {...props}>
       <MenuItem
