@@ -1,11 +1,6 @@
 import { Matrix, Mesh, MeshBuilder, Scene } from "@babylonjs/core";
-import type {
-  Tile,
-  World,
-  Terra,
-  RenderConfigObject,
-  Point2,
-} from "terra-wasm";
+import type { Tile, World, RenderConfigObject, Point2 } from "terra-wasm";
+const { build_renderer, copy_tiles } = await import("terra-wasm");
 
 /**
  * The length of one side of each tile. This is also the center-to-vertex
@@ -27,12 +22,7 @@ class TileMeshHandler {
    */
   private tiles: TileMeshInstance[];
 
-  constructor(
-    private readonly terra: Terra,
-    scene: Scene,
-    world: World,
-    renderConfig: RenderConfigObject
-  ) {
+  constructor(scene: Scene, world: World, renderConfig: RenderConfigObject) {
     // We use "thin instances" here for the tiles cause #performance
     // https://doc.babylonjs.com/divingDeeper/mesh/copies/thinInstances
     // There's a section on that page called "Faster thin instances", if we
@@ -52,7 +42,7 @@ class TileMeshHandler {
 
     // This call allocates a whole new array, so we store the array instead of
     // the full world object.
-    const tiles = this.terra.copy_tiles(world);
+    const tiles = copy_tiles(world);
 
     this.tiles = tiles.map((tile, i) => {
       // Convert hex coords to pixel coords
@@ -78,7 +68,7 @@ class TileMeshHandler {
    */
   updateRenderConfig(renderConfig: RenderConfigObject): void {
     // Build a new renderer with the new config (very cheap)
-    const renderer = this.terra.build_renderer(renderConfig);
+    const renderer = build_renderer(renderConfig);
 
     // Update each tile to have the correct color and height
     this.tiles.forEach(({ tile, instanceIndex, position2d }, i) => {
