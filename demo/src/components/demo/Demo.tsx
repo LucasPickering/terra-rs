@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Redirect, Route, Switch } from "react-router-dom";
 import WorldCanvasWrapper from "./WorldCanvasWrapper";
-import DemoContext from "context/DemoContext";
-import type { RenderConfigObject, World, WorldConfigObject } from "terra-wasm";
+import DemoContext, { WorldState } from "context/DemoContext";
+import type { RenderConfigObject, WorldConfigObject } from "terra-wasm";
 import { useConfigHandler } from "hooks/useConfigHandler";
 import WorldConfigEditor from "./config/WorldConfigEditor";
 const { generate_world, validate_world_config, validate_render_config } =
@@ -24,16 +24,22 @@ const Demo: React.FC = () => {
     queryParam: "renderConfig",
   });
 
-  const [world, setWorld] = useState<World | "generating" | undefined>();
+  const [worldState, setWorldState] = useState<WorldState>({ phase: "empty" });
   const generateWorld = (): void => {
-    setWorld("generating");
+    setWorldState({ phase: "generating" });
 
     // Update the config query param
     worldConfigHandler.updateQueryParam();
 
     // Defer world gen to idle time, so the browser prioritizes UI updates
     window.requestIdleCallback(() => {
-      setWorld(generate_world(worldConfigHandler.config));
+      try {
+        const newWorld = generate_world(worldConfigHandler.config);
+        setWorldState({ phase: "populated", world: newWorld });
+      } catch (error) {
+        // The error will get logged by Rust
+        setWorldState({ phase: "error", error });
+      }
     });
   };
 
@@ -42,7 +48,7 @@ const Demo: React.FC = () => {
       value={{
         worldConfigHandler,
         renderConfigHandler,
-        world,
+        worldState,
         generateWorld,
       }}
     >

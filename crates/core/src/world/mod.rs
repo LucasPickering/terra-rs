@@ -4,7 +4,10 @@ pub mod tile;
 
 use crate::{
     timed,
-    util::{Meter, Meter3, NumRange},
+    util::{
+        range::NumRange,
+        unit::{Meter, Meter3},
+    },
     world::{
         generate::WorldBuilder,
         hex::{HexDirection, HexPointMap},
