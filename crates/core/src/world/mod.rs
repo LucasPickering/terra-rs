@@ -39,9 +39,9 @@ use wasm_bindgen::prelude::*;
 ///
 /// ### Binary Format
 /// Worlds can be saved and exported in a binary format via [World::to_bin] and
-/// reloaded via [World::from_bin]. Currently the binary format is just msgpack,
-/// but that is subject to change so beware of that if you write other programs
-/// that load the format.
+/// reloaded via [World::from_bin]. Currently the binary format is
+/// [CBOR](https://cbor.io/), but that is subject to change so beware of that if
+/// you write other programs that load the format.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
@@ -115,7 +115,7 @@ impl World {
     /// malformed.
     #[cfg(feature = "bin")]
     pub fn from_bin(read: impl std::io::Read) -> anyhow::Result<Self> {
-        rmp_serde::from_read(read).context("error deserializing world")
+        serde_cbor::from_reader(read).context("error deserializing world")
     }
 }
 
@@ -135,8 +135,11 @@ impl World {
     /// binary format.
     #[cfg(feature = "bin")]
     pub fn to_bin(&self) -> Vec<u8> {
+        let mut buffer = Vec::new();
         // Panic here indicates an internal bug in the data format
-        rmp_serde::to_vec_named(self).expect("error serializing world")
+        serde_cbor::to_writer(&mut buffer, self)
+            .expect("error serializing world");
+        buffer
     }
 }
 

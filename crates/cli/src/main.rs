@@ -44,6 +44,7 @@ struct Opt {
     /// svg - 2D rendering of the world
     ///
     /// stl - 3D rendering of the world
+    // TODO include link to docs about binary format after core crate is pub
     #[structopt(short = "f", long)]
     output_formats: Vec<OutputFormat>,
 
