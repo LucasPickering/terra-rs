@@ -150,8 +150,8 @@ impl Tile {
     /// **gross** ingress, not the **net**.
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn runoff_ingress(&self) -> Meter3 {
+        // Ingress values are positive, so filter out negative values
         std::array::IntoIter::new(self.runoff_traversed.as_array())
-            // Negative values are egress so ignore those
             .filter(|v| *v > Meter3(0.0))
             .sum()
     }
@@ -160,10 +160,11 @@ impl Tile {
     /// **gross** egress, not the **net**.
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn runoff_egress(&self) -> Meter3 {
-        std::array::IntoIter::new(self.runoff_traversed.as_array())
-            // Positive values are egress so ignore those
+        // Egress values are negative, so filter out positive values, then
+        // negate the sum
+        -std::array::IntoIter::new(self.runoff_traversed.as_array())
             .filter(|v| *v < Meter3(0.0))
-            .sum()
+            .sum::<Meter3>()
     }
 
     /// Get the tile's biome. Every tile will have exactly on biome assigned.

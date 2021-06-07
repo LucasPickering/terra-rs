@@ -228,8 +228,8 @@ impl Default for RainfallConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            evaporation_default: Meter3(3.0),
-            evaporation_land_scale: 0.2,
+            evaporation_default: Meter3(5.0),
+            evaporation_land_scale: 0.35,
             evaporation_spread_distance: 50,
             evaporation_spread_exponent: 0.6,
             rainfall_fraction_limit: 0.03,
@@ -240,7 +240,7 @@ impl Default for RainfallConfig {
 impl Default for GeoFeatureConfig {
     fn default() -> Self {
         Self {
-            lake_runoff_threshold: Meter3(10.0),
+            lake_runoff_threshold: Meter3(3.0),
             river_runoff_traversed_threshold: Meter3(100.0),
         }
     }

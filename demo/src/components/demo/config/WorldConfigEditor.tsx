@@ -237,8 +237,8 @@ const WorldConfigEditor: React.FC<{ standalone?: boolean }> = ({
         >
           <RangeConfigInput
             min={0.0}
-            max={100.0}
-            step={5.0}
+            max={20.0}
+            step={1.0}
             formatMark={formatMeter3}
           />
         </ConfigInput>
