@@ -26,8 +26,12 @@ pub struct WorldConfig {
     /// bug.
     ///
     /// Regardless of how the seed value is input, it will always be serialized
-    /// as a number.
-    #[serde(deserialize_with = "serde_seed::deserialize")]
+    /// as a **string**. JSON and TOML don't allow 64-bit unsigned integers,
+    /// so certain seeds can have issues if the value is serialized as a
+    /// number. By serializing as a string, we avoid that, and the seed
+    /// will still be parsed back into the same number next time it is
+    /// deserialized.
+    #[serde(with = "serde_seed")]
     pub seed: u64,
 
     /// Distance from the center of the world to the edge (in tiles).
@@ -245,9 +249,17 @@ impl Default for GeoFeatureConfig {
 /// The seed field has some fancy deserialization behavior implemented here. See
 /// the `seed` field definition for a description.
 mod serde_seed {
-    use super::WorldConfig;
-    use serde::{de::Visitor, Deserializer};
+    use super::*;
+    use serde::{de::Visitor, Deserializer, Serializer};
     use std::{convert::TryInto, fmt};
+
+    /// Serialize a seed as a string, to avoid issues with large ints
+    pub fn serialize<S>(seed: &u64, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&seed.to_string())
+    }
 
     /// Macro to make it easier to implement visit logic for different types
     macro_rules! impl_visit {

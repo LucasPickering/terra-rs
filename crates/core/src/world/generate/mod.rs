@@ -91,7 +91,7 @@ impl WorldBuilder {
                 }
             }
 
-            debug_assert_eq!(map.len(), capacity, "expected 3r²+3r+1 tiles");
+            assert_eq!(map.len(), capacity, "expected 3r²+3r+1 tiles");
             map
         });
 
@@ -295,14 +295,15 @@ impl TileBuilder {
         *self.runoff_traversed.entry(from_direction).or_default() += runoff;
     }
 
-    /// Clear all runoff from this tile, and return it in a map that determines
-    /// how much runoff to send in each direction. This will always remove
-    /// **all** runoff from this tile, and that runoff will be tracked as
-    /// egress on this tile. The returned map should be used to add that amount
-    /// of runoff to neighboring tiles.
+    /// Clear all runoff from this tile and distribute it to its neighbors,
+    /// according to the pre-calculated runoff pattern. The returned map
+    /// indicates how much runoff to send in each direction. This will
+    /// always remove **all** runoff from this tile, and that runoff will be
+    /// tracked as egress on this tile. The returned map should be used to
+    /// add that amount of runoff to neighboring tiles.
     pub fn distribute_runoff(&mut self) -> HexDirectionMap<Meter3> {
         let distribution =
-            self.runoff_pattern().distribute_exits(self.runoff());
+            self.runoff_pattern().distribute_to_exits(self.runoff());
 
         // If we have anywhere to distribute (i.e. if this tile isn't a
         // terminal), then clear our runoff and count it as egress

@@ -4,6 +4,7 @@ use crate::{
     },
     Meter3,
 };
+use assert_approx_eq::assert_approx_eq;
 use fnv::FnvBuildHasher;
 use std::collections::HashMap;
 
@@ -13,6 +14,9 @@ pub enum RunoffDestination {
     Ocean,
     Terminal(HexPoint),
 }
+
+pub type RunoffDestinationMap<T> =
+    HashMap<RunoffDestination, T, FnvBuildHasher>;
 
 /// A runoff pattern is essentially a way of memoizing parts of the runoff
 /// generation process. When we calculate runoff, we start at the lowest tiles
@@ -68,16 +72,21 @@ pub struct RunoffPattern {
     /// much more than 1.0 m³ of traversal.
     traversals: HexPointMap<f64>,
 
-    /// A terminal is a tile with no exits. The terminal map shows where runoff
-    /// from this will end up. Each key is a terminal tile (or `None`) and the
-    /// value is a fraction [0, 1] denoting how much of the source's runoff
-    /// should end up on that terminal. If the key is `None`, that denotes
-    /// the ocean, meaning that fraction of runoff exists the system. The
-    /// values in this map should **always** sum to 1. **If a tile has no
-    /// terminals, then all of its runoff ends up in the ocean and it is
-    /// dubbed a "sink".** The vast majority of land tiles will end up
-    /// being sinks.
-    terminals: HashMap<RunoffDestination, f64, FnvBuildHasher>,
+    /// A destination is a point that collects runoff. There are two types:
+    /// - Ocean
+    /// - Terminal tile, which is a tile with no exits, i.e. a tile whose
+    /// neighbors all have a higher elevation than it
+    ///
+    /// This map shows where runoff from this pattern will end up. Each key is
+    /// a destination and the value is a fraction [0, 1] denoting how much of
+    /// the source's runoff should end up on that terminal. Any runoff that
+    /// flows to the ocean will exit the continent's runoff system, i.e. the
+    /// runoff gets deleted. The values in this map should **always** sum to
+    /// 1, **unless** this tile is a terminal itself, in which it has no
+    /// destinations and this map will be empty. **If a tile has no terminals,
+    /// then all of its runoff ends up in the ocean and it is dubbed a
+    /// "sink".** The vast majority of land tiles will end up being sinks.
+    destinations: RunoffDestinationMap<f64>,
 }
 
 impl RunoffPattern {
@@ -86,14 +95,8 @@ impl RunoffPattern {
             position,
             exits: HashMap::default(),
             traversals: HexPointMap::default(),
-            terminals: HashMap::default(),
+            destinations: HashMap::default(),
         }
-    }
-
-    pub fn terminals(
-        &self,
-    ) -> &HashMap<RunoffDestination, f64, FnvBuildHasher> {
-        &self.terminals
     }
 
     /// Is this tile a terminal? A terminal is a tile with no exits.
@@ -102,15 +105,58 @@ impl RunoffPattern {
     }
 
     /// Distribute the given runoff quantity to each of this pattern's exits.
-    /// The returned map determines how much runoff each exit direction
-    /// receives. The values of the returned map will always sum to 1,
-    /// **unless** this tile is a terminal. In that case, it has no exits,
-    /// so the returned map will be empty.
-    pub fn distribute_exits(&self, runoff: Meter3) -> HexDirectionMap<Meter3> {
+    /// The returned map indicates how much runoff each exit direction
+    /// receives. The values of the returned map will always sum to the input
+    /// runoff amount, **unless** this tile is a terminal. In that case, it has
+    /// no exits, so the returned map will be empty.
+    pub fn distribute_to_exits(
+        &self,
+        runoff: Meter3,
+    ) -> HexDirectionMap<Meter3> {
         self.exits
             .iter()
             .map(|(dir, f)| (*dir, runoff * f))
             .collect()
+    }
+
+    /// Filter out some terminals from this pattern's destinations, and scale
+    /// the remaining destination factors so that they still sum to 1. This
+    /// function answers the question "Where would the runoff go if it
+    /// _couldn't_ flow to these particular tiles?"
+    pub fn filter_destinations(
+        &self,
+        excluding: &[HexPoint],
+    ) -> RunoffDestinationMap<f64> {
+        // Remove any destinations that match the specified terminals
+        let mut filtered_destinations: RunoffDestinationMap<f64> = self
+            .destinations
+            .iter()
+            .filter_map(|(destination, fraction)| match destination {
+                RunoffDestination::Terminal(term_pos)
+                    if excluding.contains(&term_pos) =>
+                {
+                    None
+                }
+                _ => Some((*destination, *fraction)),
+            })
+            .collect();
+
+        // We need to scale up the remaining destinations so that they still sum
+        // to 1. Since the old sum was 1, we can just divide each remaining
+        // value by the new sum to get back to 1
+        let filtered_sum: f64 = filtered_destinations.values().sum();
+        for value in filtered_destinations.values_mut() {
+            *value /= filtered_sum;
+        }
+
+        // Sanity check: Make sure the new distribution destinations add up to
+        // 1.0. If we filtered the destinations down to empty though, then
+        // obviously they can't add up to one, so skip that case
+        if !filtered_destinations.is_empty() {
+            assert_approx_eq!(filtered_destinations.values().sum::<f64>(), 1.0);
+        }
+
+        filtered_destinations
     }
 
     /// Add a new exit to this pattern. The exit has a specific direction and
@@ -129,12 +175,12 @@ impl RunoffPattern {
             if other_pattern.is_terminal() {
                 // This exit is a terminal itself, so add/update it to our map
                 *self
-                    .terminals
+                    .destinations
                     .entry(RunoffDestination::Terminal(other_pattern.position))
                     .or_default() += factor;
             } else {
                 // This exit is NOT a terminal, so add all its terminals to us
-                for (d, f) in &other_pattern.terminals {
+                for (d, f) in &other_pattern.destinations {
                     // We want to add the other tile's terminal, but with one
                     // more degree of separation, like so: us->other->term
                     // f is the amt of water that goes other->term, so we want
@@ -142,13 +188,15 @@ impl RunoffPattern {
                     let term_factor = f * factor;
                     // If we're already sending some runoff to this terminal,
                     // make sure we update that value instead of overwriting
-                    *self.terminals.entry(*d).or_default() += term_factor;
+                    *self.destinations.entry(*d).or_default() += term_factor;
                 }
             }
         } else {
             // The exit is an ocean tile, so denote that with the None key
-            *self.terminals.entry(RunoffDestination::Ocean).or_default() +=
-                factor;
+            *self
+                .destinations
+                .entry(RunoffDestination::Ocean)
+                .or_default() += factor;
         }
     }
 }
@@ -156,5 +204,35 @@ impl RunoffPattern {
 impl HasHexPosition for RunoffPattern {
     fn position(&self) -> HexPoint {
         self.position
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_filter_destinations() {
+        let mut pattern = RunoffPattern::new(HexPoint::new(0, 0));
+        pattern
+            .destinations
+            .insert(RunoffDestination::Terminal(HexPoint::new(0, 1)), 0.2);
+        pattern
+            .destinations
+            .insert(RunoffDestination::Terminal(HexPoint::new(1, 0)), 0.2);
+        pattern.destinations.insert(RunoffDestination::Ocean, 0.6);
+
+        let output = pattern.filter_destinations(&[HexPoint::new(1, 0)]);
+
+        assert_eq!(output.len(), 2);
+        // Each of these values should be scaled up to fill in the gap left by
+        // the filtered terminal(s). In this case, each one gets divided by 0.8
+        assert_approx_eq!(
+            output
+                .get(&RunoffDestination::Terminal(HexPoint::new(0, 1)))
+                .unwrap(),
+            0.25
+        );
+        assert_approx_eq!(output.get(&RunoffDestination::Ocean).unwrap(), 0.75);
     }
 }

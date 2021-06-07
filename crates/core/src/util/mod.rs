@@ -79,7 +79,7 @@ pub fn world_len(radius: u16) -> usize {
 // Serialize a HexPointMap as a list instead of a map. This is useful because
 // HexPoints generally shouldn't be used as serialized map keys, since JSON and
 // other formats don't support complex keys.
-pub mod hex_point_map_to_vec_serde {
+pub mod serde_hex_point_map_to_vec {
     use crate::{HasHexPosition, HexPointMap};
     use serde::{
         ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer,

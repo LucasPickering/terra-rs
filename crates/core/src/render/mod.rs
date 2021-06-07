@@ -108,11 +108,12 @@ impl WorldRenderer {
                 if tile.biome().biome_type() == BiomeType::Water {
                     Color3::new(0.5, 0.5, 0.5)
                 } else {
+                    // Neither value we use here has a hard cap, so we use
+                    // arbitrary max values based on what's common/reasonable,
+                    // and anything over that will just be clamped down
                     let normal_runoff = NumRange::new(Meter3(0.0), Meter3(5.0))
                         .value(tile.runoff())
                         .normalize()
-                        // Runoff doesn't have a fixed range so we have to clamp
-                        // this to make sure we don't overflow the color value
                         .clamp()
                         .convert::<f64>()
                         .inner() as f32;
@@ -120,8 +121,6 @@ impl WorldRenderer {
                         NumRange::new(Meter3(0.0), Meter3(1000.0))
                             .value(tile.runoff_egress())
                             .normalize()
-                            // Runoff egress ALSO doesn't have a fixed range so
-                            // we have to clamp it as well
                             .clamp()
                             .convert::<f64>()
                             .inner() as f32;
