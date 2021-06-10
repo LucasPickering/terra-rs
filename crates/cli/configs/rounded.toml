@@ -1,0 +1,9 @@
+edge_buffer_fraction = 0.0
+radius = 20
+seed = 7317611935190114194
+
+[elevation]
+rounding_interval = 10.0
+
+[rainfall]
+enabled = false

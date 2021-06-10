@@ -267,8 +267,8 @@ impl<T: Into<I> + Rangeable<I>, I: Debug> RangeValue<T, I> {
 
     /// Convert this value to another type with a transparent conversion. It
     /// would be nice to just provide this as a `From` implementation, but that
-    /// gets conflicts with std's blanket implementation, so it's not possible
-    /// until specialization is done.
+    /// conflicts with std's blanket implementation, so it's not possible until
+    /// specialization is done.
     pub fn convert<U: Rangeable<I> + From<T>>(self) -> RangeValue<U, I> {
         let value = U::from(self.value);
         let range =

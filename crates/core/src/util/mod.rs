@@ -66,6 +66,13 @@ pub fn cmp_unwrap<T: PartialOrd>(a: &T, b: &T) -> Ordering {
     a.partial_cmp(b).unwrap()
 }
 
+/// Round a value to the nearest multiple of a given arbitrary interval.
+/// This will panic for any non-positive interval.
+pub fn round(value: f64, interval: f64) -> f64 {
+    assert!(interval > 0.0, "Rounding interval must be positive");
+    (value / interval).round() * interval
+}
+
 /// Calculate the length of a world (the number of tiles it contains) based on
 /// its radius. Radius 0 means 1 tile, 1 is 7 tiles, 2 is 19, etc.
 pub fn world_len(radius: u16) -> usize {
@@ -122,6 +129,26 @@ pub mod serde_hex_point_map_to_vec {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_approx_eq::assert_approx_eq;
+
+    #[test]
+    fn test_round_to() {
+        assert_approx_eq!(round(3.0, 1.0), 3.0);
+        assert_approx_eq!(round(3.4, 1.0), 3.0);
+        assert_approx_eq!(round(3.5, 1.0), 4.0);
+        assert_approx_eq!(round(-3.4, 1.0), -3.0);
+        assert_approx_eq!(round(-3.5, 1.0), -4.0);
+
+        assert_approx_eq!(round(3.5, 10.0), 0.0);
+        assert_approx_eq!(round(6.8, 10.0), 10.0);
+        assert_approx_eq!(round(65.0, 10.0), 70.0);
+
+        assert_approx_eq!(round(65.0, 0.7), 65.1);
+        assert_approx_eq!(round(-65.0, 0.7), -65.1);
+
+        assert_approx_eq!(round(6.5, 1.5), 6.0);
+        assert_approx_eq!(round(-6.5, 1.5), -6.0);
+    }
 
     #[test]
     fn test_world_len() {

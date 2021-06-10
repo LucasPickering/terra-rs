@@ -26,11 +26,12 @@ fn test_world_config_validation() {
         },
         elevation: NoiseFnConfig {
             noise_type: NoiseFnType::Fbm,
-            octaves: 0,        // valid (but weird)
-            frequency: -1.0,   // invalid
-            lacunarity: -1.0,  // valid (but weird)
-            persistence: -1.0, // valid (but weird)
-            exponent: -1.0,    // valid (but weird)
+            octaves: 0,                   // valid (but weird)
+            frequency: 0.0,               // invalid
+            lacunarity: -1.0,             // valid (but weird)
+            persistence: -1.0,            // valid (but weird)
+            exponent: -1.0,               // valid (but weird)
+            rounding_interval: Some(0.0), // invalid
         },
     };
 
