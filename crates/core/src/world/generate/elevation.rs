@@ -14,17 +14,18 @@ pub struct ElevationGenerator;
 impl Generate for ElevationGenerator {
     fn generate(&self, world: &mut WorldBuilder) {
         let config = world.config;
-        let normal_range = NumRange::normal_range();
-        let noise_fn: TileNoiseFn<Meter> =
-            TileNoiseFn::new(&mut world.rng, &config.elevation, normal_range);
+        let noise_fn: TileNoiseFn<Meter> = TileNoiseFn::new(
+            &mut world.rng,
+            config.elevation,
+            World::ELEVATION_RANGE,
+        );
 
         // Buffer size is given as a fraction of the total radius, we need
         // to convert that to a [start,stop] range
         let radius = config.radius as f64;
         let buffer_size = (radius * config.edge_buffer_fraction).round();
         // +1 because the lower bound is inclusive
-        let buffer_range =
-            NumRange::new((radius - buffer_size + 1.0) as f64, radius);
+        let buffer_range = NumRange::new(radius - buffer_size + 1.0, radius);
 
         for tile in world.tiles.values_mut() {
             let pos = tile.position();
@@ -67,16 +68,17 @@ impl Generate for ElevationGenerator {
                 World::ELEVATION_RANGE
             };
 
-            // This raw value will be [-1,1] (ish).
+            // This noise value will span the elevation range (ish)
             // TODO https://github.com/LucasPickering/terra-rs/issues/19
-            // Figure out why values aren't spanning the full [-1,1] range
-            let raw_noise = noise_fn.get(pos);
-            let elev = normal_range
-                .value(raw_noise)
-                .convert::<Meter>()
+            // Figure out why values aren't spanning the full elevation range
+            let elevation = noise_fn.get(pos);
+            // Compress values that are in the edge buffer by mapping to the
+            // restricted range
+            let elevation = World::ELEVATION_RANGE
+                .value(elevation)
                 .map_to(elev_range)
                 .inner();
-            tile.set_elevation(elev);
+            tile.set_elevation(elevation);
         }
     }
 }

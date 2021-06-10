@@ -117,6 +117,7 @@ export interface WorldConfigObject {
         lacunarity: number;
         persistence: number;
         exponent: number;
+        rounding_interval: number | undefined;
     };
 }
 

@@ -137,6 +137,7 @@ pub struct GeoFeatureConfig {
 /// i.e. not specific to a particular noise function, so as such it has no
 /// default implementation.
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
+#[serde(default)]
 pub struct NoiseFnConfig {
     pub noise_type: NoiseFnType,
 
@@ -147,7 +148,7 @@ pub struct NoiseFnConfig {
     pub octaves: usize,
 
     /// The frequency of the first (lowest) octave.
-    #[validate(range(min = 0.0))]
+    #[validate(range(min = 0.01))]
     pub frequency: f64,
 
     /// Constant to add to the frequency for each octave. E.g. if we have 3
@@ -165,8 +166,12 @@ pub struct NoiseFnConfig {
     /// normalized composite values. "Normalized" means they're in the range
     /// [0,1] (meaning we can apply any exponent and the values remain in that
     /// range) and "composite" means this is *after* we add all our octaves
-    /// together.
+    /// together. Exponents <1 bias upwards, and >1 bias downwards.
     pub exponent: f64,
+
+    /// TODO doc
+    #[validate(range(min = 0.01))]
+    pub rounding_interval: Option<f64>,
 }
 
 /// The different types of supported noise functions. These are all expected to
@@ -212,14 +217,7 @@ impl Default for WorldConfig {
             edge_buffer_exponent: 0.7,
             rainfall: RainfallConfig::default(),
             geo_feature: GeoFeatureConfig::default(),
-            elevation: NoiseFnConfig {
-                noise_type: NoiseFnType::Fbm,
-                octaves: 3,
-                frequency: 0.5,
-                lacunarity: 3.0,
-                persistence: 0.3,
-                exponent: 0.9,
-            },
+            elevation: NoiseFnConfig::default(),
         }
     }
 }
@@ -242,6 +240,20 @@ impl Default for GeoFeatureConfig {
         Self {
             lake_runoff_threshold: Meter3(3.0),
             river_runoff_traversed_threshold: Meter3(100.0),
+        }
+    }
+}
+
+impl Default for NoiseFnConfig {
+    fn default() -> Self {
+        Self {
+            noise_type: NoiseFnType::Fbm,
+            octaves: 3,
+            frequency: 0.5,
+            lacunarity: 3.0,
+            persistence: 0.3,
+            exponent: 0.9,
+            rounding_interval: None,
         }
     }
 }
