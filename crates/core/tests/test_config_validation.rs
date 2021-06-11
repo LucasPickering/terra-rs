@@ -58,9 +58,11 @@ fn test_world_config_validation() {
 #[test]
 fn test_render_config_validation() {
     let render_config = RenderConfig {
-        vertical_scale: 0.0,          // invalid
-        tile_lens: TileLens::Surface, // valid
-        show_features: false,         // valid
+        vertical_scale: 0.0,           // invalid
+        tile_lens: TileLens::Surface,  // valid
+        show_features: false,          // valid
+        max_runoff: Meter3(5.0),       // valid (can't validate Meter3 atm)
+        max_runoff_flow: Meter3(50.0), // valid (can't validate Meter3 atm)
     };
 
     // This is a bit of a lazy check but it works well enough

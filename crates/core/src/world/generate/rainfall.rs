@@ -2,7 +2,7 @@ use crate::{
     util::{range::NumRange, unit::Meter3},
     world::{
         generate::{Generate, TileBuilder, WorldBuilder},
-        hex::{HexAxialDirection, HexAxis, HexPoint, HexPointMap},
+        hex::{HexAxialDirection, HexAxis, TilePoint, TilePointMap},
         World,
     },
     WorldConfig,
@@ -94,12 +94,12 @@ impl<'a> CloudLine<'a> {
         }
     }
 
-    fn index_to_pos(&self, index: usize) -> HexPoint {
+    fn index_to_pos(&self, index: usize) -> TilePoint {
         let perp_offset = (index as i16) - (self.config.radius as i16);
         match self.wind_direction.axis {
-            HexAxis::X => HexPoint::new_xy(self.coax_offset, perp_offset),
-            HexAxis::Y => HexPoint::new_yz(self.coax_offset, perp_offset),
-            HexAxis::Z => HexPoint::new_xz(perp_offset, self.coax_offset),
+            HexAxis::X => TilePoint::new_xy(self.coax_offset, perp_offset),
+            HexAxis::Y => TilePoint::new_yz(self.coax_offset, perp_offset),
+            HexAxis::Z => TilePoint::new_xz(perp_offset, self.coax_offset),
         }
     }
 
@@ -131,7 +131,7 @@ impl<'a> CloudLine<'a> {
     /// each tile lookup once.
     fn precipitate_and_evaporate(
         &mut self,
-        tiles: &mut HexPointMap<TileBuilder>,
+        tiles: &mut TilePointMap<TileBuilder>,
     ) {
         let mut evaporation: Vec<Meter3> = iter::repeat(Meter3(0.0))
             .take(self.cloud_volumes.len())

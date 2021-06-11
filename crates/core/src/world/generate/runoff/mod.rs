@@ -17,10 +17,12 @@ use crate::{
             Generate, TileBuilder, WorldBuilder,
         },
         hex::{
-            Cluster, HasHexPosition, HexDirection, HexPoint, HexPointIndexMap,
+            Cluster, HasHexPosition, TileDirection, TilePoint,
+            TilePointIndexMap,
         },
         Tile, World,
     },
+    HexDirection,
 };
 use assert_approx_eq::assert_approx_eq;
 use fnv::FnvBuildHasher;
@@ -77,15 +79,15 @@ struct Continent<'a> {
     /// tile within the continent, since each tile cannot belong to any other
     /// continent. Exactly which tile it is isn't important, since it isn't
     /// used for calculations, just as a unique ID.
-    id: HexPoint,
+    id: TilePoint,
     /// All the tiles in this continent. After continent creation, this will
     /// not be added to or removed from. **These tiles will be sorted by
     /// ascending elevation**. Individual tiles can be mutated as well.
-    tiles: HexPointIndexMap<&'a mut TileBuilder>,
+    tiles: TilePointIndexMap<&'a mut TileBuilder>,
 }
 
 impl<'a> Continent<'a> {
-    fn new(mut tiles: HexPointIndexMap<&'a mut TileBuilder>) -> Self {
+    fn new(mut tiles: TilePointIndexMap<&'a mut TileBuilder>) -> Self {
         let (&id, _) =
             tiles.first().expect("cannot initialize empty continent");
 
@@ -162,13 +164,13 @@ impl<'a> Continent<'a> {
         //
         // This has to be done in two steps because borrow cking (we have to
         // reference multiple tiles at once during the first step).
-        let mut runoff_patterns = HexPointIndexMap::default();
+        let mut runoff_patterns = TilePointIndexMap::default();
         for source_tile in self.tiles.values() {
             // For each neighbor of this tile, determine how much water it gets.
             // This is a list of (direction,elevation_diff) pairs
-            let mut recipients: Vec<(HexDirection, Meter)> = Vec::new();
-            for dir in HexDirection::iter() {
-                let adj_pos = source_tile.position() + dir.to_vector();
+            let mut recipients: Vec<(TileDirection, Meter)> = Vec::new();
+            for dir in TileDirection::iter() {
+                let adj_pos = source_tile.position().adjacent(dir);
                 let adj_elev = match self.tiles.get(&adj_pos) {
                     // Adjacent tile isn't part of this continent, so assume
                     // it's ocean
@@ -194,7 +196,7 @@ impl<'a> Continent<'a> {
             // For each adjacent lower tile, mark it as an exit in the pattern
             let mut runoff_pattern = RunoffPattern::new(source_tile.position());
             for (dir, elev_diff) in recipients {
-                let adj_pos = source_tile.position() + dir.to_vector();
+                let adj_pos = source_tile.position().adjacent(dir);
                 runoff_pattern.add_exit(
                     dir,
                     // This is why the tiles have to be ascending by elevation,
@@ -268,7 +270,7 @@ impl<'a> Continent<'a> {
             // to each adjacent tile
 
             for (dir, amt) in distribution {
-                let adj_pos = source_pos + dir.to_vector();
+                let adj_pos = source_pos.adjacent(dir);
                 // If the adjacent tile is in our continent, add our runoff to
                 // if. If not, then it must be ocean so the runoff gets deleted
                 if let Some(adj_tile) = self.tiles.get_mut(&adj_pos) {
@@ -293,7 +295,7 @@ impl<'a> Continent<'a> {
         // basin overflows into another, then the recipient basin will be
         // re-queued. We'll continue until all runoff is settled. This will
         // eventually converge because we have logic to prevent cyclic overflow.
-        let mut basin_queue: VecDeque<HexPoint> = basins.keys().collect();
+        let mut basin_queue: VecDeque<TilePoint> = basins.keys().collect();
         while let Some(basin_key) = basin_queue.pop_front() {
             let basin = basins.get_mut(basin_key);
             // Spread out water out as far as possible

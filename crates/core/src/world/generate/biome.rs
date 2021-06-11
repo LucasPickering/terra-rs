@@ -11,8 +11,10 @@ use crate::{
 struct BiomePoint(Biome, Meter, f64);
 
 impl BiomePoint {
-    fn distance_to(&self, elevation_norm: Meter, humidity: f64) -> f64 {
-        (self.1 - elevation_norm).0.abs() + (self.2 - humidity).abs()
+    /// Get the Euclidean distance between two biome points. Since both inputs
+    /// are normalized to [0,1], the max distance is √2.
+    fn distance_to(&self, elevation_normalized: Meter, humidity: f64) -> f64 {
+        (self.1 - elevation_normalized).0.abs() + (self.2 - humidity).abs()
     }
 }
 

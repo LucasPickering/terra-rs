@@ -2,9 +2,9 @@
 //! with the "stl" feature enabled.
 
 use crate::{
-    render::{Point2, WorldRenderer},
-    HasHexPosition, HexAxialDirection, HexDirection, HexDirectionMap, Tile,
-    World,
+    render::{unit::Point2, WorldRenderer},
+    world::hex::{TileDirectionMap, VertexDirection},
+    HasHexPosition, HexDirection, Tile, TileDirection, World,
 };
 use stl_io::{Normal, Triangle, Vertex};
 use strum::IntoEnumIterator;
@@ -33,7 +33,7 @@ struct TileSolid {
     bottom_perimeter_vertices: Vec<Vertex>,
     top_y: f32,
     top_perimeter_vertices: Vec<Vertex>,
-    adjacents_y: HexDirectionMap<f32>,
+    adjacents_y: TileDirectionMap<f32>,
 }
 
 impl TileSolid {
@@ -51,11 +51,13 @@ impl TileSolid {
         &[[0, 3, 1], [0, 4, 3], [1, 3, 2], [0, 5, 4]];
 
     fn new(world: &World, renderer: &WorldRenderer, tile: &Tile) -> Self {
-        let center_2d = tile.position().to_point2();
-        let perimeter_points_2d: Vec<Point2> = HexAxialDirection::CLOCKWISE
+        let perimeter_points_2d: Vec<Point2> = VertexDirection::CLOCKWISE
             .iter()
             .cloned()
-            .map(|dir| center_2d + dir.to_vector2())
+            // Get a 2D point for each hexagon vertex
+            .map(|dir| {
+                renderer.hex_to_screen_space(tile.position().vertex(dir))
+            })
             .collect();
 
         let bottom_perimeter_vertices: Vec<_> = perimeter_points_2d
@@ -70,9 +72,9 @@ impl TileSolid {
             .collect();
 
         let pos = tile.position();
-        let adjacents_y = HexDirection::iter()
+        let adjacents_y = TileDirection::iter()
             .filter_map(|dir| {
-                let adj_pos = pos + dir.to_vector();
+                let adj_pos = pos.adjacent(dir);
                 let adj_tile = world.tiles().get(&adj_pos)?;
                 Some((dir, renderer.tile_height(adj_tile) as f32))
             })
@@ -116,7 +118,7 @@ impl TileSolid {
         }
 
         // For each side of the hexagon, draw 2 triangles
-        for (i, dir) in HexDirection::iter().enumerate() {
+        for (i, dir) in TileDirection::iter().enumerate() {
             let bottom_y = *self.adjacents_y.get(&dir).unwrap_or(&0.0);
 
             // If the adjacent tile in this direction is taller, then no need

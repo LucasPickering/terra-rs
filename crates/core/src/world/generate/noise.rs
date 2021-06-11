@@ -1,6 +1,7 @@
 use crate::{
-    config::NoiseFnType, util::range::Rangeable, HexPoint, NoiseFnConfig,
-    NumRange, RangeValue,
+    config::NoiseFnType, util::range::Rangeable,
+    world::hex::HexCoordinateValue, NoiseFnConfig, NumRange, RangeValue,
+    TilePoint,
 };
 use noise::{Fbm, MultiFractal, NoiseFn, RidgedMulti, Seedable};
 use rand::Rng;
@@ -14,7 +15,7 @@ impl<T: Debug + NoiseFn<[f64; 3]>> NoiseFnTrait for T {}
 
 /// A wrapper around a noise function that makes it easy to use for generating
 /// tile values. This is initialized for a particular function type, and
-/// makes it easy to pass in a [HexPoint] and get out values in an arbitrary
+/// makes it easy to pass in a [TilePoint] and get out values in an arbitrary
 /// output range.
 ///
 /// This type can optionally also do transparent conversions on the output type,
@@ -45,14 +46,14 @@ where
     const NOISE_FN_OUTPUT_RANGE: NumRange<f64> = NumRange::new(-1.0, 1.0);
 
     /// Get the function output at the given point
-    pub fn get(&self, point: HexPoint) -> RangeValue<T, f64> {
-        // See INPUT_SCALE doc comment for why we need it
-        let scaled_input = [
+    pub fn get(&self, point: TilePoint) -> RangeValue<T, f64> {
+        // Scale each point value down. See INPUT_SCALE doc comment for why we
+        // need it
+        let fn_output = self.noise_fn.get([
             point.x() as f64 / Self::INPUT_SCALE,
             point.y() as f64 / Self::INPUT_SCALE,
             point.z() as f64 / Self::INPUT_SCALE,
-        ];
-        let fn_output = self.noise_fn.get(scaled_input);
+        ]);
         Self::NOISE_FN_OUTPUT_RANGE
             .value(fn_output)
             // Map to [0,1] so we can apply the exponent

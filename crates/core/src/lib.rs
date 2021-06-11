@@ -25,6 +25,8 @@
 #![feature(const_fn_floating_point_arithmetic)]
 #![feature(const_fn_trait_bound)]
 
+// TODO rework these to have one level of module depth
+
 mod config;
 mod render;
 mod util;
@@ -35,7 +37,7 @@ pub use crate::{
         ElevationConfig, GeoFeatureConfig, NoiseFnConfig, NoiseFnType,
         RainfallConfig, WorldConfig,
     },
-    render::{config::RenderConfig, Color3, Point2, TileLens, WorldRenderer},
+    render::{config::RenderConfig, TileLens, WorldRenderer},
     util::{
         range::{NumRange, RangeValue},
         unit::{Meter, Meter2, Meter3},
@@ -43,7 +45,8 @@ pub use crate::{
     world::{
         hex::{
             HasHexPosition, HexAxialDirection, HexAxis, HexDirection,
-            HexDirectionMap, HexPoint, HexPointMap,
+            TileDirection, TileDirectionMap, TilePoint, TilePointMap,
+            VertexDirection,
         },
         tile::Tile,
         Biome, BiomeType, GeoFeature, World,
