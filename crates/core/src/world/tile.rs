@@ -1,6 +1,6 @@
 use crate::{
-    world::hex::HexDirectionValues, Biome, GeoFeature, HasHexPosition,
-    HexPoint, Meter, Meter2, Meter3, World,
+    world::hex::TileDirectionValues, Biome, GeoFeature, HasHexPosition, Meter,
+    Meter2, Meter3, TilePoint, World,
 };
 use serde::{Deserialize, Serialize};
 #[cfg(target_arch = "wasm32")]
@@ -20,10 +20,10 @@ use wasm_bindgen::prelude::*;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Tile {
     // These fields are all pub(super) so they can be accessed by the builder
-    /// The location of this tile in the world. See [HexPoint] for a
+    /// The location of this tile in the world. See [TilePoint] for a
     /// description of the coordinate system. Every tile in the world has a
     /// unique position.
-    pub(super) position: HexPoint,
+    pub(super) position: TilePoint,
 
     /// The elevation of this tile, relative to sea level.
     pub(super) elevation: Meter,
@@ -40,7 +40,7 @@ pub struct Tile {
     /// direction) and negative values indicate egress (i.e. runoff left in
     /// that direction). The value should be positive if the neighbor in that
     /// direction is a higher elevation, and negative if it is lower.
-    pub(super) runoff_traversed: HexDirectionValues<Meter3>,
+    pub(super) runoff_traversed: TileDirectionValues<Meter3>,
 
     /// The biome for this tile. Every tile exists in a single biome, which
     /// describes its climate characteristics. See [Biome] for more info.
@@ -52,40 +52,18 @@ pub struct Tile {
     pub(super) features: Vec<GeoFeature>,
 }
 
-// Non-Wasm API
 impl Tile {
     /// The top surface area of a single tile, in abstract units! Note that this
-    /// math doesn't line up with [Tile::VERTEX_RADIUS] or the other rendering
-    /// constants, i.e. if you were to calculate an
-    pub const AREA: Meter2 = Meter2(1.0);
-
-    // Rendering constants below
-    /// Distance between the center of a tile and one of its 6 vertices, in
-    /// **2D space**. This is also the length of one side of the tile.
+    /// math doesn't line up with [WorldRenderer::TILE_VERTEX_RADIUS] or the
+    /// other rendering constants, i.e. if you were to calculate the area of
+    /// a hexagon with a radius of `WorldRenderer::TILE_VERTEX_RADIUS`, you
+    /// wouldn't get the same value as this constant! This area value only
+    /// applies to world space, and it makes certain calculations (e.g. runoff)
+    /// simpler.
     ///
-    /// ## Rendering Constant Caveat
-    /// This value is **not** consistent with the abstract units of [Meter]/
-    /// [Meter2]/[Meter3]. There is some artistic license employed during
-    /// rendering. See [Point2] for a description of 2D space.
-    pub const VERTEX_RADIUS: f64 = 1.0;
-    /// Distance between the center of a tile and the midpoint of one of its
-    /// sides, in **2D space**. See [Tile::VERTEX_RADIUS] for the rendering
-    /// constant caveat.
-    pub const SIDE_RADIUS: f64 = Self::VERTEX_RADIUS * 0.8660254; // sqrt(3)/2
-    /// Distance between any two opposite **vertices** of a tile, in **2D
-    /// space**. See [Tile::VERTEX_RADIUS] for the rendering constant caveat.
-    pub const WIDTH: f64 = Self::VERTEX_RADIUS * 2.0;
-    /// Distance between any two opposite **sides** of a tile, in **2D space**.
-    /// See [Tile::VERTEX_RADIUS] for the rendering constant caveat.
-    pub const HEIGHT: f64 = Self::SIDE_RADIUS * 2.0;
-    /// Distance between the center of the tiles that are aligned in the Y
-    /// and one unit apart in the X (i.e. left-to-right). See
-    /// [Tile::VERTEX_RADIUS] for the rendering constant caveat.
-    pub const CENTER_DISTANCE_X: f64 = Self::VERTEX_RADIUS * 1.5;
-    /// Distance between the center of two tiles that are aligned in the X
-    /// and one unit apart in the Y (i.e. up-and-down). See
-    /// [Tile::VERTEX_RADIUS] for the rendering constant caveat.
-    pub const CENTER_DISTANCE_Y: f64 = Self::HEIGHT;
+    /// TODO maybe we _should_ make this consistent? would it really make
+    /// runoff stuff harder?
+    pub const AREA: Meter2 = Meter2(1.0);
 
     /// Get a list of geographic features that appear on this tile. See
     /// [GeoFeature] for more info.
@@ -95,19 +73,9 @@ impl Tile {
     pub fn features(&self) -> &[GeoFeature] {
         self.features.as_slice()
     }
-}
-
-// Wasm-friendly API
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-impl Tile {
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
-    pub fn pos(&self) -> HexPoint {
-        self.position
-    }
 
     /// Return the elevation of the top of this tile, relative to sea level.
     /// This value is guaranteed to be in the range [Self::ELEVATION_RANGE].
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn elevation(&self) -> Meter {
         self.elevation
     }
@@ -116,7 +84,6 @@ impl Tile {
     /// This value is guaranteed to be non-negative, but has no hard maximum.
     /// If you need to map a rainfall value to some bounded range, you can use
     /// [Self::RAINFALL_SOFT_RANGE] for a soft maximum.
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn rainfall(&self) -> Meter3 {
         self.rainfall
     }
@@ -128,7 +95,6 @@ impl Tile {
     /// determine humidity.
     ///
     /// This function will **always** return a value in [0,1].
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn humidity(&self) -> f64 {
         World::RAINFALL_SOFT_RANGE
             .value(self.rainfall)
@@ -141,14 +107,12 @@ impl Tile {
     /// The amount of water runoff that collected on this tile. This is the
     /// amount of runoff **currently** on the tile after runoff simulation,
     /// **not** the amount of total runoff that passed over the tile.
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn runoff(&self) -> Meter3 {
         self.runoff
     }
 
     /// Get the total amount of runoff that _entered_ this tile. This is the
     /// **gross** ingress, not the **net**.
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn runoff_ingress(&self) -> Meter3 {
         // Ingress values are positive, so filter out negative values
         std::array::IntoIter::new(self.runoff_traversed.as_array())
@@ -158,7 +122,6 @@ impl Tile {
 
     /// Get the total amount of runoff that _exited_ this tile. This is the
     /// **gross** egress, not the **net**.
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn runoff_egress(&self) -> Meter3 {
         // Egress values are negative, so filter out positive values, then
         // negate the sum
@@ -169,14 +132,15 @@ impl Tile {
 
     /// Get the tile's biome. Every tile will have exactly on biome assigned.
     /// See [Biome] for more info.
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(getter))]
     pub fn biome(&self) -> Biome {
         self.biome
     }
 }
 
 impl HasHexPosition for Tile {
-    fn position(&self) -> HexPoint {
+    type Point = TilePoint;
+
+    fn position(&self) -> TilePoint {
         self.position
     }
 }

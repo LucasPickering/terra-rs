@@ -39,8 +39,8 @@ function initScene(engine: Engine): Scene {
     "camera",
     0,
     Math.PI / 4,
-    500.0,
-    new Vector3(0.0, 200.0, 0.0),
+    200.0,
+    new Vector3(0.0, 100.0, 0.0),
     scene
   );
   camera.lowerRadiusLimit = 1.0;

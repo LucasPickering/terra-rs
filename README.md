@@ -40,7 +40,7 @@ Currently we use Rust nightly because of a handful of features. Once this list g
   - [const_fn_floating_point_arithmetic](https://github.com/rust-lang/rust/issues/57241)
   - [const_fn_trait_bound](https://github.com/rust-lang/rust/issues/57563)
 - rustfmt
-  - [importa_granularity](https://github.com/rust-lang/rustfmt/blob/master/Configurations.md#imports_granularity)
+  - [imports_granularity](https://github.com/rust-lang/rustfmt/blob/master/Configurations.md#imports_granularity)
   - [wrap_comments](https://github.com/rust-lang/rustfmt/issues/3347)
 - cargo
   - [namespaced-features](https://doc.rust-lang.org/cargo/reference/unstable.html#namespaced-features)

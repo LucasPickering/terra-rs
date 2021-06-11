@@ -21,8 +21,8 @@ use crate::{
             wind::WindGenerator,
         },
         hex::{
-            HasHexPosition, HexAxialDirection, HexDirection, HexDirectionMap,
-            HexPoint, HexPointMap,
+            HasHexPosition, HexAxialDirection, TileDirection, TileDirectionMap,
+            TilePoint, TilePointMap,
         },
         Biome, BiomeType, GeoFeature, Meter, Tile, World, WorldConfig,
     },
@@ -58,7 +58,7 @@ pub struct WorldBuilder {
 
     /// All the tiles in the world. These individual tiles will be mutated
     /// during world generation, but tiles can never be added/removed/moved!
-    pub tiles: HexPointMap<TileBuilder>,
+    pub tiles: TilePointMap<TileBuilder>,
 
     /// Direction of the world's prevailing wind. Initialized by
     /// [WindGenerator], and is guaranteed to be populated after that.
@@ -72,7 +72,7 @@ impl WorldBuilder {
         // Initialize each tile
         let tiles = timed!("World initialization", {
             let capacity = util::world_len(config.radius);
-            let mut map = HexPointMap::with_capacity_and_hasher(
+            let mut map = TilePointMap::with_capacity_and_hasher(
                 capacity,
                 FnvBuildHasher::default(),
             );
@@ -86,7 +86,7 @@ impl WorldBuilder {
                 let y_min = cmp::max(-r, -x - r);
                 let y_max = cmp::min(r, -x + r);
                 for y in y_min..=y_max {
-                    let pos = HexPoint::new(x, y);
+                    let pos = TilePoint::new_xy(x, y);
                     map.insert(pos, TileBuilder::new(pos));
                 }
             }
@@ -113,7 +113,7 @@ impl WorldBuilder {
 
     /// Generate a world by running a series of generation steps sequentially.
     /// Must be run from a blank slate. Outputs the finalized set of tiles.
-    pub fn generate_world(mut self) -> HexPointMap<Tile> {
+    pub fn generate_world(mut self) -> TilePointMap<Tile> {
         // Run each generation step. The order is very important!
         self.apply_generator(ElevationGenerator);
         self.apply_generator(WindGenerator);
@@ -158,7 +158,7 @@ trait Generate {
 /// we're trying to use world values that haven't been generated yet.
 #[derive(Clone, Debug)]
 pub struct TileBuilder {
-    position: HexPoint,
+    position: TilePoint,
     elevation: Option<Meter>,
     rainfall: Option<Meter3>,
     biome: Option<Biome>,
@@ -167,19 +167,19 @@ pub struct TileBuilder {
     /// [RunoffPattern] for more info. This is only used during world
     /// generation, so it gets thrown away when the full world is built.
     runoff_pattern: Option<RunoffPattern>,
-    runoff_traversed: HexDirectionMap<Meter3>,
+    runoff_traversed: TileDirectionMap<Meter3>,
     features: Vec<GeoFeature>,
 }
 
 impl TileBuilder {
-    pub fn new(position: HexPoint) -> Self {
+    pub fn new(position: TilePoint) -> Self {
         Self {
             position,
             elevation: None,
             rainfall: None,
             runoff: None,
             runoff_pattern: None,
-            runoff_traversed: HexDirectionMap::default(),
+            runoff_traversed: TileDirectionMap::default(),
             biome: None,
             features: Vec::new(),
         }
@@ -229,7 +229,7 @@ impl TileBuilder {
         }
     }
 
-    /// See [Tile::humidity]. Panics if humidity is unset.
+    /// See [Tile::humidity]. Panics if rainfall is unset.
     pub fn humidity(&self) -> f64 {
         let rainfall = self.rainfall();
         World::RAINFALL_SOFT_RANGE
@@ -282,7 +282,11 @@ impl TileBuilder {
     /// `from_direction` indicates which direction the runoff is coming
     /// from, which will be used to track this runoff as ingress.  Returns
     /// an error if the amount is negative or runoff is uninitialized.
-    pub fn add_runoff(&mut self, runoff: Meter3, from_direction: HexDirection) {
+    pub fn add_runoff(
+        &mut self,
+        runoff: Meter3,
+        from_direction: TileDirection,
+    ) {
         assert!(
             runoff >= Meter3(0.0),
             "cannot add negative runoff {} for {:?}",
@@ -301,7 +305,7 @@ impl TileBuilder {
     /// always remove **all** runoff from this tile, and that runoff will be
     /// tracked as egress on this tile. The returned map should be used to
     /// add that amount of runoff to neighboring tiles.
-    pub fn distribute_runoff(&mut self) -> HexDirectionMap<Meter3> {
+    pub fn distribute_runoff(&mut self) -> TileDirectionMap<Meter3> {
         let distribution =
             self.runoff_pattern().distribute_to_exits(self.runoff());
 
@@ -328,7 +332,7 @@ impl TileBuilder {
     }
 
     /// See [Tile::runoff_traversed].
-    pub fn runoff_traversed(&self) -> &HexDirectionMap<Meter3> {
+    pub fn runoff_traversed(&self) -> &TileDirectionMap<Meter3> {
         &self.runoff_traversed
     }
 
@@ -364,7 +368,8 @@ impl TileBuilder {
 }
 
 impl HasHexPosition for TileBuilder {
-    fn position(&self) -> HexPoint {
+    type Point = TilePoint;
+    fn position(&self) -> TilePoint {
         self.position
     }
 }

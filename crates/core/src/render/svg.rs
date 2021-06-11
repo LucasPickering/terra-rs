@@ -1,6 +1,7 @@
 use crate::{
-    render::{Color3, WorldRenderer},
-    GeoFeature, HasHexPosition, HexAxialDirection, Tile, World,
+    render::{unit::Color3, WorldRenderer},
+    world::hex::HexDirection,
+    GeoFeature, HasHexPosition, Tile, TilePoint, VertexDirection, World,
 };
 use svg::{
     node::{
@@ -21,12 +22,14 @@ pub fn world_to_svg(world: &World, renderer: &WorldRenderer) -> Document {
     let radius = world.config().radius as f64;
     // Distance from center of origin tile to center of right-most tile,
     // **plus** the center of that right-most tile to its right-most edge
-    let view_box_max_x =
-        (radius * Tile::CENTER_DISTANCE_X + Tile::VERTEX_RADIUS).ceil();
+    let view_box_max_x = (radius * WorldRenderer::TILE_CENTER_DISTANCE_X
+        + WorldRenderer::TILE_VERTEX_RADIUS)
+        .ceil();
     // Distance from the center of origin tile to center of bottom-most tile,
     // **plus** the center of that bottom-most tile to its bottom edge
-    let view_box_max_y =
-        (radius * Tile::CENTER_DISTANCE_Y + Tile::SIDE_RADIUS).ceil();
+    let view_box_max_y = (radius * WorldRenderer::TILE_CENTER_DISTANCE_Y
+        + WorldRenderer::TILE_SIDE_RADIUS)
+        .ceil();
 
     let mut document = Document::new()
         .set(
@@ -54,7 +57,7 @@ pub fn world_to_svg(world: &World, renderer: &WorldRenderer) -> Document {
 /// Generate an SVG polygon for a single tile
 fn draw_tile(world_renderer: &WorldRenderer, tile: &Tile) -> Group {
     let pos = tile.position();
-    let pos2d = pos.to_point2();
+    let pos2d = world_renderer.hex_to_screen_space(pos);
 
     // Start with the main tile hexagon
     let mut group = Group::new()
@@ -69,11 +72,13 @@ fn draw_tile(world_renderer: &WorldRenderer, tile: &Tile) -> Group {
                 // time anyway. So it's just easier to leave it like this
                 .set(
                     "points",
-                    HexAxialDirection::CLOCKWISE
+                    VertexDirection::CLOCKWISE
                         .iter()
                         .map(|dir| {
-                            let v = dir.to_vector2();
-                            (v.x, v.y)
+                            let vertex_hex = TilePoint::ORIGIN.vertex(*dir);
+                            let vertex_2d =
+                                world_renderer.hex_to_screen_space(vertex_hex);
+                            (vertex_2d.x, vertex_2d.y)
                         })
                         .collect::<Vec<_>>(),
                 )
@@ -86,17 +91,24 @@ fn draw_tile(world_renderer: &WorldRenderer, tile: &Tile) -> Group {
         for feature in tile.features() {
             match feature {
                 GeoFeature::Lake => {} // This is covered by TileLens::Surface
-                GeoFeature::RiverEntrance { direction, .. }
-                | GeoFeature::RiverExit { direction, .. } => {
-                    let side_offset = direction.to_vector2();
+                GeoFeature::RiverEntrance { direction, volume }
+                | GeoFeature::RiverExit { direction, volume } => {
+                    let side_midpoint = world_renderer.hex_to_screen_space(
+                        TilePoint::ORIGIN.side_midpoint(*direction),
+                    );
                     group = group.add(
                         Line::new()
                             .set("x1", 0)
                             .set("y1", 0)
-                            .set("x2", side_offset.x)
-                            .set("y2", side_offset.y)
+                            .set("x2", side_midpoint.x)
+                            .set("y2", side_midpoint.y)
                             .set("stroke", RIVER_COLOR.to_html())
-                            .set("stroke-width", 0.4),
+                            // TODO make this non-linear (research river width
+                            // vs flow rate)
+                            .set(
+                                "stroke-width",
+                                world_renderer.normalize_runoff_flow(*volume),
+                            ),
                     );
                 }
             }

@@ -1,7 +1,7 @@
 use crate::{
     world::{
         generate::{Generate, WorldBuilder},
-        hex::HexDirection,
+        hex::TileDirection,
         GeoFeature,
     },
     Meter3,
@@ -23,7 +23,7 @@ impl Generate for WaterFeatureGenerator {
 
             // River exit
             // We have to copy this into a vec before mutating cause borrow ck
-            let runoff_traversed: Vec<(HexDirection, Meter3)> = tile
+            let runoff_traversed: Vec<(TileDirection, Meter3)> = tile
                 .runoff_traversed()
                 .iter()
                 .map(|(k, v)| (*k, *v))

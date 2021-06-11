@@ -1,4 +1,4 @@
-use crate::TileLens;
+use crate::{Meter3, TileLens};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -41,6 +41,23 @@ pub struct RenderConfig {
     /// ## Relevant Formats
     /// - SVG
     pub show_features: bool,
+
+    /// A **soft** cap on how runoff values are rendered. Any runoff at or
+    /// above this bound will be rendered as the "max" visual value, which
+    /// could be color, lake size, etc.
+    ///
+    /// ## Relevant Formats
+    /// - SVG
+    pub max_runoff: Meter3,
+
+    /// A **soft** cap on how runoff flow totals (runoff ingress and egress)
+    /// are rendered. Any runoff flow value at or above this bound will be
+    /// rendered as the "max" visual value, which could be color, river width,
+    /// etc.
+    ///
+    /// ## Relevant Formats
+    /// - SVG
+    pub max_runoff_flow: Meter3,
 }
 
 impl Default for RenderConfig {
@@ -49,6 +66,8 @@ impl Default for RenderConfig {
             vertical_scale: 1.0,
             tile_lens: TileLens::Surface,
             show_features: true,
+            max_runoff: Meter3(5.0),
+            max_runoff_flow: Meter3(1000.0),
         }
     }
 }

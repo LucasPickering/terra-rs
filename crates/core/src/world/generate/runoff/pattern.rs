@@ -1,6 +1,7 @@
 use crate::{
     world::hex::{
-        HasHexPosition, HexDirection, HexDirectionMap, HexPoint, HexPointMap,
+        HasHexPosition, TileDirection, TileDirectionMap, TilePoint,
+        TilePointMap,
     },
     Meter3,
 };
@@ -12,7 +13,7 @@ use std::collections::HashMap;
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum RunoffDestination {
     Ocean,
-    Terminal(HexPoint),
+    Terminal(TilePoint),
 }
 
 pub type RunoffDestinationMap<T> =
@@ -42,13 +43,13 @@ pub type RunoffDestinationMap<T> =
 #[derive(Clone, Debug)]
 pub struct RunoffPattern {
     /// Position of the source tile that this pattern is built for.
-    position: HexPoint,
+    position: TilePoint,
 
     /// The neighbors of this tile, and how much water each one gets from this
     /// tile. This map will only include entries for tiles that actually get
     /// some water, and all the values should sum to 1 (unless it's empty). If
     /// this map is empty, the tile is a terminal.
-    exits: HexDirectionMap<f64>,
+    exits: TileDirectionMap<f64>,
 
     /// A map that tracks every tile that runoff passes over after leaving this
     /// tile. This **doesn't** track where the runoff _ends up_ (that's what
@@ -70,7 +71,7 @@ pub struct RunoffPattern {
     /// so on. Notice that the values **do not add up to 1.0**. The same blob
     /// of runoff will run over many tiles, so 1.0 m³ of runoff can account for
     /// much more than 1.0 m³ of traversal.
-    traversals: HexPointMap<f64>,
+    traversals: TilePointMap<f64>,
 
     /// A destination is a point that collects runoff. There are two types:
     /// - Ocean
@@ -90,11 +91,11 @@ pub struct RunoffPattern {
 }
 
 impl RunoffPattern {
-    pub fn new(position: HexPoint) -> Self {
+    pub fn new(position: TilePoint) -> Self {
         Self {
             position,
             exits: HashMap::default(),
-            traversals: HexPointMap::default(),
+            traversals: TilePointMap::default(),
             destinations: HashMap::default(),
         }
     }
@@ -112,7 +113,7 @@ impl RunoffPattern {
     pub fn distribute_to_exits(
         &self,
         runoff: Meter3,
-    ) -> HexDirectionMap<Meter3> {
+    ) -> TileDirectionMap<Meter3> {
         self.exits
             .iter()
             .map(|(dir, f)| (*dir, runoff * f))
@@ -125,7 +126,7 @@ impl RunoffPattern {
     /// _couldn't_ flow to these particular tiles?"
     pub fn filter_destinations(
         &self,
-        excluding: &[HexPoint],
+        excluding: &[TilePoint],
     ) -> RunoffDestinationMap<f64> {
         // Remove any destinations that match the specified terminals
         let mut filtered_destinations: RunoffDestinationMap<f64> = self
@@ -163,7 +164,7 @@ impl RunoffPattern {
     /// factor. All of the factors for all of a tile's exits should sum to 1.
     pub fn add_exit(
         &mut self,
-        dir: HexDirection,
+        dir: TileDirection,
         other_pattern: Option<&RunoffPattern>,
         factor: f64,
     ) {
@@ -202,7 +203,8 @@ impl RunoffPattern {
 }
 
 impl HasHexPosition for RunoffPattern {
-    fn position(&self) -> HexPoint {
+    type Point = TilePoint;
+    fn position(&self) -> TilePoint {
         self.position
     }
 }
@@ -213,23 +215,23 @@ mod tests {
 
     #[test]
     fn test_filter_destinations() {
-        let mut pattern = RunoffPattern::new(HexPoint::new(0, 0));
+        let mut pattern = RunoffPattern::new(TilePoint::new_xy(0, 0));
         pattern
             .destinations
-            .insert(RunoffDestination::Terminal(HexPoint::new(0, 1)), 0.2);
+            .insert(RunoffDestination::Terminal(TilePoint::new_xy(0, 1)), 0.2);
         pattern
             .destinations
-            .insert(RunoffDestination::Terminal(HexPoint::new(1, 0)), 0.2);
+            .insert(RunoffDestination::Terminal(TilePoint::new_xy(1, 0)), 0.2);
         pattern.destinations.insert(RunoffDestination::Ocean, 0.6);
 
-        let output = pattern.filter_destinations(&[HexPoint::new(1, 0)]);
+        let output = pattern.filter_destinations(&[TilePoint::new_xy(1, 0)]);
 
         assert_eq!(output.len(), 2);
         // Each of these values should be scaled up to fill in the gap left by
         // the filtered terminal(s). In this case, each one gets divided by 0.8
         assert_approx_eq!(
             output
-                .get(&RunoffDestination::Terminal(HexPoint::new(0, 1)))
+                .get(&RunoffDestination::Terminal(TilePoint::new_xy(0, 1)))
                 .unwrap(),
             0.25
         );
