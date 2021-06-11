@@ -1,4 +1,4 @@
-use terra::{World, WorldConfig};
+use terra::{ElevationConfig, World, WorldConfig};
 
 /// Sanity check, make sure the default world config doesn't horrifically crash
 /// and burn.
@@ -26,7 +26,10 @@ fn test_world_gen_tiny() {
     let config = WorldConfig {
         seed: 12506774975058000,
         radius: 2,
-        edge_buffer_fraction: 0.25,
+        elevation: ElevationConfig {
+            edge_buffer_fraction: 0.25,
+            ..Default::default()
+        },
         ..Default::default()
     };
     let world = World::generate(config).unwrap();
@@ -39,7 +42,10 @@ fn test_world_gen_large() {
     let config = WorldConfig {
         seed: 1021522790211909,
         radius: 400,
-        edge_buffer_fraction: 0.25,
+        elevation: ElevationConfig {
+            edge_buffer_fraction: 0.25,
+            ..Default::default()
+        },
         ..Default::default()
     };
     let world = World::generate(config).unwrap();
@@ -56,7 +62,10 @@ fn test_world_gen_mega_lake() {
     let config = WorldConfig {
         seed: 12507776774975058000,
         radius: 60,
-        edge_buffer_fraction: 0.025,
+        elevation: ElevationConfig {
+            edge_buffer_fraction: 0.025,
+            ..Default::default()
+        },
         ..Default::default()
     };
     let world = World::generate(config).unwrap();

@@ -1,6 +1,6 @@
 use crate::{
     config::NoiseFnType, util::range::Rangeable, HexPoint, NoiseFnConfig,
-    NumRange,
+    NumRange, RangeValue,
 };
 use noise::{Fbm, MultiFractal, NoiseFn, RidgedMulti, Seedable};
 use rand::Rng;
@@ -23,17 +23,19 @@ impl<T: Debug + NoiseFn<[f64; 3]>> NoiseFnTrait for T {}
 pub struct TileNoiseFn<T: Rangeable<f64> = f64> {
     /// The noise generation function
     noise_fn: Box<dyn NoiseFnTrait>,
-    /// Exponent to apply to each noise value. This will be applied to values
-    /// in the range [0,1], so exponents <1 bias upwards, and >1 bias
-    /// downwards.
-    exponent: f64,
+    /// The config that defines the behavior of this function
+    config: NoiseFnConfig,
     /// The range of values that outputs should be mapped to. Generally the
     /// output will span this entire range, but it may not. This depends on
     /// the behavior of the underlying noise function.
     output_range: NumRange<T, f64>,
 }
 
-impl<T: Rangeable<f64>> TileNoiseFn<T> {
+impl<T> TileNoiseFn<T>
+where
+    T: Rangeable<f64>,
+    f64: From<T>,
+{
     /// If we used the full values from the input, our frequencies would have
     /// to be stupid low to get resonable looking output, so we scale them
     /// down by this factor
@@ -43,7 +45,7 @@ impl<T: Rangeable<f64>> TileNoiseFn<T> {
     const NOISE_FN_OUTPUT_RANGE: NumRange<f64> = NumRange::new(-1.0, 1.0);
 
     /// Get the function output at the given point
-    pub fn get(&self, point: HexPoint) -> T {
+    pub fn get(&self, point: HexPoint) -> RangeValue<T, f64> {
         // See INPUT_SCALE doc comment for why we need it
         let scaled_input = [
             point.x() as f64 / Self::INPUT_SCALE,
@@ -55,10 +57,10 @@ impl<T: Rangeable<f64>> TileNoiseFn<T> {
             .value(fn_output)
             // Map to [0,1] so we can apply the exponent
             .normalize()
-            .apply(|val| val.powf(self.exponent))
+            .apply(|val| val.powf(self.config.exponent))
+            // Convert to type T so we can map to the output range
             .convert() // f64 -> T
             .map_to(self.output_range)
-            .inner()
     }
 }
 
@@ -68,75 +70,76 @@ impl<T: Rangeable<f64>> TileNoiseFn<T> {
     /// ### Arguments
     /// - `world_config` - The overall world config, needed for seed and world
     /// radius.
-    /// - `fn_config` - Configuration for the underlying noise fn.
+    /// - `config` - Configuration for the underlying noise function.
     /// - `output_range` - The output range of this function. Noise values will
     /// be mapped to this range during generation.
     pub fn new(
         rng: &mut impl Rng,
-        fn_config: &NoiseFnConfig,
+        config: NoiseFnConfig,
         output_range: NumRange<T, f64>,
     ) -> Self {
         // Gen a new seed so that we get a different one per function
         let seed = rng.gen();
-        let noise_fn = fn_config.make_noise_fn(seed);
+        let noise_fn = Self::make_noise_fn(config, seed);
 
         Self {
             noise_fn,
-            exponent: fn_config.exponent,
+            config,
             output_range,
         }
     }
-}
 
-impl NoiseFnConfig {
     /// Create a noise function based on this function config. Since the config
     /// contains the function type, we don't know which struct the function will
     /// be at compile time, so we need a trait object.
-    fn make_noise_fn(&self, seed: u32) -> Box<dyn NoiseFnTrait> {
+    fn make_noise_fn(
+        config: NoiseFnConfig,
+        seed: u32,
+    ) -> Box<dyn NoiseFnTrait> {
         // Seedable and MultiFractal can't be turned into trait objects, so
         // we can't use dynamic dispatch to configure the function. That means
         // we have to duplicate the configuration code for each function type,
         // which sucks but 'tis what 'tis.
-        match self.noise_type {
+        match config.noise_type {
             NoiseFnType::BasicMulti => Box::new(
                 Fbm::default()
                     .set_seed(seed)
-                    .set_octaves(self.octaves)
-                    .set_frequency(self.frequency)
-                    .set_lacunarity(self.lacunarity)
-                    .set_persistence(self.persistence),
+                    .set_octaves(config.octaves)
+                    .set_frequency(config.frequency)
+                    .set_lacunarity(config.lacunarity)
+                    .set_persistence(config.persistence),
             ),
             NoiseFnType::Billow => Box::new(
                 Fbm::default()
                     .set_seed(seed)
-                    .set_octaves(self.octaves)
-                    .set_frequency(self.frequency)
-                    .set_lacunarity(self.lacunarity)
-                    .set_persistence(self.persistence),
+                    .set_octaves(config.octaves)
+                    .set_frequency(config.frequency)
+                    .set_lacunarity(config.lacunarity)
+                    .set_persistence(config.persistence),
             ),
             NoiseFnType::Fbm => Box::new(
                 Fbm::default()
                     .set_seed(seed)
-                    .set_octaves(self.octaves)
-                    .set_frequency(self.frequency)
-                    .set_lacunarity(self.lacunarity)
-                    .set_persistence(self.persistence),
+                    .set_octaves(config.octaves)
+                    .set_frequency(config.frequency)
+                    .set_lacunarity(config.lacunarity)
+                    .set_persistence(config.persistence),
             ),
             NoiseFnType::HybridMulti => Box::new(
                 Fbm::default()
                     .set_seed(seed)
-                    .set_octaves(self.octaves)
-                    .set_frequency(self.frequency)
-                    .set_lacunarity(self.lacunarity)
-                    .set_persistence(self.persistence),
+                    .set_octaves(config.octaves)
+                    .set_frequency(config.frequency)
+                    .set_lacunarity(config.lacunarity)
+                    .set_persistence(config.persistence),
             ),
             NoiseFnType::RidgedMulti => Box::new(
                 RidgedMulti::default()
                     .set_seed(seed)
-                    .set_octaves(self.octaves)
-                    .set_frequency(self.frequency)
-                    .set_lacunarity(self.lacunarity)
-                    .set_persistence(self.persistence),
+                    .set_octaves(config.octaves)
+                    .set_frequency(config.frequency)
+                    .set_lacunarity(config.lacunarity)
+                    .set_persistence(config.persistence),
             ),
         }
     }

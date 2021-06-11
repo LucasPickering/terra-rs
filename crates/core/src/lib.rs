@@ -32,8 +32,8 @@ mod world;
 
 pub use crate::{
     config::{
-        GeoFeatureConfig, NoiseFnConfig, NoiseFnType, RainfallConfig,
-        WorldConfig,
+        ElevationConfig, GeoFeatureConfig, NoiseFnConfig, NoiseFnType,
+        RainfallConfig, WorldConfig,
     },
     render::{config::RenderConfig, Color3, Point2, TileLens, WorldRenderer},
     util::{
