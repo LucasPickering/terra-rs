@@ -1,6 +1,7 @@
 use terra::{
-    GeoFeatureConfig, Meter3, NoiseFnConfig, NoiseFnType, RainfallConfig,
-    RenderConfig, TileLens, World, WorldConfig, WorldRenderer,
+    ElevationConfig, GeoFeatureConfig, Meter, Meter3, NoiseFnConfig,
+    NoiseFnType, RainfallConfig, RenderConfig, TileLens, World, WorldConfig,
+    WorldRenderer,
 };
 use validator::ValidationErrors;
 
@@ -8,9 +9,20 @@ use validator::ValidationErrors;
 fn test_world_config_validation() {
     let config = WorldConfig {
         seed: 0,
-        radius: 10001,              // invalid (too big)
-        edge_buffer_fraction: -0.1, // invalid
-        edge_buffer_exponent: -1.0, // valid (but weird)
+        radius: 10001, // invalid (too big)
+        elevation: ElevationConfig {
+            noise_fn: NoiseFnConfig {
+                noise_type: NoiseFnType::Fbm,
+                octaves: 0,        // valid (but weird)
+                frequency: 0.0,    // invalid
+                lacunarity: -1.0,  // valid (but weird)
+                persistence: -1.0, // valid (but weird)
+                exponent: -1.0,    // valid (but weird)
+            },
+            rounding_interval: Some(Meter(0.1)), // valid
+            edge_buffer_fraction: -0.1,          // invalid
+            edge_buffer_exponent: -1.0,          // valid (but weird)
+        },
         rainfall: RainfallConfig {
             enabled: true,
             evaporation_default: Meter3(-1.0), // can't validate Meter3s :(
@@ -23,15 +35,6 @@ fn test_world_config_validation() {
             // Unfortunately we can't validate Meter3s right now
             lake_runoff_threshold: Meter3(-1.0),
             river_runoff_traversed_threshold: Meter3(-1.0),
-        },
-        elevation: NoiseFnConfig {
-            noise_type: NoiseFnType::Fbm,
-            octaves: 0,                   // valid (but weird)
-            frequency: 0.0,               // invalid
-            lacunarity: -1.0,             // valid (but weird)
-            persistence: -1.0,            // valid (but weird)
-            exponent: -1.0,               // valid (but weird)
-            rounding_interval: Some(0.0), // invalid
         },
     };
 
@@ -46,7 +49,7 @@ fn test_world_config_validation() {
     error_fields.sort_unstable();
     assert_eq!(
         error_fields,
-        vec!["edge_buffer_fraction", "elevation", "radius", "rainfall"],
+        vec!["elevation", "radius", "rainfall"],
         "incorrect validation errors in {:#?}",
         validation_errors
     );

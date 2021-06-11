@@ -96,8 +96,19 @@ const TS_APPEND_CONTENT: &'static str = r#"
 export interface WorldConfigObject {
     seed: string | number;
     radius: number;
-    edge_buffer_fraction: number;
-    edge_buffer_exponent: number;
+    elevation: {
+        noise_fn: {
+            noise_type: 'basic_multi' | 'billow' | 'fbm' | 'hybrid_multi' | 'ridged_multi';
+            octaves: number;
+            frequency: number;
+            lacunarity: number;
+            persistence: number;
+            exponent: number;
+        };
+        rounding_interval: number | undefined;
+        edge_buffer_fraction: number;
+        edge_buffer_exponent: number;
+    };
     rainfall: {
         enabled: boolean;
         evaporation_default: number;
@@ -109,15 +120,6 @@ export interface WorldConfigObject {
     geo_feature: {
         lake_runoff_threshold: number;
         river_runoff_traversed_threshold: number;
-    };
-    elevation: {
-        noise_type: 'basic_multi' | 'billow' | 'fbm' | 'hybrid_multi' | 'ridged_multi';
-        octaves: number;
-        frequency: number;
-        lacunarity: number;
-        persistence: number;
-        exponent: number;
-        rounding_interval: number | undefined;
     };
 }
 

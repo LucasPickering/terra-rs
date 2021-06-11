@@ -1,8 +1,12 @@
-use crate::Meter3;
+use crate::{Meter, Meter3};
 use fnv::FnvHasher;
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
 use validator::Validate;
+
+// TODO there's a bunch of fields in here that can't easily be validated
+// because they are Meter or Meter3. Maybe a PR to validator that allows
+// validating things that are Into<f64>? Or manual validation
 
 /// Configuration that defines a world gen process. Two worlds generated with
 /// same config will always be identical.
@@ -38,19 +42,9 @@ pub struct WorldConfig {
     #[validate(range(min = 0, max = 10000))]
     pub radius: u16,
 
-    /// The fraction of the world's radius that is buffer space. Tiles in the
-    /// buffer space will be pushed down, to ensure that the very edge of the
-    /// world is all ocean. The closer to the edge a tile is, the more it will
-    /// be pushed. 1.0 means the world is _entirely_ buffer space, 0.0 means
-    /// there is no buffer at all, 0.25 means the outer 25% is buffer, etc.
-    #[validate(range(min = 0.0, max = 1.0))]
-    pub edge_buffer_fraction: f64,
-    /// Exponent to apply to the function that pushes down elevations in the
-    /// buffer zone. An exponent of 1.0 will push them linearly. Sub-1.0
-    /// exponents will have a smooth dropoff closer to the middle, then get
-    /// steeper towards the edge. Super-1.0 exponents will do the opposite
-    /// (steep at first, then smooth out at the edge).
-    pub edge_buffer_exponent: f64,
+    /// Config for the noise function used to generate elevation values
+    #[validate]
+    pub elevation: ElevationConfig,
 
     /// Config for fields related to rainfall and evaporation
     #[validate]
@@ -59,10 +53,39 @@ pub struct WorldConfig {
     /// Config for fields related to geographic feature generation
     #[validate]
     pub geo_feature: GeoFeatureConfig,
+}
 
-    /// Config for the noise function used to generate elevation values
-    #[validate]
-    pub elevation: NoiseFnConfig,
+/// Configuration for elevation map generation. THis controls the elevation of
+/// each tile, which defines the shape of the terrain. Elevation is generated
+/// by a noise function, then some post-processing is applied.
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
+#[serde(default)]
+pub struct ElevationConfig {
+    /// Configuration for the noise function used to generate elevation values
+    pub noise_fn: NoiseFnConfig,
+
+    /// If defined, each elevation value will be rounded to the nearest
+    /// multiple of this interval. E.g. if the interval is 10, each
+    /// elevation will be rounded to the nearest 10 meters.
+    ///
+    /// This supports any positive number, including fractions
+    // TODO validate >0
+    pub rounding_interval: Option<Meter>,
+
+    /// The fraction of the world's radius that is buffer space. Tiles in the
+    /// buffer space will be pushed down, to ensure that the very edge of the
+    /// world is all ocean. The closer to the edge a tile is, the more it will
+    /// be pushed. 1.0 means the world is _entirely_ buffer space, 0.0 means
+    /// there is no buffer at all, 0.25 means the outer 25% is buffer, etc.
+    #[validate(range(min = 0.0, max = 1.0))]
+    pub edge_buffer_fraction: f64,
+
+    /// Exponent to apply to the function that pushes down elevations in the
+    /// buffer zone. An exponent of 1.0 will push them linearly. Sub-1.0
+    /// exponents will have a gradual dropoff closer to the middle, then get
+    /// steeper towards the edge. Super-1.0 exponents will do the opposite
+    /// (steep at first, then gradual out at the edge).
+    pub edge_buffer_exponent: f64,
 }
 
 /// Configuration related to rainfall and evaporation simulation. These params
@@ -137,7 +160,6 @@ pub struct GeoFeatureConfig {
 /// i.e. not specific to a particular noise function, so as such it has no
 /// default implementation.
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
-#[serde(default)]
 pub struct NoiseFnConfig {
     pub noise_type: NoiseFnType,
 
@@ -162,16 +184,13 @@ pub struct NoiseFnConfig {
     /// 0.25]`.
     pub persistence: f64,
 
-    /// Exponent to apply to values after generation. This is applied to
-    /// normalized composite values. "Normalized" means they're in the range
-    /// [0,1] (meaning we can apply any exponent and the values remain in that
-    /// range) and "composite" means this is *after* we add all our octaves
-    /// together. Exponents <1 bias upwards, and >1 bias downwards.
+    /// Exponent to apply to elevation values after generation. This is applied
+    /// to normalized composite values. "Normalized" means they're in the
+    /// range [0,1] (meaning we can apply any exponent and the values
+    /// remain in that range) and "composite" means this is *after* we add
+    /// all our octaves together. Exponents <1 bias upwards, and >1 bias
+    /// downwards.
     pub exponent: f64,
-
-    /// TODO doc
-    #[validate(range(min = 0.01))]
-    pub rounding_interval: Option<f64>,
 }
 
 /// The different types of supported noise functions. These are all expected to
@@ -213,11 +232,27 @@ impl Default for WorldConfig {
             seed: rand::random(),
 
             radius: 100,
-            edge_buffer_fraction: 0.25,
-            edge_buffer_exponent: 0.7,
             rainfall: RainfallConfig::default(),
             geo_feature: GeoFeatureConfig::default(),
-            elevation: NoiseFnConfig::default(),
+            elevation: ElevationConfig::default(),
+        }
+    }
+}
+
+impl Default for ElevationConfig {
+    fn default() -> Self {
+        Self {
+            noise_fn: NoiseFnConfig {
+                noise_type: NoiseFnType::Fbm,
+                octaves: 3,
+                frequency: 0.5,
+                lacunarity: 3.0,
+                persistence: 0.3,
+                exponent: 0.9,
+            },
+            rounding_interval: None,
+            edge_buffer_fraction: 0.25,
+            edge_buffer_exponent: 0.7,
         }
     }
 }
@@ -240,20 +275,6 @@ impl Default for GeoFeatureConfig {
         Self {
             lake_runoff_threshold: Meter3(3.0),
             river_runoff_traversed_threshold: Meter3(100.0),
-        }
-    }
-}
-
-impl Default for NoiseFnConfig {
-    fn default() -> Self {
-        Self {
-            noise_type: NoiseFnType::Fbm,
-            octaves: 3,
-            frequency: 0.5,
-            lacunarity: 3.0,
-            persistence: 0.3,
-            exponent: 0.9,
-            rounding_interval: None,
         }
     }
 }
