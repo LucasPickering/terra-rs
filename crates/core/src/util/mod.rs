@@ -67,10 +67,14 @@ pub fn cmp_unwrap<T: PartialOrd>(a: &T, b: &T) -> Ordering {
 }
 
 /// Round a value to the nearest multiple of a given arbitrary interval.
-/// This will panic for any non-positive interval.
-pub fn round(value: f64, interval: f64) -> f64 {
+/// This will panic for any non-positive interval. Supports rounding for any
+/// unit that can be converted to/from an `f64`.
+pub fn round<T: From<f64> + Into<f64>>(value: T, interval: T) -> T {
+    let value: f64 = value.into();
+    let interval: f64 = interval.into();
     assert!(interval > 0.0, "Rounding interval must be positive");
-    (value / interval).round() * interval
+    let rounded = (value / interval).round() * interval;
+    rounded.into()
 }
 
 /// Calculate the length of a world (the number of tiles it contains) based on

@@ -90,7 +90,7 @@ const WorldConfigEditor: React.FC<{ standalone?: boolean }> = ({
       >
         <ConfigInput<WorldConfigObject>
           configHandler={worldConfigHandler}
-          field={["edge_buffer_fraction"]}
+          field={["elevation", "edge_buffer_fraction"]}
           label="Edge Buffer Fraction"
           description={worldDescriptions.edge_buffer.edge_buffer_fraction}
         >
@@ -98,7 +98,7 @@ const WorldConfigEditor: React.FC<{ standalone?: boolean }> = ({
         </ConfigInput>
         <ConfigInput<WorldConfigObject>
           configHandler={worldConfigHandler}
-          field={["edge_buffer_exponent"]}
+          field={["elevation", "edge_buffer_exponent"]}
           label="Edge Buffer Exponent"
           description={worldDescriptions.edge_buffer.edge_buffer_exponent}
         >
@@ -112,7 +112,7 @@ const WorldConfigEditor: React.FC<{ standalone?: boolean }> = ({
       >
         <ConfigInput<WorldConfigObject>
           configHandler={worldConfigHandler}
-          field={["elevation", "noise_type"]}
+          field={["elevation", "noise_fn", "noise_type"]}
           label="Noise Type"
           description={worldDescriptions.elevation.noise_type}
         >
@@ -126,7 +126,7 @@ const WorldConfigEditor: React.FC<{ standalone?: boolean }> = ({
         </ConfigInput>
         <ConfigInput<WorldConfigObject>
           configHandler={worldConfigHandler}
-          field={["elevation", "octaves"]}
+          field={["elevation", "noise_fn", "octaves"]}
           label="Octaves"
           description={worldDescriptions.elevation.octaves}
         >
@@ -134,7 +134,7 @@ const WorldConfigEditor: React.FC<{ standalone?: boolean }> = ({
         </ConfigInput>
         <ConfigInput<WorldConfigObject>
           configHandler={worldConfigHandler}
-          field={["elevation", "frequency"]}
+          field={["elevation", "noise_fn", "frequency"]}
           label="Frequency"
           description={worldDescriptions.elevation.frequency}
         >
@@ -142,7 +142,7 @@ const WorldConfigEditor: React.FC<{ standalone?: boolean }> = ({
         </ConfigInput>
         <ConfigInput<WorldConfigObject>
           configHandler={worldConfigHandler}
-          field={["elevation", "lacunarity"]}
+          field={["elevation", "noise_fn", "lacunarity"]}
           label="Lacunarity"
           description={worldDescriptions.elevation.lacunarity}
         >
@@ -150,7 +150,7 @@ const WorldConfigEditor: React.FC<{ standalone?: boolean }> = ({
         </ConfigInput>
         <ConfigInput<WorldConfigObject>
           configHandler={worldConfigHandler}
-          field={["elevation", "persistence"]}
+          field={["elevation", "noise_fn", "persistence"]}
           label="Persistence"
           description={worldDescriptions.elevation.persistence}
         >
@@ -158,12 +158,13 @@ const WorldConfigEditor: React.FC<{ standalone?: boolean }> = ({
         </ConfigInput>
         <ConfigInput<WorldConfigObject>
           configHandler={worldConfigHandler}
-          field={["elevation", "exponent"]}
+          field={["elevation", "noise_fn", "exponent"]}
           label="Exponent"
           description={worldDescriptions.elevation.exponent}
         >
           <RangeConfigInput {...EXPONENT_RANGE} />
         </ConfigInput>
+        {/* Excluding rounding_interval for now because it breaks runoff gen */}
       </ConfigSection>
 
       <ConfigSection

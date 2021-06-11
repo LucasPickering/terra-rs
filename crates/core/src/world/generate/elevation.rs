@@ -1,5 +1,5 @@
 use crate::{
-    util::{range::NumRange, unit::Meter},
+    util::{self, range::NumRange, unit::Meter},
     world::{
         generate::{noise::TileNoiseFn, Generate, WorldBuilder},
         hex::{HasHexPosition, HexPoint},
@@ -13,17 +13,17 @@ pub struct ElevationGenerator;
 
 impl Generate for ElevationGenerator {
     fn generate(&self, world: &mut WorldBuilder) {
-        let config = world.config;
+        let elev_config = world.config.elevation;
         let noise_fn: TileNoiseFn<Meter> = TileNoiseFn::new(
             &mut world.rng,
-            config.elevation,
+            elev_config.noise_fn,
             World::ELEVATION_RANGE,
         );
 
         // Buffer size is given as a fraction of the total radius, we need
         // to convert that to a [start,stop] range
-        let radius = config.radius as f64;
-        let buffer_size = (radius * config.edge_buffer_fraction).round();
+        let radius = world.config.radius as f64;
+        let buffer_size = (radius * elev_config.edge_buffer_fraction).round();
         // +1 because the lower bound is inclusive
         let buffer_range = NumRange::new(radius - buffer_size + 1.0, radius);
 
@@ -50,7 +50,7 @@ impl Generate for ElevationGenerator {
                     .normalize()
                     .invert()
                     // Apply exponent curve
-                    .apply(|v| v.powf(config.edge_buffer_exponent)) // Use a smooth gradient
+                    .apply(|v| v.powf(elev_config.edge_buffer_exponent)) // Use a smooth gradient
                     .convert::<Meter>()
                     // Pick a new upper bound on elevation, somewhere between
                     // sea level and the standard upper bound. For the
@@ -71,12 +71,17 @@ impl Generate for ElevationGenerator {
             // This noise value will span the elevation range (ish)
             // TODO https://github.com/LucasPickering/terra-rs/issues/19
             // Figure out why values aren't spanning the full elevation range
-            let elevation = noise_fn.get(pos);
-            // Compress values that are in the edge buffer by mapping to the
-            // restricted range
-            let elevation = World::ELEVATION_RANGE
-                .value(elevation)
+            let elevation: Meter = noise_fn
+                .get(pos)
+                // Map to our output range which may be compressed by the buffer
                 .map_to(elev_range)
+                // Round to nearest multiple of the specified interval (if any)
+                .apply(|val| match elev_config.rounding_interval {
+                    Some(rounding_interval) => {
+                        util::round(val, rounding_interval)
+                    }
+                    None => val,
+                })
                 .inner();
             tile.set_elevation(elevation);
         }
