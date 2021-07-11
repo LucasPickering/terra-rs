@@ -1,0 +1,5 @@
+radius = 100
+seed = "unity"
+
+[elevation]
+edge_buffer_fraction = 0.0

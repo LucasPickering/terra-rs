@@ -1,0 +1,19 @@
+radius = 20
+seed = "unity"
+
+[rainfall]
+evaporation_default = 20.0
+evaporation_land_scale = 1.0
+evaporation_spread_distance = 50
+evaporation_spread_exponent = 0.6
+rainfall_fraction_limit = 0.03
+
+[elevation]
+edge_buffer_fraction = 0.0
+[elevation.noise_fn]
+exponent = 0.9
+frequency = 4.0
+lacunarity = 3.0
+noise_type = "fbm"
+octaves = 3
+persistence = 0.3
