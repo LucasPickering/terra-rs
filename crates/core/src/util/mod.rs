@@ -1,8 +1,4 @@
 pub mod range;
-#[cfg(feature = "stl")]
-pub mod stl;
-#[cfg(feature = "svg")]
-pub mod svg;
 pub mod unit;
 
 use std::cmp::Ordering;
@@ -87,18 +83,18 @@ pub fn world_len(radius: u16) -> usize {
     3 * r * r + 3 * r + 1
 }
 
-// Serialize a HexPointMap as a list instead of a map. This is useful because
-// HexPoints generally shouldn't be used as serialized map keys, since JSON and
+// Serialize a TilePointMap as a list instead of a map. This is useful because
+// TilePoints generally shouldn't be used as serialized map keys, since JSON and
 // other formats don't support complex keys.
-pub mod serde_hex_point_map_to_vec {
-    use crate::{HasHexPosition, HexPointMap};
+pub mod serde_tile_point_map_to_vec {
+    use crate::{HasHexPosition, TilePoint, TilePointMap};
     use serde::{
         ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer,
     };
 
-    /// Serialize a hex point map as a list
+    /// Serialize a tile point map as a list
     pub fn serialize<T, S>(
-        map: &HexPointMap<T>,
+        map: &TilePointMap<T>,
         serializer: S,
     ) -> Result<S::Ok, S::Error>
     where
@@ -113,13 +109,13 @@ pub mod serde_hex_point_map_to_vec {
     }
 
     /// Deserialize a list of values into a map. The deserialized type must
-    /// implement [HasHexPosition] so that we can derive a [HexPoint] for each
+    /// implement [HasHexPosition] so that we can derive a [TilePoint] for each
     /// element to use as its map key.
     pub fn deserialize<'de, T, D>(
         deserializer: D,
-    ) -> Result<HexPointMap<T>, D::Error>
+    ) -> Result<TilePointMap<T>, D::Error>
     where
-        T: Deserialize<'de> + HasHexPosition,
+        T: Deserialize<'de> + HasHexPosition<Point = TilePoint>,
         D: Deserializer<'de>,
     {
         let vec: Vec<T> = Vec::deserialize(deserializer)?;

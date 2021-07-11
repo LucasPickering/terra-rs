@@ -1,15 +1,22 @@
 pub mod config;
+#[cfg(feature = "stl")]
+pub mod stl;
+#[cfg(feature = "svg")]
+pub mod svg;
+pub mod unit;
 
 use crate::{
-    render::config::RenderConfig, Biome, BiomeType, GeoFeature, Meter3,
-    NumRange, Tile, World,
+    render::{
+        config::RenderConfig,
+        unit::{Color3, Point2},
+    },
+    world::hex::HexThing,
+    Biome, BiomeType, GeoFeature, HasHexPosition, Meter3, NumRange, Tile,
+    World,
 };
-use derive_more::{
-    Add, AddAssign, Display, Div, DivAssign, From, Into, Mul, MulAssign, Neg,
-    Sub, SubAssign, Sum,
-};
+use nalgebra::{Matrix3, Point3, Rotation3};
 use serde::{Deserialize, Serialize};
-use std::ops;
+use std::f64;
 use strum::EnumString;
 use validator::Validate;
 #[cfg(target_arch = "wasm32")]
@@ -43,6 +50,35 @@ pub struct WorldRenderer {
 
 // Non-Wasm API
 impl WorldRenderer {
+    // Rendering constants below
+    /// Distance between the center of a tile and one of its 6 vertices, in
+    /// **screen space**. This is also the length of one side of the tile.
+    ///
+    /// ## Rendering Constant Caveat
+    /// This value is **not** consistent with the abstract units of [Meter]/
+    /// [Meter2]/[Meter3]. There is some artistic license employed during
+    /// rendering. See [crate::hex] for a description of what screen space is.
+    pub const TILE_VERTEX_RADIUS: f64 = 1.0;
+    /// Distance between the center of a tile and the midpoint of one of its
+    /// sides, in **2D space**. See [Self::TILE_VERTEX_RADIUS] for the rendering
+    /// constant caveat.
+    pub const TILE_SIDE_RADIUS: f64 = Self::TILE_VERTEX_RADIUS * 0.8660254; // sqrt(3)/2
+    /// Distance between any two opposite **vertices** of a tile, in **2D
+    /// space**. See [Self::TILE_VERTEX_RADIUS] for the rendering constant
+    /// caveat.
+    pub const TILE_WIDTH: f64 = Self::TILE_VERTEX_RADIUS * 2.0;
+    /// Distance between any two opposite **sides** of a tile, in **2D space**.
+    /// See [Self::TILE_VERTEX_RADIUS] for the rendering constant caveat.
+    pub const TILE_HEIGHT: f64 = Self::TILE_SIDE_RADIUS * 2.0;
+    /// Distance **in the X axis only** between the center of two tiles that are
+    /// aligned in the Y and one unit apart in the X (i.e. left-to-right).
+    /// See [Self::TILE_VERTEX_RADIUS] for the rendering constant caveat.
+    pub const TILE_CENTER_DISTANCE_X: f64 = Self::TILE_VERTEX_RADIUS * 1.5;
+    /// Distance between the center of two tiles that are aligned in the X
+    /// and one unit apart in the Y (i.e. up-and-down). See
+    /// [Self::TILE_VERTEX_RADIUS] for the rendering constant caveat.
+    pub const TILE_CENTER_DISTANCE_Y: f64 = Self::TILE_HEIGHT;
+
     /// Initialize a new renderer with the given options. Returns an error if
     /// the render config is invalid.
     pub fn new(render_config: RenderConfig) -> anyhow::Result<Self> {
@@ -54,17 +90,59 @@ impl WorldRenderer {
     pub fn render_config(&self) -> &RenderConfig {
         &self.render_config
     }
+
+    /// Convert a point from from hex space to 2D screen space. Useful for
+    /// rendering tiles or other world objects into a visual format.
+    pub fn hex_to_screen_space<T: Into<f64>>(
+        &self,
+        point: impl HexThing<Component = T>,
+    ) -> Point2 {
+        // Let's do some linalg! The goal here is to transform the point from
+        // being on the 3D step function to the plane `z = 0`.
+        let point: Point3<f64> =
+            Point3::new(point.x().into(), point.y().into(), point.z().into());
+
+        // First, project onto the plane x+y+z=0, the plane that defines the hex
+        // system. For tile points, this will do nothing, since they are
+        // already on the plane
+        let projection: Matrix3<f64> =
+            Matrix3::identity() - Matrix3::from_element(1.0 / 3.0);
+
+        // Next, rotate the point to be on the plane `z = 0`. You can imagine
+        // this as rotating the entire `x + y + z = 0` plane to be just the
+        // level plane `z = 0`. Rotate 45 degrees around one axis, then the
+        // other.
+        let rotation_z =
+            Rotation3::from_euler_angles(0.0, 0.0, f64::consts::FRAC_PI_4);
+        let rotation_x =
+            Rotation3::from_euler_angles(f64::consts::FRAC_PI_4, 0.0, 0.0);
+
+        // Apply each transformation to the point. Remember, they apply in
+        // reverse order
+        (rotation_x * rotation_z * projection * point).xy().into()
+    }
 }
 
 // Wasm-friendly API
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl WorldRenderer {
+    /// Get the position of a tile, in screen space. See the module-level doc
+    /// at [crate::hex] for a description of screen coordinate space.
+    pub fn tile_position(&self, tile: &Tile) -> Point2 {
+        self.hex_to_screen_space(tile.position())
+    }
+
+    /// Get the distance between the center of a tile and the midpoint of one
+    /// of its sides. Useful for scaling tiles in certain render contexts.
+    pub fn tile_side_radius(&self) -> f64 {
+        Self::TILE_SIDE_RADIUS
+    }
+
     /// Get the height that a tile's geometry should have. This will convert
     /// the tile's elevation to a zero-based scale, then multiplicatively scale
     /// it based on the pre-configured Y scale of the world. See
     /// [RenderConfig::vertical_scale] for more info on what exactly the
     /// vertical scale means.
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
     pub fn tile_height(&self, tile: &Tile) -> f64 {
         // Map elevation to a zero-based scale
         let zeroed_elevation = World::ELEVATION_RANGE
@@ -75,7 +153,6 @@ impl WorldRenderer {
 
     /// Compute the color of a tile based on current render settings. The tile
     /// lens in the render config controls what data the color is derived from.
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
     pub fn tile_color(&self, tile: &Tile) -> Color3 {
         match self.render_config.tile_lens {
             // See TileLens definition for a description of each lens type
@@ -111,19 +188,11 @@ impl WorldRenderer {
                     // Neither value we use here has a hard cap, so we use
                     // arbitrary max values based on what's common/reasonable,
                     // and anything over that will just be clamped down
-                    let normal_runoff = NumRange::new(Meter3(0.0), Meter3(5.0))
-                        .value(tile.runoff())
-                        .normalize()
-                        .clamp()
-                        .convert::<f64>()
-                        .inner() as f32;
+                    // TODO make max runoff configurable here
+                    let normal_runoff =
+                        self.normalize_runoff(tile.runoff()) as f32;
                     let normal_runoff_egress =
-                        NumRange::new(Meter3(0.0), Meter3(1000.0))
-                            .value(tile.runoff_egress())
-                            .normalize()
-                            .clamp()
-                            .convert::<f64>()
-                            .inner() as f32;
+                        self.normalize_runoff_flow(tile.runoff_egress()) as f32;
 
                     // (0,0) -> black
                     // (1,0) -> blue
@@ -150,13 +219,41 @@ impl WorldRenderer {
         }
     }
 
+    /// Normalize a runoff value into the range `[0, 1]`. Since runoff values
+    /// have no hard upper bound, this function relies on a soft bound from
+    /// the render config to determine what value maps to `1`. Any runoff
+    /// flow value at or above [RenderConfig::max_runoff] will map to
+    /// `1`. Everything less than that will map proportionally between `0`
+    /// and `1`.
+    pub fn normalize_runoff(&self, runoff: Meter3) -> f64 {
+        NumRange::new(Meter3(0.0), self.render_config.max_runoff)
+            .value(runoff)
+            .normalize()
+            .clamp()
+            .convert::<f64>()
+            .inner()
+    }
+
+    /// Normalize a runoff flow value (i.e. either runoff ingress or runoff
+    /// egress) into the range `[0, 1]`. Since runoff values have no hard upper
+    /// bound, this function relies on a soft bound from the render config to
+    /// determine what value maps to `1`. Any runoff flow value at or above
+    /// [RenderConfig::max_runoff_flow] will map to `1`. Everything less than
+    /// that will map proportionally between `0` and `1`.
+    pub fn normalize_runoff_flow(&self, runoff_flow: Meter3) -> f64 {
+        NumRange::new(Meter3(0.0), self.render_config.max_runoff_flow)
+            .value(runoff_flow)
+            .normalize()
+            .clamp()
+            .convert::<f64>()
+            .inner()
+    }
+
     /// Render this world as a 2D SVG, from a top-down perspective. Returns the
     /// SVG in a string.
     #[cfg(feature = "svg")]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
     pub fn render_as_svg(&self, world: &World) -> String {
-        use crate::util;
-        let svg = util::svg::world_to_svg(world, self);
+        let svg = svg::world_to_svg(world, self);
         svg.to_string()
     }
 
@@ -164,175 +261,13 @@ impl WorldRenderer {
     /// data. Returns an error if serialization fails, which indicates a bug
     /// in terra or stl_io.
     #[cfg(feature = "stl")]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
     pub fn render_as_stl(&self, world: &World) -> Vec<u8> {
-        use crate::util;
-        let mesh = util::stl::world_to_stl(world, self);
+        let mesh = stl::world_to_stl(world, self);
         let mut buffer = Vec::<u8>::new();
         // Panic here indicates a bug in our STL mesh format
         stl_io::write_stl(&mut buffer, mesh.iter())
             .expect("error serializing STL");
         buffer
-    }
-}
-
-/// A point in 2D rendered space. This isn't used at all during world
-/// generation/processing, but is useful during rendering. You can use
-/// [HexPoint::to_point2] to convert a tile's world position into a renderable
-/// 2D position. These positions aren't really useful outside of rendering, so
-/// stick to [HexPoint] for stuff like distances, pathfinding, etc.
-///
-/// ## 2D Coordinates
-///
-/// Unlike hex coordinates, which have 3 components, 2D coordinates obviously
-/// only have 2. This coordinate system uses the center of the screen as the
-/// origin, so the tile with the hex position of `(0, 0, 0)` will be centered on
-/// `(0, 0)` in 2D. Left is negative x, right is positive x. Down is positive y,
-/// up is negative y.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Display,
-    PartialEq,
-    PartialOrd,
-    From,
-    Into,
-    Neg,
-    Add,
-    Sub,
-    Mul,
-    Div,
-    AddAssign,
-    SubAssign,
-    MulAssign,
-    DivAssign,
-    Sum,
-)]
-#[display(fmt = "({}, {})", x, y)]
-pub struct Point2 {
-    pub x: f64,
-    pub y: f64,
-}
-
-/// A vector in 2D space. Like [Point2], this isn't used during world generation
-/// at all, but is useful during rendering. This can represent offsets in 2D.
-///
-/// See [Point2] for a description of the 2D coordinate space.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Display,
-    PartialEq,
-    PartialOrd,
-    From,
-    Into,
-    Neg,
-    Add,
-    Sub,
-    Mul,
-    Div,
-    AddAssign,
-    SubAssign,
-    MulAssign,
-    DivAssign,
-    Sum,
-)]
-#[display(fmt = "({}, {})", x, y)]
-pub struct Vector2 {
-    pub x: f64,
-    pub y: f64,
-}
-
-impl ops::Add<Vector2> for Point2 {
-    type Output = Point2;
-
-    fn add(self, rhs: Vector2) -> Self::Output {
-        Self {
-            x: self.x + rhs.x,
-            y: self.y + rhs.y,
-        }
-    }
-}
-
-/// An RGB color. Values are stored as floats between 0 and 1 (inclusive).
-/// This uses f32 because the extra precision from f64 is pointless.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Color3 {
-    pub red: f32,
-    pub green: f32,
-    pub blue: f32,
-}
-
-impl Color3 {
-    /// The valid range of values for each component in RGB
-    const COMPONENT_RANGE: NumRange<f32> = NumRange::new(0.0, 1.0);
-
-    /// Create a new RGB color with components in the range [0.0, 1.0]. Panic
-    /// if any of the components are out of range
-    pub fn new(red: f32, green: f32, blue: f32) -> Self {
-        fn check_component(component_name: &str, value: f32) -> f32 {
-            if Color3::COMPONENT_RANGE.contains(value) {
-                value
-            } else {
-                panic!(
-                    "Color component {} must be in {}, but was {}",
-                    component_name,
-                    Color3::COMPONENT_RANGE,
-                    value
-                )
-            }
-        }
-
-        Self {
-            red: check_component("red", red),
-            green: check_component("green", green),
-            blue: check_component("blue", blue),
-        }
-    }
-
-    /// Create a new RGB color from integer components in the [0,255] range.
-    pub const fn new_int(red: u8, green: u8, blue: u8) -> Self {
-        Self {
-            red: red as f32 / 255.0,
-            green: green as f32 / 255.0,
-            blue: blue as f32 / 255.0,
-        }
-    }
-
-    /// Convert this number to a set of 3 bytes: `(red, green, blue)`
-    pub fn to_ints(self) -> (u8, u8, u8) {
-        (
-            (self.red * 255.0) as u8,
-            (self.green * 255.0) as u8,
-            (self.blue * 255.0) as u8,
-        )
-    }
-
-    /// Convert this color to an HTML color code: `#rrggbb`
-    pub fn to_html(self) -> String {
-        let (r, g, b) = self.to_ints();
-        format!("#{:02x}{:02x}{:02x}", r, g, b)
-    }
-}
-
-// Scale a color by a constant
-impl ops::Mul<f32> for Color3 {
-    type Output = Self;
-
-    fn mul(self, rhs: f32) -> Self {
-        let red = Self::COMPONENT_RANGE.clamp(self.red * rhs);
-        let green = Self::COMPONENT_RANGE.clamp(self.green * rhs);
-        let blue = Self::COMPONENT_RANGE.clamp(self.blue * rhs);
-        // It's safe to bypass the constructor here because we just clamped
-        // all 3 components to the valid range
-        Self { red, green, blue }
     }
 }
 

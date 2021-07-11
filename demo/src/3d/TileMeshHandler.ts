@@ -3,16 +3,6 @@ import type { Tile, World, RenderConfigObject, Point2 } from "terra-wasm";
 const { build_renderer, copy_tiles } = await import("terra-wasm");
 
 /**
- * The length of one side of each tile. This is also the center-to-vertex
- * radius, because each tile is 6 equilateral triangles.
- */
-const TILE_SIDE_LENGTH = 1.0;
-/**
- * Distance between two opposite vertices.
- */
-const TILE_VERTEX_DIAM = TILE_SIDE_LENGTH * 2;
-
-/**
  * Util class for generating and rendering meshes for a world of tiles
  */
 class TileMeshHandler {
@@ -31,7 +21,7 @@ class TileMeshHandler {
     this.mesh = MeshBuilder.CreateCylinder(
       "tile",
       {
-        diameter: TILE_VERTEX_DIAM,
+        diameter: 1.0,
         tessellation: 6,
         cap: Mesh.CAP_END,
       },
@@ -47,7 +37,7 @@ class TileMeshHandler {
     this.tiles = tiles.map((tile, i) => {
       // Convert hex coords to pixel coords
       // https://www.redblobgames.com/grids/hexagons/#coordinates-cube
-      const position2d = tile.pos.to_point2();
+      const position2d = build_renderer(renderConfig).tile_position(tile);
 
       // Refresh meshes if this is the last tile in the list
       const isLastTile = i === tiles.length - 1;
@@ -69,6 +59,12 @@ class TileMeshHandler {
   updateRenderConfig(renderConfig: RenderConfigObject): void {
     // Build a new renderer with the new config (very cheap)
     const renderer = build_renderer(renderConfig);
+    // Every tile gets the same rotation
+    const rotationMatrix = Matrix.RotationY(Math.PI / 4);
+    // Scale each tile down horizontally to make them tessellate
+    // TODO something is wonky in the visuals here, tiles don't quite align
+    // properly. Small enough that we can punt on it for now though
+    const horizontalScaling = renderer.tile_side_radius();
 
     // Update each tile to have the correct color and height
     this.tiles.forEach(({ tile, instanceIndex, position2d }, i) => {
@@ -89,10 +85,17 @@ class TileMeshHandler {
       )
         // Reset scaling to (1,1,1)
         .removeRotationAndScaling()
+        .add(rotationMatrix)
         // Since scale values are all at 1 now, and we're **adding** to the
         // scale, we want to subtract one from each of the desired scale values
         // e.g. if height=5, we do (1,1,1)+(0,4,0)=(1,5,1)
-        .add(Matrix.Scaling(0, tileHeight - 1, 0));
+        .add(
+          Matrix.Scaling(
+            horizontalScaling - 1,
+            tileHeight - 1,
+            horizontalScaling - 1
+          )
+        );
       this.mesh.thinInstanceSetMatrixAt(
         instanceIndex,
         transformationMatrix,

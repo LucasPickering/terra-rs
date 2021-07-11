@@ -2,7 +2,7 @@ use crate::{
     util::{self, range::NumRange, unit::Meter},
     world::{
         generate::{noise::TileNoiseFn, Generate, WorldBuilder},
-        hex::{HasHexPosition, HexPoint},
+        hex::{HasHexPosition, TilePoint},
         World,
     },
 };
@@ -29,7 +29,7 @@ impl Generate for ElevationGenerator {
 
         for tile in world.tiles.values_mut() {
             let pos = tile.position();
-            let d = pos.distance_to(HexPoint::ORIGIN) as f64;
+            let d = pos.distance_to(TilePoint::ORIGIN) as f64;
 
             // Determine the range of potential elevation outputs for this tile.
             // For most tiles it's static, but for some the edge buffer will

@@ -8,7 +8,7 @@ use crate::{
             },
             TileBuilder,
         },
-        hex::{Cluster, HasHexPosition, HexPoint, HexPointIndexMap},
+        hex::{Cluster, HasHexPosition, TilePoint, TilePointIndexMap},
         Tile,
     },
 };
@@ -22,7 +22,7 @@ use std::{
     iter,
 };
 
-/// A key that we use to lookup basins. This is just a [HexPoint], but this
+/// A key that we use to lookup basins. This is just a [TilePoint], but this
 /// wrapper semantically implies that the key 1. refers to a basin but 2. has
 /// **not** been resolved yet. Basin keys can alias other keys, which is needed
 /// when we join two basins (the key of one basin stays the primary while the
@@ -31,9 +31,9 @@ use std::{
 /// [Basins::resolve].
 ///
 /// These keys are only used within this module, everything externally just uses
-/// [HexPoint].
+/// [TilePoint].
 #[derive(Copy, Clone, Debug, Display, From, Hash, PartialEq, Eq)]
-struct BasinKey(HexPoint);
+struct BasinKey(TilePoint);
 
 impl BasinKey {
     /// **Dangerously** upgrade this key into a resolved key. This should only
@@ -46,7 +46,7 @@ impl BasinKey {
 /// A basin key that has been resolved so that it is guaranteed to not be an
 /// alias. Created by [Basins::resolve].
 #[derive(Copy, Clone, Debug, Display, Into, Hash, PartialEq, Eq)]
-struct ResolvedBasinKey(HexPoint);
+struct ResolvedBasinKey(TilePoint);
 
 impl ResolvedBasinKey {
     /// Convert this key into a possibly-alias key.
@@ -69,7 +69,7 @@ pub struct Basin {
     /// All the terminals contains within the basin. This starts as just one
     /// element (the initial terminal in the basin), but this will grow for
     /// each call to [Self::join].
-    terminals: Vec<HexPoint>,
+    terminals: Vec<TilePoint>,
     /// The list of all tiles in the basin.
     tiles: Cluster<()>,
     /// The total amount of runoff held in this basin. This runoff should
@@ -112,13 +112,13 @@ impl Basin {
     /// All terminal tiles in this basin. This will start as just the initial
     /// tile, but every time a new basin is joined into this one, the terminal
     /// list will grow.
-    pub fn terminals(&self) -> &[HexPoint] {
+    pub fn terminals(&self) -> &[TilePoint] {
         &self.terminals
     }
 
     /// Get the primary key of this basin. A basin is keyed by the position of
     /// its original tile.
-    pub fn key(&self) -> HexPoint {
+    pub fn key(&self) -> TilePoint {
         self.key.into()
     }
 
@@ -144,7 +144,7 @@ impl Basin {
 
     /// Overflow **into** this basin. `donor` is the basin that is giving us
     /// the runoff.
-    pub fn overflow(&mut self, donor: HexPoint, overflow: Meter3) {
+    pub fn overflow(&mut self, donor: TilePoint, overflow: Meter3) {
         self.runoff += overflow;
 
         // Make a note of what other basins have overflowed into us. Later on,
@@ -258,7 +258,7 @@ impl Basins {
     /// runoff pattern data, we will assume that any tile with runoff on it is a
     /// terminal. As such, this should only be called **after** runoff has
     /// been pushed out to all the terminal tiles.
-    pub fn new(continent: &mut HexPointIndexMap<&mut TileBuilder>) -> Self {
+    pub fn new(continent: &mut TilePointIndexMap<&mut TileBuilder>) -> Self {
         // Create one basin per terminal tile
         let mut basins = HashMap::default();
         for tile in continent.values_mut() {
@@ -289,7 +289,7 @@ impl Basins {
 
     /// Iterate over all basin keys. This will NOT include alias keys, only
     /// primary keys.
-    pub fn keys(&self) -> impl Iterator<Item = HexPoint> + '_ {
+    pub fn keys(&self) -> impl Iterator<Item = TilePoint> + '_ {
         self.basins.keys().map(|key| key.0)
     }
 
@@ -304,7 +304,7 @@ impl Basins {
     /// think is a basin key _should_ be a basin key. So as a convenience
     /// measure, this panics in the case of an unknown key, instead of returning
     /// an `Option`.
-    pub fn get(&self, key: HexPoint) -> &Basin {
+    pub fn get(&self, key: TilePoint) -> &Basin {
         let key = self.resolve(key.into());
         unwrap!(self.basins.get(&key), "unknown basin key {}", key)
     }
@@ -315,7 +315,7 @@ impl Basins {
     /// anything that we think is a basin key _should_ be a basin key. So as a
     /// convenience measure, this panics in the case of an unknown key, instead
     /// of returning an `Option`.
-    pub fn get_mut(&mut self, key: HexPoint) -> &mut Basin {
+    pub fn get_mut(&mut self, key: TilePoint) -> &mut Basin {
         let key = self.resolve(key.into());
         unwrap!(self.basins.get_mut(&key), "unknown basin key {}", key)
     }
@@ -323,8 +323,8 @@ impl Basins {
     /// Has `donor` overflowed into `donee` in the past?
     pub fn has_previously_overflowed(
         &self,
-        donor: HexPoint,
-        donee: HexPoint,
+        donor: TilePoint,
+        donee: TilePoint,
     ) -> bool {
         let donee_basin = self.get(donee);
         donee_basin.prev_donors.contains(&donor.into())
@@ -337,8 +337,8 @@ impl Basins {
     /// Returns the resulting basin (which is just whatever `a` points to).
     pub fn join(
         &mut self,
-        a: HexPoint,
-        b: HexPoint,
+        a: TilePoint,
+        b: TilePoint,
         overflow: Meter3,
     ) -> &Basin {
         let a: BasinKey = a.into();

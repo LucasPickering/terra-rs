@@ -10,7 +10,7 @@ use crate::{
     },
     world::{
         generate::WorldBuilder,
-        hex::{HexDirection, HexPointMap},
+        hex::{TileDirection, TilePointMap},
         tile::Tile,
     },
     WorldConfig,
@@ -51,9 +51,9 @@ pub struct World {
     config: WorldConfig,
 
     /// The tiles that make up this world, keyed by their position.
-    // Serialize as a vec because hex points can't be keys
-    #[serde(with = "crate::util::serde_hex_point_map_to_vec")]
-    tiles: HexPointMap<Tile>,
+    // Serialize as a vec because tile points can't be keys
+    #[serde(with = "crate::util::serde_tile_point_map_to_vec")]
+    tiles: TilePointMap<Tile>,
 }
 
 // Non-Wasm API
@@ -80,7 +80,7 @@ impl World {
     }
 
     /// Get a reference to the map of tiles that make up this world.
-    pub fn tiles(&self) -> &HexPointMap<Tile> {
+    pub fn tiles(&self) -> &TilePointMap<Tile> {
         &self.tiles
     }
 
@@ -203,7 +203,7 @@ pub enum GeoFeature {
     /// none of them can have the same direction as a river exit. These are
     /// generated based on runoff ingress measurements.
     RiverEntrance {
-        direction: HexDirection,
+        direction: TileDirection,
         volume: Meter3,
     },
     /// A river exiting a tile from in a specific direction. A tile can have
@@ -211,7 +211,7 @@ pub enum GeoFeature {
     /// none of them can have the same direction as a river entrance. These
     /// are generated based on runoff egress measurements.
     RiverExit {
-        direction: HexDirection,
+        direction: TileDirection,
         volume: Meter3,
     },
 }
