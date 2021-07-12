@@ -55,9 +55,17 @@ PrefabInstance:
       propertyPath: m_Name
       value: Plains Tile
       objectReference: {fileID: 0}
+    - target: {fileID: 6047519076038493672, guid: 7aeaab48e510145bb928fcfa4d5c040c, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 2c6f5ab601d22834883d3c7e18f8be41, type: 2}
+    - target: {fileID: 6503280009533041702, guid: 7aeaab48e510145bb928fcfa4d5c040c, type: 3}
+      propertyPath: m_ReceiveShadows
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 6503280009533041702, guid: 7aeaab48e510145bb928fcfa4d5c040c, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: a829eee1b29dbd84cbc2f6e9ee370463, type: 2}
+      objectReference: {fileID: 2100000, guid: 2c6f5ab601d22834883d3c7e18f8be41, type: 2}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7aeaab48e510145bb928fcfa4d5c040c, type: 3}

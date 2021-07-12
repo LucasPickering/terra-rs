@@ -55,6 +55,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Desert TIle
       objectReference: {fileID: 0}
+    - target: {fileID: 6047519076038493672, guid: 7aeaab48e510145bb928fcfa4d5c040c, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 36508c771463abf43b7135d9539897e7, type: 2}
     - target: {fileID: 6503280009533041702, guid: 7aeaab48e510145bb928fcfa4d5c040c, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
