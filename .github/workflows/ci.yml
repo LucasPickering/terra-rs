@@ -109,7 +109,6 @@ jobs:
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@3.7.1
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: gh-pages
-          FOLDER: ${{ steps.download.outputs.download-path }}
-          CLEAN: true
+          branch: gh-pages
+          folder: ${{ steps.download.outputs.download-path }}
+          clean: true
