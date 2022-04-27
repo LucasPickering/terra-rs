@@ -100,14 +100,18 @@ jobs:
       - test
       - build-demo
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
       - name: Download build artifact
         id: download
         uses: actions/download-artifact@v2
         with:
           name: demo-build
+          path: demo/dist
 
       - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@3.7.1
+        uses: JamesIves/github-pages-deploy-action@v4.3.3
         with:
           branch: gh-pages
           folder: ${{ steps.download.outputs.download-path }}
