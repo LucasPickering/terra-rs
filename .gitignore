@@ -1,0 +1,12 @@
+target/
+node_modules/
+.vscode/
+pkg/
+dist/
+crates/cli/world/
+*.bin
+*.svg
+
+*.d.ts
+!declarations.d.ts
+.DS_Store

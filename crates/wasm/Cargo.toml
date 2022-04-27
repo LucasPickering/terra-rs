@@ -1,0 +1,31 @@
+cargo-features = ["per-package-target"]
+
+[package]
+authors = ["Lucas Pickering <lucas@lucaspickering.me>"]
+default-target = "wasm32-unknown-unknown"
+description = "WebAssembly bindings for the Terra core crate"
+edition = "2018"
+license = "MIT"
+name = "terra-wasm"
+repository = "https://github.com/LucasPickering/terra-rs"
+version = "0.1.0"
+
+[package.metadata.wasm-pack.profile.dev]
+wasm-opt = ['-O4', '-g']
+
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+[lib]
+crate-type = ["cdylib"]
+test = false
+
+[dependencies]
+console_error_panic_hook = "0.1"
+js-sys = "0.3"
+log = "0.4"
+serde = "1.0"
+terra = {path = "../core", features = ["bin", "svg", "stl"]}
+wasm-bindgen = {version = "0.2", features = ["serde-serialize"]}
+wasm-logger = "0.2"

@@ -1,0 +1,5 @@
+radius = 10
+seed = 7317611935190114194
+
+[elevation]
+edge_buffer_fraction = 0.0

@@ -1,0 +1,24 @@
+[package]
+authors = ["Lucas Pickering <lucas@lucaspickering.me>"]
+description = "Command line interface for Terra 3D terrain generation"
+edition = "2018"
+license = "MIT"
+name = "terra-cli"
+repository = "https://github.com/LucasPickering/terra-rs"
+version = "0.1.0"
+
+[[bin]]
+name = "terra"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+config = {version = "0.10", default-features = false, features = ["json", "toml"]}
+log = "*"
+serde = {version = "1.0", features = ["derive"]}
+serde_json = "1.0"
+simple_logger = "1.11"
+structopt = "0.3"
+strum = "*"
+terra = {path = "../core", features = ["bin", "svg", "stl"]}
+toml = "*"
