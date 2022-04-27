@@ -1,5 +1,0 @@
-# A world to be 3D-printed
-radius = 30
-seed = 6419875009622483798
-[elevation]
-edge_buffer_fraction = 0.0
