@@ -8,8 +8,8 @@ use bevy::{
     DefaultPlugins,
 };
 use terra::{
-    HasHexPosition, HexDirection, Point2, Tile, VertexDirection, World,
-    WorldConfig, WorldRenderer,
+    HasHexPosition, HexDirection, Point2, RenderConfig, TilePoint,
+    VertexDirection, World, WorldConfig, WorldRenderer,
 };
 
 fn main() {
@@ -26,16 +26,33 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let world = World::generate(WorldConfig {
-        radius: 0,
+        radius: 50,
+        seed: 238758723847892,
         ..default()
     })
     .unwrap();
-    let world_renderer = WorldRenderer::new(default()).unwrap();
+    let renderer = WorldRenderer::new(RenderConfig {
+        vertical_scale: 1.0,
+        ..default()
+    })
+    .unwrap();
 
+    let tile_mesh_handle = meshes.add(tile_mesh(&renderer));
     for tile in world.tiles().values() {
+        let position_2d = renderer.hex_to_screen_space(tile.position());
+        let transform = Transform::from_xyz(
+            position_2d.x as f32,
+            0.0,
+            position_2d.y as f32,
+        )
+        .with_scale([1.0, renderer.tile_height(tile) as f32, 1.0].into());
+        let color = renderer.tile_color(tile);
+
         commands.spawn(PbrBundle {
-            mesh: meshes.add(tile_mesh(&world_renderer, tile)),
-            material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
+            mesh: tile_mesh_handle.clone(),
+            material: materials
+                .add(Color::rgb(color.red, color.green, color.blue).into()),
+            transform,
             ..default()
         });
     }
@@ -47,18 +64,18 @@ fn setup(
             shadows_enabled: true,
             ..default()
         },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
+        transform: Transform::from_xyz(0.0, 250.0, 0.0),
         ..default()
     });
     // camera
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-2.0, 2.5, 5.0)
+        transform: Transform::from_xyz(200.0, 250.0, -200.0)
             .looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     });
 }
 
-fn tile_mesh(world_renderer: &WorldRenderer, tile: &Tile) -> Mesh {
+fn tile_mesh(world_renderer: &WorldRenderer) -> Mesh {
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
 
     // A tile has 12 vertices, 6 on top and 6 on bottom. In this order:
@@ -69,10 +86,10 @@ fn tile_mesh(world_renderer: &WorldRenderer, tile: &Tile) -> Mesh {
         .copied()
         .map(|direction| {
             world_renderer
-                .hex_to_screen_space(tile.position().vertex(direction))
+                .hex_to_screen_space(TilePoint::ORIGIN.vertex(direction))
         })
         .collect();
-    let vertices: Vec<[f32; 3]> = vertices_2d
+    let positions: Vec<[f32; 3]> = vertices_2d
         .iter()
         // Bottom 6
         .map(|point2| [point2.x as f32, 0.0, point2.y as f32])
@@ -84,7 +101,10 @@ fn tile_mesh(world_renderer: &WorldRenderer, tile: &Tile) -> Mesh {
                 .map(|point2| [point2.x as f32, 1.0, point2.y as f32]),
         )
         .collect();
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
+    let normals: Vec<[f32; 3]> =
+        positions.iter().map(|_| [0.0, 1.0, 0.0]).collect();
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
 
     // REMEMBER: We use the right-hand rule, so all vertices are
     // COUNTER-CLOCKWISE when looking at the visible side.
