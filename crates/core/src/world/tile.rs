@@ -18,6 +18,7 @@ use wasm_bindgen::prelude::*;
 /// world generation.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
 pub struct Tile {
     // These fields are all pub(super) so they can be accessed by the builder
     /// The location of this tile in the world. See [TilePoint] for a

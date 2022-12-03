@@ -39,6 +39,7 @@ use wasm_bindgen::prelude::*;
 /// - SVG (2D with colors and textures)
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::system::Resource))]
 pub struct WorldRenderer {
     /// Config that determines how rendering is done
     ///
