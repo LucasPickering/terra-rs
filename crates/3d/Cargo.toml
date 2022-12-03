@@ -15,3 +15,4 @@ bevy = {version = "0.9.1", default-features = false, features = [
   "render",
   "x11",
 ]}
+terra = {path = "../core"}

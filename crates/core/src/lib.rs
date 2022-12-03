@@ -24,7 +24,6 @@
 
 #![feature(const_fn_floating_point_arithmetic)]
 
-
 // TODO rework these to have one level of module depth
 
 mod config;
@@ -37,7 +36,7 @@ pub use crate::{
         ElevationConfig, GeoFeatureConfig, NoiseFnConfig, NoiseFnType,
         RainfallConfig, WorldConfig,
     },
-    render::{config::RenderConfig, TileLens, WorldRenderer},
+    render::{config::RenderConfig, unit::Point2, TileLens, WorldRenderer},
     util::{
         range::{NumRange, RangeValue},
         unit::{Meter, Meter2, Meter3},

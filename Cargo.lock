@@ -2555,6 +2555,7 @@ name = "terra-3d"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "terra",
 ]
 
 [[package]]
