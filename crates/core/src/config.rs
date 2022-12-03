@@ -55,7 +55,7 @@ pub struct WorldConfig {
     pub geo_feature: GeoFeatureConfig,
 }
 
-/// Configuration for elevation map generation. THis controls the elevation of
+/// Configuration for elevation map generation. This controls the elevation of
 /// each tile, which defines the shape of the terrain. Elevation is generated
 /// by a noise function, then some post-processing is applied.
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
