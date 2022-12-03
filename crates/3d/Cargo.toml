@@ -1,0 +1,17 @@
+[package]
+authors = ["Lucas Pickering <lucas@lucaspickering.me>"]
+description = "3D rendering for Terra worlds"
+edition = "2021"
+license = "MIT"
+name = "terra-3d"
+repository = "https://github.com/LucasPickering/terra-rs"
+version = "0.1.0"
+
+[dependencies]
+bevy = {version = "0.9.1", default-features = false, features = [
+  "bevy_asset",
+  "bevy_winit",
+  "dynamic", # fast compile
+  "render",
+  "x11",
+]}
