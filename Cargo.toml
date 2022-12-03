@@ -1,4 +1,5 @@
 [workspace]
+exclude = ["crates/wasm"] # TODO remove before merging bevy stuff 
 members = [
   "crates/*",
 ] 
