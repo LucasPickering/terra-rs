@@ -1,7 +1,8 @@
 [workspace]
 members = [
   "crates/*",
-]
+] 
+resolver = "2" # Needed for bevy/wgpu stuff
 
 # wasm-pack-plugin doesn't allow us to set the mode to 'profiling', so we have
 # to turn dev into profiling (optimized, but with debug symbols)
