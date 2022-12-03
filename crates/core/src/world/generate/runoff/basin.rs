@@ -295,7 +295,7 @@ impl Basins {
 
     /// Move the basins out of this struct.
     pub fn into_basins(self) -> impl Iterator<Item = Basin> {
-        self.basins.into_iter().map(|(_, basin)| basin)
+        self.basins.into_values()
     }
 
     /// Get a reference to a basin. If the given key is an alias, the alias will

@@ -134,7 +134,7 @@ impl RunoffPattern {
             .iter()
             .filter_map(|(destination, fraction)| match destination {
                 RunoffDestination::Terminal(term_pos)
-                    if excluding.contains(&term_pos) =>
+                    if excluding.contains(term_pos) =>
                 {
                     None
                 }

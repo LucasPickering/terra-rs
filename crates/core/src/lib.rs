@@ -23,7 +23,7 @@
 //! - `svg` - Render worlds in 2D SVG format ([World::to_svg])
 
 #![feature(const_fn_floating_point_arithmetic)]
-#![feature(const_fn_trait_bound)]
+
 
 // TODO rework these to have one level of module depth
 

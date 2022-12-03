@@ -93,7 +93,7 @@ impl Rangeable<f64> for Meter3 {
 ///   comparisons. E.g. for `Meter` we map down to `f64`, but for `f64` it's
 ///   still just `f64`
 #[derive(Copy, Clone, Debug, Display, PartialEq)]
-#[display(fmt = "[{}, {}]", min, max)]
+#[display(fmt = "[{min}, {max}]")]
 pub struct NumRange<T: Rangeable<I>, I = T> {
     pub min: T,
     pub max: T,

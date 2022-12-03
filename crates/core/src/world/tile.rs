@@ -115,7 +115,9 @@ impl Tile {
     /// **gross** ingress, not the **net**.
     pub fn runoff_ingress(&self) -> Meter3 {
         // Ingress values are positive, so filter out negative values
-        std::array::IntoIter::new(self.runoff_traversed.as_array())
+        self.runoff_traversed
+            .as_array()
+            .into_iter()
             .filter(|v| *v > Meter3(0.0))
             .sum()
     }
@@ -125,7 +127,10 @@ impl Tile {
     pub fn runoff_egress(&self) -> Meter3 {
         // Egress values are negative, so filter out positive values, then
         // negate the sum
-        -std::array::IntoIter::new(self.runoff_traversed.as_array())
+        -self
+            .runoff_traversed
+            .as_array()
+            .into_iter()
             .filter(|v| *v < Meter3(0.0))
             .sum::<Meter3>()
     }

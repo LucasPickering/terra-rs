@@ -50,8 +50,7 @@ fn test_world_config_validation() {
     assert_eq!(
         error_fields,
         vec!["elevation", "radius", "rainfall"],
-        "incorrect validation errors in {:#?}",
-        validation_errors
+        "incorrect validation errors in {validation_errors:#?}",
     );
 }
 
@@ -77,7 +76,6 @@ fn test_render_config_validation() {
     assert_eq!(
         error_fields,
         vec!["vertical_scale"],
-        "incorrect validation errors in {:#?}",
-        validation_errors
+        "incorrect validation errors in {validation_errors:#?}",
     );
 }

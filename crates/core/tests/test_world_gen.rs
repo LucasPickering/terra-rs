@@ -14,8 +14,7 @@ fn test_world_gen_default() {
     assert_eq!(
         world.tiles().len(),
         30301,
-        "Default config failed: {:?}",
-        config
+        "Default config failed: {config:?}",
     );
 }
 

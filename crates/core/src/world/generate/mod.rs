@@ -132,7 +132,7 @@ impl WorldBuilder {
 
     /// A helper to run a generation step on this builder.
     fn apply_generator(&mut self, generator: impl Debug + Generate) {
-        timed!(&format!("{:?}", generator), generator.generate(self))
+        timed!(&format!("{generator:?}"), generator.generate(self))
     }
 }
 
@@ -225,7 +225,7 @@ impl TileBuilder {
         if rainfall >= Meter3(0.0) {
             self.rainfall = Some(rainfall);
         } else {
-            panic!("cannot set negative rainfall {}", rainfall)
+            panic!("cannot set negative rainfall {rainfall} for {self:?}")
         }
     }
 
@@ -271,9 +271,7 @@ impl TileBuilder {
     pub fn set_runoff(&mut self, runoff: Meter3) {
         assert!(
             runoff >= Meter3(0.0),
-            "cannot set negative runoff {} for {:?}",
-            runoff,
-            self
+            "cannot set negative runoff {runoff} for {self:?}"
         );
         self.runoff = Some(runoff);
     }
@@ -289,9 +287,7 @@ impl TileBuilder {
     ) {
         assert!(
             runoff >= Meter3(0.0),
-            "cannot add negative runoff {} for {:?}",
-            runoff,
-            self
+            "cannot add negative runoff {runoff} for {self:?}"
         );
 
         self.runoff = Some(self.runoff() + runoff);
@@ -362,7 +358,7 @@ impl TileBuilder {
         if !self.features.contains(&feature) {
             self.features.push(feature);
         } else {
-            panic!("feature {:?} already exists for {:?}", feature, self)
+            panic!("feature {feature:?} already exists for {self:?}")
         }
     }
 }

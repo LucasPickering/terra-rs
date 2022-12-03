@@ -38,10 +38,27 @@ Currently we use Rust nightly because of a handful of features. Once this list g
 
 - rustc
   - [const_fn_floating_point_arithmetic](https://github.com/rust-lang/rust/issues/57241)
-  - [const_fn_trait_bound](https://github.com/rust-lang/rust/issues/57563)
 - rustfmt
   - [imports_granularity](https://github.com/rust-lang/rustfmt/blob/master/Configurations.md#imports_granularity)
   - [wrap_comments](https://github.com/rust-lang/rustfmt/issues/3347)
 - cargo
-  - [namespaced-features](https://doc.rust-lang.org/cargo/reference/unstable.html#namespaced-features)
   - [per-package-target](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#per-package-target)
+
+## Troubleshooting
+
+### ARM + wasm-pack
+
+If you're running on a Mac M1 or any other ARM system and get this error when trying to run the demo:
+
+```
+Error: no prebuilt wasm-opt binaries are available for this platform: Unrecognized target!
+To disable `wasm-opt`, add `wasm-opt = false` to your package metadata in your `Cargo.toml`
+```
+
+Then make sure your installation of `wasm-pack` is at least version `0.10.2`. You can check with:
+
+```sh
+wasm-pack --version
+```
+
+You can upgrade by reinstalling with the link above.

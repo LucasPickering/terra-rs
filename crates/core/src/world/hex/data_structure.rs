@@ -2,8 +2,10 @@ use crate::world::hex::{TileDirection, TilePoint};
 use fnv::FnvBuildHasher;
 use indexmap::{map::Entry, IndexMap};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::fmt::Debug;
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    fmt::Debug,
+};
 
 /// A set of tile points
 pub type TilePointSet = HashSet<TilePoint, FnvBuildHasher>;
@@ -124,7 +126,7 @@ impl<T: Debug> Cluster<T> {
 
             // Grab the next item off the queue and check it
             while let Some((pos, item)) = bfs_queue.pop_front() {
-                if predicate(&item) {
+                if predicate(item) {
                     // If it passes the pred, then add it to the cluster and add
                     // its neighbors to the queue
                     cluster.insert(pos, item);
@@ -190,8 +192,7 @@ impl<T: Debug> Cluster<T> {
         let removed = self.adjacents.remove(&pos);
         assert!(
             removed,
-            "cannot add tile at {} to cluster {:?}, it is not adjacent!",
-            pos, self
+            "cannot add tile at {pos} to cluster {self:?}, it is not adjacent!",
         );
 
         // Add the tile to the map, and add its neighbors to our set of
@@ -201,7 +202,7 @@ impl<T: Debug> Cluster<T> {
                 entry.insert(tile);
             }
             Entry::Occupied(_) => {
-                panic!("tile {} is already in cluster {:?}", pos, self);
+                panic!("tile {pos} is already in cluster {self:?}");
             }
         }
         let tiles = &self.tiles; // cause closure capturing is kinda dumb

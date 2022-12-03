@@ -211,7 +211,7 @@ fn run(opt: Opt) -> anyhow::Result<()> {
                 .read(true)
                 .open(&input_path)
                 .with_context(|| {
-                    format!("error opening world file {:?}", input_path)
+                    format!("error opening world file {input_path:?}")
                 })?;
             let world = World::from_bin(file)?;
             info!("Loaded world from {:?}", &input_path);
@@ -248,7 +248,7 @@ fn main() {
     let exit_code = match run(Opt::from_args()) {
         Ok(_) => 0,
         Err(err) => {
-            eprintln!("Error: {:#}", err);
+            eprintln!("Error: {err:#}");
             1
         }
     };

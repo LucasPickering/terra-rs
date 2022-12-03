@@ -215,9 +215,7 @@ impl<'a> Continent<'a> {
             assert!(
                 tile.position() == runoff_pattern.position(),
                 "tile/runoff pattern position mismatch. \
-                tile: {:?} \nrunoff pattern: {:?}",
-                tile,
-                runoff_pattern
+                tile: {tile:?} \nrunoff pattern: {runoff_pattern:?}"
             );
             tile.set_runoff_pattern(runoff_pattern);
         }
@@ -405,8 +403,7 @@ impl<'a> Continent<'a> {
             // be in a basin, so none of them should ever become candidates).
             assert!(
                 candidate_tile.runoff() == Meter3(0.0),
-                "encountered candidate tile with non-zero runoff {:?}",
-                candidate_tile
+                "encountered candidate tile with non-zero runoff {candidate_tile:?}"
             );
 
             // If the candidate is higher than our current water level, then
