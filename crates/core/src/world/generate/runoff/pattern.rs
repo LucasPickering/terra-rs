@@ -1,8 +1,5 @@
 use crate::{
-    world::hex::{
-        HasHexPosition, TileDirection, TileDirectionMap, TilePoint,
-        TilePointMap,
-    },
+    world::hex::{HasHexPosition, TileDirection, TileDirectionMap, TilePoint},
     Meter3,
 };
 use assert_approx_eq::assert_approx_eq;
@@ -51,28 +48,6 @@ pub struct RunoffPattern {
     /// this map is empty, the tile is a terminal.
     exits: TileDirectionMap<f64>,
 
-    /// A map that tracks every tile that runoff passes over after leaving this
-    /// tile. This **doesn't** track where the runoff _ends up_ (that's what
-    /// `terminals` is for). These numbers represent the fraction of runoff
-    /// from this origin tile that passes over each descendent. E.g. if
-    /// this tile starts with 1.0 m³ of runoff, and the map looks like
-    /// this:
-    ///
-    /// ```text
-    /// {
-    ///     (1, 1, -2) => 0.3,
-    ///     (-1, 1, 0) => 0.7,
-    ///     (-1, 2, -1) => 0.4,
-    ///     (-1, 0, 1) => 0.3,
-    /// }
-    /// ```
-    ///
-    /// Then 30% of our runoff passes over (1, 1, -2), 70% over (-1, 1, 0), and
-    /// so on. Notice that the values **do not add up to 1.0**. The same blob
-    /// of runoff will run over many tiles, so 1.0 m³ of runoff can account for
-    /// much more than 1.0 m³ of traversal.
-    traversals: TilePointMap<f64>,
-
     /// A destination is a point that collects runoff. There are two types:
     /// - Ocean
     /// - Terminal tile, which is a tile with no exits, i.e. a tile whose
@@ -95,7 +70,6 @@ impl RunoffPattern {
         Self {
             position,
             exits: HashMap::default(),
-            traversals: TilePointMap::default(),
             destinations: HashMap::default(),
         }
     }
