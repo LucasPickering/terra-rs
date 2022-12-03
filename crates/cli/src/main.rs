@@ -100,13 +100,6 @@ impl OutputFormat {
     }
 }
 
-/// Options to configure rendered output formats.
-#[derive(Copy, Clone, Debug)]
-pub struct RenderOptions {
-    lens: TileLens,
-    show_features: bool,
-}
-
 fn load_config(config_path: &Path) -> anyhow::Result<WorldConfig> {
     // Load config
     let mut settings = Config::new();
