@@ -15,7 +15,7 @@ pub struct WorldPlugin;
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.insert_resource(WorldConfig {
-            radius: 50,
+            radius: 100,
             seed: 238758723847892,
             ..default()
         })

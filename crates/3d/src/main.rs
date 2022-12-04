@@ -3,6 +3,7 @@ mod world;
 
 use crate::{camera::CameraPlugin, world::WorldPlugin};
 use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     prelude::{
         default, App, Commands, PointLight, PointLightBundle, Transform,
     },
@@ -12,6 +13,8 @@ use bevy::{
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugin(LogDiagnosticsPlugin::default())
+        .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(WorldPlugin)
         .add_plugin(CameraPlugin)
         .add_startup_system(setup)
