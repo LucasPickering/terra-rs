@@ -1,7 +1,7 @@
 use bevy::{
     prelude::{
-        default, Assets, Bundle, Color, Commands, Mesh, PbrBundle, Plugin, Res,
-        ResMut, StandardMaterial, Transform,
+        debug, default, info, Assets, Bundle, Color, Commands, Mesh, PbrBundle,
+        Plugin, Res, ResMut, StandardMaterial, Transform,
     },
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
@@ -15,7 +15,7 @@ pub struct WorldPlugin;
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.insert_resource(WorldConfig {
-            radius: 100,
+            radius: 50,
             seed: 238758723847892,
             ..default()
         })
@@ -45,9 +45,11 @@ fn generate_world(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     // Generate the world
+    info!("Generating world");
     let world = World::generate(world_config.to_owned()).unwrap();
 
     // Spawn all the world tiles
+    debug!("Spawning tile meshes");
     let tile_mesh_handle = meshes.add(tile_mesh(&renderer));
     for tile in world.tiles().values() {
         let position_2d = renderer.hex_to_screen_space(tile.position());

@@ -10,6 +10,9 @@ use bevy::{
     window::Windows,
 };
 
+const ZOOM_SPEED: f32 = 0.02;
+const MIN_RADIUS: f32 = 0.1;
+
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
@@ -122,9 +125,9 @@ fn pan_orbit_camera(
             pan_orbit.focus += translation;
         } else if scroll.abs() > 0.0 {
             any = true;
-            pan_orbit.radius -= scroll * pan_orbit.radius * 0.2;
+            pan_orbit.radius -= scroll * pan_orbit.radius * ZOOM_SPEED;
             // dont allow zoom to reach zero or you get stuck
-            pan_orbit.radius = f32::max(pan_orbit.radius, 0.05);
+            pan_orbit.radius = f32::max(pan_orbit.radius, MIN_RADIUS);
         }
 
         if any {
