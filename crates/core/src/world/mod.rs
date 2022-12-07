@@ -84,6 +84,11 @@ impl World {
         &self.tiles
     }
 
+    /// Get the owned tile map for this world
+    pub fn into_tiles(self) -> TilePointMap<Tile> {
+        self.tiles
+    }
+
     /// Generate a new world with the given config. This operation could take
     /// several seconds, depending on the world size and complexity. Returns
     /// an error if the given config is invalid. Panics only in the case of

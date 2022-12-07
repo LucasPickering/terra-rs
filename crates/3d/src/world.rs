@@ -15,7 +15,7 @@ pub struct WorldPlugin;
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.insert_resource(WorldConfig {
-            radius: 50,
+            radius: 20,
             seed: 238758723847892,
             ..default()
         })
@@ -51,22 +51,25 @@ fn generate_world(
     // Spawn all the world tiles
     debug!("Spawning tile meshes");
     let tile_mesh_handle = meshes.add(tile_mesh(&renderer));
-    for tile in world.tiles().values() {
+    for tile in world.into_tiles().into_values() {
         let position_2d = renderer.hex_to_screen_space(tile.position());
         let transform = Transform::from_xyz(
             position_2d.x as f32,
             0.0,
             position_2d.y as f32,
         )
-        .with_scale([1.0, renderer.tile_height(tile) as f32, 1.0].into());
-        let color = renderer.tile_color(tile);
+        .with_scale([1.0, renderer.tile_height(&tile) as f32, 1.0].into());
+        let color = renderer.tile_color(&tile);
 
-        commands.spawn(PbrBundle {
-            mesh: tile_mesh_handle.clone(),
-            material: materials
-                .add(Color::rgb(color.red, color.green, color.blue).into()),
-            transform,
-            ..default()
+        commands.spawn(TileBundle {
+            tile,
+            pbr_bundle: PbrBundle {
+                mesh: tile_mesh_handle.clone(),
+                material: materials
+                    .add(Color::rgb(color.red, color.green, color.blue).into()),
+                transform,
+                ..default()
+            },
         });
     }
 }
