@@ -9,10 +9,13 @@ version = "0.1.0"
 
 [dependencies]
 bevy = {version = "0.9.1", default-features = false, features = [
+  # We can't use `dynamic` because it doesn't work in wasm :(
   "bevy_asset",
   "bevy_winit",
-  "dynamic", # fast compile
   "render",
   "x11",
 ]}
 terra = {path = "../core", features = ["bevy"]}
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1"
