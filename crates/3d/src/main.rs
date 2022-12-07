@@ -18,7 +18,7 @@ fn main() {
 
     App::new()
         .add_plugins(DefaultPlugins.set(LogPlugin {
-            filter: "debug,wgpu_core=warn,wgpu_hal=warn".into(),
+            filter: "info,wgpu_core=warn,wgpu_hal=warn,terra=debug,terra-3d=debug".into(),
             level: bevy::log::Level::DEBUG,
         }))
         .add_plugin(LogDiagnosticsPlugin::default())
