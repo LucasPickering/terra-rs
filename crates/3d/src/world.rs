@@ -166,15 +166,10 @@ fn tile_mesh(renderer: &WorldRenderer) -> Mesh {
     //     \ /
     //      9
 
-    // A tile is made up of 20 polygons: 2 per side plus 4 on each end
+    // A tile is made up of 16 polygons: 2 per side plus 4 on top
+    // We *skip* the bottom because it's not visible anyway
     // Each polygon is 3 vertices
     let mut indices: Vec<u32> = vec![
-        // Bottom - these are CCW instead of CW because we want them
-        // to render upside-down
-        0, 5, 1, // T1
-        1, 5, 4, // T2
-        1, 4, 2, // T3
-        2, 4, 3, // T4
         // Top
         6, 7, 11, // T1
         7, 10, 11, // T2
