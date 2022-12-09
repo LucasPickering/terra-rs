@@ -11,8 +11,8 @@ use crate::{
         unit::{Color3, Point2},
     },
     world::hex::HexThing,
-    Biome, BiomeType, GeoFeature, HasHexPosition, Meter3, NumRange, Tile,
-    World,
+    Biome, BiomeType, GeoFeature, HasHexPosition, Meter, Meter3, NumRange,
+    Tile, World,
 };
 use nalgebra::{Matrix3, Point3, Rotation3};
 use serde::{Deserialize, Serialize};
@@ -145,9 +145,20 @@ impl WorldRenderer {
     /// [RenderConfig::vertical_scale] for more info on what exactly the
     /// vertical scale means.
     pub fn tile_height(&self, tile: &Tile) -> f64 {
+        self.elevation_to_height(tile.elevation())
+    }
+
+    /// Get the height of sea level, in absolute coordinates
+    pub fn sea_level_height(&self) -> f64 {
+        self.elevation_to_height(World::SEA_LEVEL)
+    }
+
+    /// Convert a relative elevation value to an absolute height, to be used
+    /// in 3D rendering coordinates.
+    pub fn elevation_to_height(&self, elevation: Meter) -> f64 {
         // Map elevation to a zero-based scale
         let zeroed_elevation = World::ELEVATION_RANGE
-            .map_to(&World::ELEVATION_RANGE.zeroed(), tile.elevation());
+            .map_to(&World::ELEVATION_RANGE.zeroed(), elevation);
         // Multiply by render scale
         zeroed_elevation.0 * self.render_config.vertical_scale
     }
