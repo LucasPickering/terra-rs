@@ -1,6 +1,6 @@
 use bevy::{
     prelude::{
-        debug, default, info, Assets, Bundle, Color, Commands,
+        debug, default, info, shape, Assets, Bundle, Color, Commands,
         DirectionalLight, DirectionalLightBundle, Mesh, PbrBundle, Plugin, Res,
         ResMut, StandardMaterial, Transform, Vec3,
     },
@@ -91,6 +91,18 @@ fn generate_world(
             },
         });
     }
+
+    // Shitty ocean plane
+    commands.spawn(PbrBundle {
+        mesh: meshes.add(Mesh::from(shape::Plane { size: 500.0 })),
+        material: materials.add(Color::rgba(0.078, 0.302, 0.639, 0.7).into()),
+        transform: Transform::from_xyz(
+            0.0,
+            renderer.sea_level_height() as f32,
+            0.0,
+        ),
+        ..default()
+    });
 }
 
 /// Build a 3d mesh of a hexagonal prism, representing a tile.
