@@ -1,7 +1,8 @@
 use bevy::{
     prelude::{
-        debug, default, info, Assets, Bundle, Color, Commands, Mesh, PbrBundle,
-        Plugin, Res, ResMut, StandardMaterial, Transform,
+        debug, default, info, Assets, Bundle, Color, Commands,
+        DirectionalLight, DirectionalLightBundle, Mesh, PbrBundle, Plugin, Res,
+        ResMut, StandardMaterial, Transform, Vec3,
     },
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
@@ -15,7 +16,7 @@ pub struct WorldPlugin;
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.insert_resource(WorldConfig {
-            radius: 20,
+            radius: 100,
             seed: 238758723847892,
             ..default()
         })
@@ -26,6 +27,7 @@ impl Plugin for WorldPlugin {
             })
             .unwrap(),
         )
+        .add_startup_system(setup)
         .add_startup_system(generate_world);
     }
 }
@@ -35,6 +37,22 @@ struct TileBundle {
     tile: Tile,
     #[bundle]
     pbr_bundle: PbrBundle,
+}
+
+/// Add static entities to the scene
+fn setup(mut commands: Commands) {
+    // Directional light emulates the sun
+    commands.spawn(DirectionalLightBundle {
+        directional_light: DirectionalLight {
+            shadows_enabled: true,
+            ..default()
+        },
+        // This determines the direction. Actual position doesn't matter though,
+        // it's just there to determine rotation from .looking_at
+        transform: Transform::from_xyz(500.0, 100.0, 500.0)
+            .looking_at(Vec3::ZERO, Vec3::Y),
+        ..default()
+    });
 }
 
 fn generate_world(
@@ -53,12 +71,13 @@ fn generate_world(
     let tile_mesh_handle = meshes.add(tile_mesh(&renderer));
     for tile in world.into_tiles().into_values() {
         let position_2d = renderer.hex_to_screen_space(tile.position());
+        let height = renderer.tile_height(&tile) as f32;
         let transform = Transform::from_xyz(
             position_2d.x as f32,
             0.0,
             position_2d.y as f32,
         )
-        .with_scale([1.0, renderer.tile_height(&tile) as f32, 1.0].into());
+        .with_scale([1.0, height, 1.0].into());
         let color = renderer.tile_color(&tile);
 
         commands.spawn(TileBundle {
@@ -75,7 +94,7 @@ fn generate_world(
 }
 
 /// Build a 3d mesh of a hexagonal prism, representing a tile.
-fn tile_mesh(world_renderer: &WorldRenderer) -> Mesh {
+fn tile_mesh(renderer: &WorldRenderer) -> Mesh {
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
 
     // A tile has 12 vertices, 6 on top and 6 on bottom. In this order:
@@ -85,8 +104,7 @@ fn tile_mesh(world_renderer: &WorldRenderer) -> Mesh {
         .iter()
         .copied()
         .map(|direction| {
-            world_renderer
-                .hex_to_screen_space(TilePoint::ORIGIN.vertex(direction))
+            renderer.hex_to_screen_space(TilePoint::ORIGIN.vertex(direction))
         })
         .collect();
     let positions: Vec<[f32; 3]> = vertices_2d
@@ -97,12 +115,16 @@ fn tile_mesh(world_renderer: &WorldRenderer) -> Mesh {
         .chain(
             vertices_2d
                 .iter()
-                // TODO use elevation
                 .map(|point2| [point2.x as f32, 1.0, point2.y as f32]),
         )
         .collect();
-    let normals: Vec<[f32; 3]> =
-        positions.iter().map(|_| [0.0, 1.0, 0.0]).collect();
+
+    // Normals are just the vertex vectors, but normalized
+    let normals: Vec<Vec3> = positions
+        .iter()
+        .map(|position| Vec3::new(position[0], 0.0, position[2]).normalize())
+        .collect();
+
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
 
