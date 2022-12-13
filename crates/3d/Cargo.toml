@@ -16,6 +16,7 @@ bevy = {version = "0.9.1", default-features = false, features = [
   "render",
   "x11",
 ]}
+bevy-inspector-egui = "0.14.0"
 bevy_common_assets = {version = "0.4.0", features = ["json"]}
 terra = {path = "../core", features = ["bevy"]}
 

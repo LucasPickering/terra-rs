@@ -1,9 +1,10 @@
 use bevy::{
     prelude::{
-        default, info, shape, Added, AssetEvent, AssetServer, Assets, Color,
-        Commands, DirectionalLight, DirectionalLightBundle, Entity,
+        default, info, Added, AssetEvent, AssetServer, Assets, BuildChildren,
+        Color, Commands, DirectionalLight, DirectionalLightBundle, Entity,
         EventReader, Handle, IntoSystemDescriptor, Mesh, PbrBundle, Plugin,
-        Query, Res, ResMut, Resource, StandardMaterial, Transform, Vec3, With,
+        Query, Res, ResMut, Resource, SpatialBundle, StandardMaterial,
+        Transform, Vec3, With,
     },
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
@@ -44,12 +45,7 @@ fn load_config(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 /// Add static entities to the scene
-fn init_scene(
-    renderer: Res<WorldRenderer>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
+fn init_scene(mut commands: Commands) {
     // Directional light emulates the sun
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
@@ -60,18 +56,6 @@ fn init_scene(
         // it's just there to determine rotation from .looking_at
         transform: Transform::from_xyz(500.0, 100.0, 500.0)
             .looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
-
-    // Shitty ocean plane
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Plane { size: 500.0 })),
-        material: materials.add(Color::rgba(0.078, 0.302, 0.639, 0.7).into()),
-        transform: Transform::from_xyz(
-            0.0,
-            renderer.sea_level_height() as f32,
-            0.0,
-        ),
         ..default()
     });
 }
@@ -131,25 +115,60 @@ fn render_world(
 ) {
     // For each tile entity, we'll attach additional visual components
     let tile_mesh_handle = meshes.add(tile_mesh(&renderer));
+    let mut water_material: StandardMaterial =
+        Color::rgba(0.078, 0.302, 0.639, 0.5).into();
+    water_material.metallic = 0.0;
+    let water_material_handle = materials.add(water_material);
+
     for (entity, tile) in tile_query.iter() {
         let position_2d = renderer.hex_to_screen_space(tile.position());
         let height = renderer.tile_height(tile) as f32;
-        let transform = Transform::from_xyz(
-            position_2d.x as f32,
-            0.0,
-            position_2d.y as f32,
-        )
-        .with_scale([1.0, height, 1.0].into());
         let color = renderer.tile_color(tile);
 
-        // Attach a mesh to the existing tile entity
-        commands.entity(entity).insert(PbrBundle {
-            mesh: tile_mesh_handle.clone(),
-            material: materials
-                .add(Color::rgb(color.red, color.green, color.blue).into()),
-            transform,
-            ..default()
-        });
+        // We'll add a root transform that provides x/z position. Then add
+        // actual visual objects as children. This makes sure transform stay
+        // isolated, e.g. tile height doesn't affect water or vice/versa
+        commands
+            .entity(entity)
+            .insert(SpatialBundle {
+                transform: Transform::from_xyz(
+                    position_2d.x as f32,
+                    0.0,
+                    position_2d.y as f32,
+                ),
+                ..default()
+            })
+            .with_children(|parent| {
+                // Spawn the hex mesh
+                parent.spawn(PbrBundle {
+                    mesh: tile_mesh_handle.clone(),
+                    material: materials.add(
+                        Color::rgb(color.red, color.green, color.blue).into(),
+                    ),
+                    transform: Transform::from_scale([1.0, height, 1.0].into()),
+                    ..default()
+                });
+
+                // Add water for water tiles
+                if tile.is_water_biome() {
+                    // Span the distance between the tile and sea level
+                    let transform = Transform::from_xyz(0.0, height, 0.0)
+                        .with_scale(
+                            [
+                                1.0,
+                                renderer.sea_level_height() as f32 - height,
+                                1.0,
+                            ]
+                            .into(),
+                        );
+                    parent.spawn(PbrBundle {
+                        mesh: tile_mesh_handle.clone(),
+                        material: water_material_handle.clone(),
+                        transform,
+                        ..default()
+                    });
+                }
+            });
     }
 }
 
