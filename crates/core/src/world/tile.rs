@@ -1,6 +1,6 @@
 use crate::{
-    world::hex::TileDirectionValues, Biome, GeoFeature, HasHexPosition, Meter,
-    Meter2, Meter3, TilePoint, World,
+    world::hex::TileDirectionValues, Biome, BiomeType, GeoFeature,
+    HasHexPosition, Meter, Meter2, Meter3, TilePoint, World,
 };
 use serde::{Deserialize, Serialize};
 #[cfg(target_arch = "wasm32")]
@@ -140,6 +140,18 @@ impl Tile {
     /// See [Biome] for more info.
     pub fn biome(&self) -> Biome {
         self.biome
+    }
+
+    /// Convenience method to check if the **biome** of this tile is land. This
+    /// has nothing to do with runoff on the tile!
+    pub fn is_land_biome(&self) -> bool {
+        self.biome.biome_type() == BiomeType::Land
+    }
+
+    /// Convenience method to check if the **biome** of this tile is water. This
+    /// has nothing to do with runoff on the tile!
+    pub fn is_water_biome(&self) -> bool {
+        self.biome.biome_type() == BiomeType::Water
     }
 }
 

@@ -8,6 +8,7 @@ use bevy::{
     prelude::{App, AssetPlugin, PluginGroup},
     DefaultPlugins,
 };
+use bevy_inspector_egui::WorldInspectorPlugin;
 
 fn main() {
     #[cfg(target_arch = "wasm32")]
@@ -21,6 +22,7 @@ fn main() {
             watch_for_changes: true,
             ..Default::default()
         }))
+        .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(WorldPlugin)
