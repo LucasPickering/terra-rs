@@ -12,9 +12,11 @@ bevy = {version = "0.9.1", default-features = false, features = [
   # We can't use `dynamic` because it doesn't work in wasm :(
   "bevy_asset",
   "bevy_winit",
+  "filesystem_watcher",
   "render",
   "x11",
 ]}
+bevy_common_assets = {version = "0.4.0", features = ["json"]}
 terra = {path = "../core", features = ["bevy"]}
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
