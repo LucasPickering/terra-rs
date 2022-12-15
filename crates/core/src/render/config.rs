@@ -12,6 +12,7 @@ use validator::Validate;
 /// `vertical_scale` is irrelevant for 2D rendering like SVG. The documentation
 /// for each field will list which formats it applies to.
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::system::Resource))]
 #[serde(default)]
 pub struct RenderConfig {
     /// The vertical scale factor applied to each tile. This impacts the

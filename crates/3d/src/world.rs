@@ -1,10 +1,10 @@
 use bevy::{
     prelude::{
-        default, info, Added, AssetEvent, AssetServer, Assets, BuildChildren,
-        Color, Commands, DirectionalLight, DirectionalLightBundle, Entity,
-        EventReader, Handle, IntoSystemDescriptor, Mesh, PbrBundle, Plugin,
-        Query, Res, ResMut, Resource, SpatialBundle, StandardMaterial,
-        Transform, Vec3, With,
+        debug, default, info, Added, App, AssetEvent, AssetServer, Assets,
+        BuildChildren, Color, Commands, DespawnRecursiveExt, DirectionalLight,
+        DirectionalLightBundle, Entity, EventReader, Handle,
+        IntoSystemDescriptor, Mesh, PbrBundle, Plugin, Query, Res, ResMut,
+        Resource, SpatialBundle, StandardMaterial, Transform, Vec3, With,
     },
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
@@ -17,21 +17,17 @@ use terra::{
 pub struct WorldPlugin;
 
 impl Plugin for WorldPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
+    fn build(&self, app: &mut App) {
         app.add_plugin(JsonAssetPlugin::<WorldConfig>::new(&["terra.json"]))
-            .insert_resource(
-                WorldRenderer::new(RenderConfig {
-                    vertical_scale: 1.0,
-                    ..default()
-                })
-                .unwrap(),
-            )
+            .insert_resource(RenderConfig::default())
             .add_startup_system(load_config)
             .add_startup_system(init_scene)
             .add_system(generate_world)
             // Always delete *before* generating so we don't clobber new stuff
             .add_system(delete_world.before(generate_world))
-            .add_system(render_world);
+            .add_system(render_world)
+            // Always unrender before re-rendering
+            .add_system(unrender_world.before(render_world));
     }
 }
 
@@ -87,14 +83,14 @@ fn generate_world(
     }
 }
 
-/// Delete the world whenever the config asset changes
+/// Delete the world whenever the config asset changes. This deletes the world
+/// data *and* the associated visuals
 fn delete_world(
     mut commands: Commands,
     tile_query: Query<Entity, With<Tile>>,
     mut asset_events: EventReader<AssetEvent<WorldConfig>>,
 ) {
     for event in asset_events.iter() {
-        dbg!(event);
         if let AssetEvent::Modified { .. } = event {
             info!("Deleting old world");
             for entity in tile_query.iter() {
@@ -108,18 +104,25 @@ fn delete_world(
 /// Run whenever tiles are added to the world.
 fn render_world(
     mut commands: Commands,
-    tile_query: Query<(Entity, &Tile), Added<Tile>>,
-    renderer: Res<WorldRenderer>,
+    tile_query: Query<(Entity, &Tile)>,
+    tile_added_query: Query<(), Added<Tile>>,
+    render_config: Res<RenderConfig>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // For each tile entity, we'll attach additional visual components
-    let tile_mesh_handle = meshes.add(tile_mesh(&renderer));
-    let mut water_material: StandardMaterial =
-        Color::rgba(0.078, 0.302, 0.639, 0.5).into();
-    water_material.metallic = 0.0;
-    let water_material_handle = materials.add(water_material);
+    // Check for anything that should trigger a re-render. We split the tile
+    // query into two so we can still access all tiles when config changes
+    if !render_config.is_changed() && tile_added_query.is_empty() {
+        return;
+    }
 
+    debug!("Rendering tiles");
+    let renderer =
+        WorldRenderer::new(*render_config).expect("Invalid render config");
+    let tile_mesh_handle = meshes.add(tile_mesh(&renderer));
+    let water_material_handle = materials.add(water_material());
+
+    // For each tile entity, we'll attach additional visual components
     for (entity, tile) in tile_query.iter() {
         let position_2d = renderer.hex_to_screen_space(tile.position());
         let height = renderer.tile_height(tile) as f32;
@@ -172,7 +175,33 @@ fn render_world(
     }
 }
 
+/// Delete the visuals of all tiles, leaving the `Tile` components intact.
+/// Runs whenever the render config changes
+fn unrender_world(
+    mut commands: Commands,
+    tile_query: Query<Entity, With<Tile>>,
+    render_config: Res<RenderConfig>,
+) {
+    // TODO this is kinda jank, could be improved:
+    // - Create an intermediate WorldEvent type, to consolidate the conditions
+    // to trigger a re-generate vs re-render in one place
+    // - Figure out how to remove "everyting but tile" without having to
+    // keep track of what we create during rendering
+    if render_config.is_changed() {
+        debug!("Un-rendering tiles");
+        for entity in tile_query.iter() {
+            commands
+                .entity(entity)
+                .remove::<SpatialBundle>()
+                // Sure hope there aren't any children beside the visuals...
+                .despawn_descendants();
+        }
+    }
+}
+
 /// Build a 3d mesh of a hexagonal prism, representing a tile.
+///
+/// TODO replace this with a cylinder in bevy 0.10
 fn tile_mesh(renderer: &WorldRenderer) -> Mesh {
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
 
@@ -278,4 +307,11 @@ fn tile_mesh(renderer: &WorldRenderer) -> Mesh {
 
     mesh.set_indices(Some(Indices::U32(indices)));
     mesh
+}
+
+fn water_material() -> StandardMaterial {
+    let mut material: StandardMaterial =
+        Color::rgba(0.078, 0.302, 0.639, 0.5).into();
+    material.metallic = 0.0;
+    material
 }

@@ -1,14 +1,14 @@
 mod camera;
+mod ui;
 mod world;
 
-use crate::{camera::CameraPlugin, world::WorldPlugin};
+use crate::{camera::CameraPlugin, ui::UiPlugin, world::WorldPlugin};
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     log::LogPlugin,
     prelude::{App, AssetPlugin, PluginGroup},
     DefaultPlugins,
 };
-use bevy_inspector_egui::WorldInspectorPlugin;
 
 fn main() {
     #[cfg(target_arch = "wasm32")]
@@ -22,9 +22,9 @@ fn main() {
             watch_for_changes: true,
             ..Default::default()
         }))
-        .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        .add_plugin(UiPlugin)
         .add_plugin(WorldPlugin)
         .add_plugin(CameraPlugin)
         .run();
