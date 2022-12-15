@@ -9,15 +9,15 @@ version = "0.1.0"
 
 [dependencies]
 bevy = {version = "0.9.1", default-features = false, features = [
-  # We can't use `dynamic` because it doesn't work in wasm :(
   "bevy_asset",
   "bevy_winit",
+  "dynamic", # Warning - does not work with wasm!!
   "filesystem_watcher",
   "render",
   "x11",
 ]}
-bevy-inspector-egui = "0.14.0"
 bevy_common_assets = {version = "0.4.0", features = ["json"]}
+bevy_egui = {version = "0.18.0", default-features = false, features = ["default_fonts"]}
 terra = {path = "../core", features = ["bevy"]}
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

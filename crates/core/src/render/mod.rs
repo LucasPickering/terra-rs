@@ -39,7 +39,6 @@ use wasm_bindgen::prelude::*;
 /// - SVG (2D with colors and textures)
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::system::Resource))]
 pub struct WorldRenderer {
     /// Config that determines how rendering is done
     ///
@@ -285,7 +284,9 @@ impl WorldRenderer {
 
 /// A definition of what data is used to compute a tile's color.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, EnumString, Serialize, Deserialize)]
+#[derive(
+    Copy, Clone, Debug, Eq, PartialEq, EnumString, Serialize, Deserialize,
+)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum TileLens {
