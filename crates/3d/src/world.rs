@@ -175,10 +175,9 @@ fn render_world(
 
                 // Add water for lakes (which is a *feature*, not a biome)
                 if tile.features().contains(&GeoFeature::Lake) {
-                    // TODO move this math into the renderer or Tile
-                    let runoff_height = renderer.elevation_to_height(
-                        tile.elevation() + (tile.runoff() / Tile::AREA),
-                    ) as f32;
+                    let runoff_height = renderer
+                        .elevation_to_height(tile.runoff_elevation())
+                        as f32;
                     // Span the distance between the tile and sea level
                     let transform = transform_tile_top.with_scale(
                         [1.0, runoff_height - tile_height, 1.0].into(),
