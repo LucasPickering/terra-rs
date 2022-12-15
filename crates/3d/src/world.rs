@@ -11,7 +11,7 @@ use bevy::{
 use bevy_common_assets::json::JsonAssetPlugin;
 use terra::{
     GeoFeature, HasHexPosition, HexDirection, Point2, RenderConfig, Tile,
-    TilePoint, VertexDirection, World, WorldConfig, WorldRenderer,
+    TileLens, TilePoint, VertexDirection, World, WorldConfig, WorldRenderer,
 };
 
 pub struct WorldPlugin;
@@ -154,40 +154,44 @@ fn render_world(
                     ..default()
                 });
 
-                // A transform to the top-center of the tile
-                let transform_tile_top =
-                    Transform::from_xyz(0.0, tile_height, 0.0);
+                // Spawn additional visuals for **surface lens only**
+                if render_config.tile_lens == TileLens::Surface {
+                    // A transform to the top-center of the tile
+                    let transform_tile_top =
+                        Transform::from_xyz(0.0, tile_height, 0.0);
 
-                // Add water for ocean tiles
-                if tile.is_water_biome() {
-                    // Span the distance between the tile and sea level
-                    let sea_level_height = renderer.sea_level_height() as f32;
-                    let transform = transform_tile_top.with_scale(
-                        [1.0, sea_level_height - tile_height, 1.0].into(),
-                    );
-                    parent.spawn(PbrBundle {
-                        mesh: tile_mesh_handle.clone(),
-                        material: water_material_handle.clone(),
-                        transform,
-                        ..default()
-                    });
-                }
+                    // Add water for ocean tiles
+                    if tile.is_water_biome() {
+                        // Span the distance between the tile and sea level
+                        let sea_level_height =
+                            renderer.sea_level_height() as f32;
+                        let transform = transform_tile_top.with_scale(
+                            [1.0, sea_level_height - tile_height, 1.0].into(),
+                        );
+                        parent.spawn(PbrBundle {
+                            mesh: tile_mesh_handle.clone(),
+                            material: water_material_handle.clone(),
+                            transform,
+                            ..default()
+                        });
+                    }
 
-                // Add water for lakes (which is a *feature*, not a biome)
-                if tile.features().contains(&GeoFeature::Lake) {
-                    let runoff_height = renderer
-                        .elevation_to_height(tile.runoff_elevation())
-                        as f32;
-                    // Span the distance between the tile and sea level
-                    let transform = transform_tile_top.with_scale(
-                        [1.0, runoff_height - tile_height, 1.0].into(),
-                    );
-                    parent.spawn(PbrBundle {
-                        mesh: tile_mesh_handle.clone(),
-                        material: water_material_handle.clone(),
-                        transform,
-                        ..default()
-                    });
+                    // Add water for lakes (which is a *feature*, not a biome)
+                    if tile.features().contains(&GeoFeature::Lake) {
+                        let runoff_height = renderer
+                            .elevation_to_height(tile.runoff_elevation())
+                            as f32;
+                        // Span the distance between the tile and sea level
+                        let transform = transform_tile_top.with_scale(
+                            [1.0, runoff_height - tile_height, 1.0].into(),
+                        );
+                        parent.spawn(PbrBundle {
+                            mesh: tile_mesh_handle.clone(),
+                            material: water_material_handle.clone(),
+                            transform,
+                            ..default()
+                        });
+                    }
                 }
             });
     }
