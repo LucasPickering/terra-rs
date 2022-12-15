@@ -10,8 +10,8 @@ use bevy::{
 };
 use bevy_common_assets::json::JsonAssetPlugin;
 use terra::{
-    HasHexPosition, HexDirection, Point2, RenderConfig, Tile, TilePoint,
-    VertexDirection, World, WorldConfig, WorldRenderer,
+    GeoFeature, HasHexPosition, HexDirection, Point2, RenderConfig, Tile,
+    TilePoint, VertexDirection, World, WorldConfig, WorldRenderer,
 };
 
 pub struct WorldPlugin;
@@ -125,7 +125,7 @@ fn render_world(
     // For each tile entity, we'll attach additional visual components
     for (entity, tile) in tile_query.iter() {
         let position_2d = renderer.hex_to_screen_space(tile.position());
-        let height = renderer.tile_height(tile) as f32;
+        let tile_height = renderer.tile_height(tile) as f32;
         let color = renderer.tile_color(tile);
 
         // We'll add a root transform that provides x/z position. Then add
@@ -148,22 +148,41 @@ fn render_world(
                     material: materials.add(
                         Color::rgb(color.red, color.green, color.blue).into(),
                     ),
-                    transform: Transform::from_scale([1.0, height, 1.0].into()),
+                    transform: Transform::from_scale(
+                        [1.0, tile_height, 1.0].into(),
+                    ),
                     ..default()
                 });
 
-                // Add water for water tiles
+                // A transform to the top-center of the tile
+                let transform_tile_top =
+                    Transform::from_xyz(0.0, tile_height, 0.0);
+
+                // Add water for ocean tiles
                 if tile.is_water_biome() {
                     // Span the distance between the tile and sea level
-                    let transform = Transform::from_xyz(0.0, height, 0.0)
-                        .with_scale(
-                            [
-                                1.0,
-                                renderer.sea_level_height() as f32 - height,
-                                1.0,
-                            ]
-                            .into(),
-                        );
+                    let sea_level_height = renderer.sea_level_height() as f32;
+                    let transform = transform_tile_top.with_scale(
+                        [1.0, sea_level_height - tile_height, 1.0].into(),
+                    );
+                    parent.spawn(PbrBundle {
+                        mesh: tile_mesh_handle.clone(),
+                        material: water_material_handle.clone(),
+                        transform,
+                        ..default()
+                    });
+                }
+
+                // Add water for lakes (which is a *feature*, not a biome)
+                if tile.features().contains(&GeoFeature::Lake) {
+                    // TODO move this math into the renderer or Tile
+                    let runoff_height = renderer.elevation_to_height(
+                        tile.elevation() + (tile.runoff() / Tile::AREA),
+                    ) as f32;
+                    // Span the distance between the tile and sea level
+                    let transform = transform_tile_top.with_scale(
+                        [1.0, runoff_height - tile_height, 1.0].into(),
+                    );
                     parent.spawn(PbrBundle {
                         mesh: tile_mesh_handle.clone(),
                         material: water_material_handle.clone(),
