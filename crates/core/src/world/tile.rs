@@ -136,6 +136,13 @@ impl Tile {
             .sum::<Meter3>()
     }
 
+    /// Get the elevation of the top of the runoff on this tile. For tiles with
+    /// no runoff, this will just be the tile's elevation. For lake tiles and
+    /// others with runoff, it will be the elevation of the water's surface.
+    pub fn runoff_elevation(&self) -> Meter {
+        self.elevation() + self.runoff() / Self::AREA
+    }
+
     /// Get the tile's biome. Every tile will have exactly on biome assigned.
     /// See [Biome] for more info.
     pub fn biome(&self) -> Biome {
