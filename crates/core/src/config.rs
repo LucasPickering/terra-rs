@@ -146,11 +146,6 @@ pub struct RainfallConfig {
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
 #[serde(default)]
 pub struct GeoFeatureConfig {
-    /// The minimum amount of runoff that needs to collect on a tile for it to
-    /// become a lake. Any tile with this amount of runoff or more on it after
-    /// runoff simulation will become a lake. Any tile with less will not.
-    pub lake_runoff_threshold: Meter3,
-
     /// The minimum amount of runoff that must enter or exit a tile in a single
     /// direction for that direction to be considered a river. Unlike
     /// `lake_runoff_threshold`, this tracks total _traversed_ runoff, not
@@ -278,7 +273,6 @@ impl Default for RainfallConfig {
 impl Default for GeoFeatureConfig {
     fn default() -> Self {
         Self {
-            lake_runoff_threshold: Meter3(3.0),
             river_runoff_traversed_threshold: Meter3(100.0),
         }
     }

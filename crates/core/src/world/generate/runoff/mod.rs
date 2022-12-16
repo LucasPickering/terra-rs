@@ -240,7 +240,6 @@ impl<'a> Continent<'a> {
     /// This function tracks TWO stats: egress (for each tile, how much runoff
     /// exited in each direction?) and collected runoff (how much runoff remains
     /// on this tile after the downhill flow?).
-    #[allow(clippy::needless_collect)]
     fn push_downhill(&mut self) {
         // Starting at the highest tile, we push the runoff from each tile down
         // to its lower neighbors. At each step, we track the egress in each
@@ -248,8 +247,6 @@ impl<'a> Continent<'a> {
         // direction for each donee tile.
 
         // Have to copy this into a vec to get around borrow checking
-        // Clippy thinks we don't need this but we do, hence the #[allow] above
-        // (If you don't believe me, try it yourself)
         let positions: Vec<_> = self.tiles.keys().copied().collect();
 
         // We have to iterate by index so that we can grab multiple mutable

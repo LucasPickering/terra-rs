@@ -16,8 +16,12 @@ impl Generate for WaterFeatureGenerator {
     fn generate(&self, world: &mut WorldBuilder) {
         let cfg = world.config.geo_feature;
         for tile in world.tiles.values_mut() {
-            // Lake
-            if tile.runoff() >= cfg.lake_runoff_threshold {
+            // If the tile has *any* runoff on it, it becomes a lake. At some
+            // point we may want to threshold this, but that adds complexity
+            // because you still need to capture the edges of lakes, which means
+            // the logic has to be basin-aware, instead of operating on a
+            // per-tile basis.
+            if tile.runoff() > Meter3(0.0) {
                 tile.add_feature(GeoFeature::Lake);
             }
 
