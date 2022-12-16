@@ -11,7 +11,6 @@ macro_rules! unwrap {
     ($opt:expr, $fmt:expr, $($arg:tt)*) => {
         match $opt {
             Some(v) => v,
-            // None => bail!($fmt, $($arg)*)
             None => panic!($fmt, $($arg)*),
         }
     };
