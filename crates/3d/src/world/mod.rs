@@ -1,17 +1,17 @@
-use bevy::{
-    prelude::{
-        debug, default, info, Added, App, AssetEvent, AssetServer, Assets,
-        BuildChildren, Color, Commands, DespawnRecursiveExt, DirectionalLight,
-        DirectionalLightBundle, Entity, EventReader, Handle,
-        IntoSystemDescriptor, Mesh, PbrBundle, Plugin, Query, Res, ResMut,
-        Resource, SpatialBundle, StandardMaterial, Transform, Vec3, With,
-    },
-    render::{mesh::Indices, render_resource::PrimitiveTopology},
+mod mesh;
+
+use crate::world::mesh::TileMeshBuilder;
+use bevy::prelude::{
+    debug, default, info, Added, AlphaMode, App, AssetEvent, AssetServer,
+    Assets, BuildChildren, Color, Commands, DespawnRecursiveExt,
+    DirectionalLight, DirectionalLightBundle, Entity, EventReader, Handle,
+    IntoSystemDescriptor, Mesh, PbrBundle, Plugin, Query, Res, ResMut,
+    Resource, SpatialBundle, StandardMaterial, Transform, Vec3, With,
 };
 use bevy_common_assets::json::JsonAssetPlugin;
 use terra::{
-    GeoFeature, HasHexPosition, HexDirection, Point2, RenderConfig, Tile,
-    TileLens, TilePoint, VertexDirection, World, WorldConfig, WorldRenderer,
+    GeoFeature, HasHexPosition, RenderConfig, Tile, TileLens, World,
+    WorldConfig, WorldRenderer,
 };
 
 pub struct WorldPlugin;
@@ -119,7 +119,11 @@ fn render_world(
     debug!("Rendering tiles");
     let renderer =
         WorldRenderer::new(*render_config).expect("Invalid render config");
-    let tile_mesh_handle = meshes.add(tile_mesh(&renderer));
+    // TODO we're duping these meshes on every render, we should skip that
+    let tile_mesh_handle =
+        meshes.add(TileMeshBuilder::default().build(&renderer));
+    let water_mesh_handle =
+        meshes.add(TileMeshBuilder::default().disable_sides().build(&renderer));
     let water_material_handle = materials.add(water_material());
 
     // For each tile entity, we'll attach additional visual components
@@ -145,9 +149,15 @@ fn render_world(
                 // Spawn the hex mesh
                 parent.spawn(PbrBundle {
                     mesh: tile_mesh_handle.clone(),
-                    material: materials.add(
-                        Color::rgb(color.red, color.green, color.blue).into(),
-                    ),
+                    material: materials.add(StandardMaterial {
+                        base_color: Color::rgb(
+                            color.red,
+                            color.green,
+                            color.blue,
+                        ),
+                        perceptual_roughness: 1.0,
+                        ..default()
+                    }),
                     transform: Transform::from_scale(
                         [1.0, tile_height, 1.0].into(),
                     ),
@@ -156,22 +166,19 @@ fn render_world(
 
                 // Spawn additional visuals for **surface lens only**
                 if render_config.tile_lens == TileLens::Surface {
-                    // A transform to the top-center of the tile
-                    let transform_tile_top =
-                        Transform::from_xyz(0.0, tile_height, 0.0);
-
                     // Add water for ocean tiles
                     if tile.is_water_biome() {
                         // Span the distance between the tile and sea level
                         let sea_level_height =
                             renderer.sea_level_height() as f32;
-                        let transform = transform_tile_top.with_scale(
-                            [1.0, sea_level_height - tile_height, 1.0].into(),
-                        );
                         parent.spawn(PbrBundle {
-                            mesh: tile_mesh_handle.clone(),
+                            mesh: water_mesh_handle.clone(),
                             material: water_material_handle.clone(),
-                            transform,
+                            transform: Transform::from_xyz(
+                                0.0,
+                                sea_level_height,
+                                0.0,
+                            ),
                             ..default()
                         });
                     }
@@ -181,14 +188,14 @@ fn render_world(
                         let runoff_height = renderer
                             .elevation_to_height(tile.runoff_elevation())
                             as f32;
-                        // Span the distance between the tile and sea level
-                        let transform = transform_tile_top.with_scale(
-                            [1.0, runoff_height - tile_height, 1.0].into(),
-                        );
                         parent.spawn(PbrBundle {
-                            mesh: tile_mesh_handle.clone(),
+                            mesh: water_mesh_handle.clone(),
                             material: water_material_handle.clone(),
-                            transform,
+                            transform: Transform::from_xyz(
+                                0.0,
+                                runoff_height,
+                                0.0,
+                            ),
                             ..default()
                         });
                     }
@@ -221,119 +228,12 @@ fn unrender_world(
     }
 }
 
-/// Build a 3d mesh of a hexagonal prism, representing a tile.
-///
-/// TODO replace this with a cylinder in bevy 0.10
-fn tile_mesh(renderer: &WorldRenderer) -> Mesh {
-    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-
-    // A tile has 12 vertices, 6 on top and 6 on bottom. In this order:
-    // Bot-N, Bot-ENE, Bot-ESE, Bot-S, Bot-WSW, Bot-WNW
-    // Top-N, Top-ENE, Top-ESE, Top-S, Top-WSW, Top-WNW
-    let vertices_2d: Vec<Point2> = VertexDirection::CLOCKWISE
-        .iter()
-        .copied()
-        .map(|direction| {
-            renderer.hex_to_screen_space(TilePoint::ORIGIN.vertex(direction))
-        })
-        .collect();
-    let positions: Vec<[f32; 3]> = vertices_2d
-        .iter()
-        // Bottom 6
-        .map(|point2| [point2.x as f32, 0.0, point2.y as f32])
-        // Top 6
-        .chain(
-            vertices_2d
-                .iter()
-                .map(|point2| [point2.x as f32, 1.0, point2.y as f32]),
-        )
-        .collect();
-
-    // Normals are just the vertex vectors, but normalized
-    let normals: Vec<Vec3> = positions
-        .iter()
-        .map(|position| Vec3::new(position[0], 0.0, position[2]).normalize())
-        .collect();
-
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-
-    // REMEMBER: all vertices are specified CLOCKWISE
-
-    //   Bottom
-    //      0
-    //     / \
-    //    /   \
-    //   / T1  \
-    //  /       \
-    // 5.........1
-    // |       ..|
-    // | T2  ..  |
-    // |   .. T3 |
-    // | ..      |
-    // 4.........2
-    //  \       /
-    //   \  T4 /
-    //    \   /
-    //     \ /
-    //      3
-
-    //   Top
-    //      6
-    //     / \
-    //    /   \
-    //   / T1  \
-    //  /       \
-    // 11........7
-    // |       ..|
-    // | T2  ..  |
-    // |   .. T3 |
-    // | ..      |
-    // 10........8
-    //  \       /
-    //   \  T4 /
-    //    \   /
-    //     \ /
-    //      9
-
-    // A tile is made up of 16 polygons: 2 per side plus 4 on top
-    // We *skip* the bottom because it's not visible anyway
-    // Each polygon is 3 vertices
-    let mut indices: Vec<u32> = vec![
-        // Top
-        6, 7, 11, // T1
-        7, 10, 11, // T2
-        7, 8, 10, // T3
-        8, 9, 10, // T4
-    ];
-
-    // For each side of the hexagon, draw 2 triangles
-    for i in 0..6 {
-        // The side has 4 vertices
-        let bottom_right = i as u32;
-        let bottom_left = (bottom_right + 1) % 6;
-        let top_right = bottom_right + 6;
-        let top_left = bottom_left + 6;
-        // Split the rectangle into two triangles
-        indices.extend([
-            // Bottom-right triangle
-            bottom_right,
-            bottom_left,
-            top_right,
-            // Top-left triangle
-            bottom_left,
-            top_left,
-            top_right,
-        ]);
-    }
-
-    mesh.set_indices(Some(Indices::U32(indices)));
-    mesh
-}
-
 fn water_material() -> StandardMaterial {
-    let mut material: StandardMaterial =
-        Color::rgba(0.078, 0.302, 0.639, 0.5).into();
-    material.metallic = 0.0;
-    material
+    StandardMaterial {
+        base_color: Color::rgba(0.078, 0.302, 0.639, 0.5),
+        alpha_mode: AlphaMode::Blend,
+        metallic: 0.0,
+        reflectance: 0.0,
+        ..default()
+    }
 }
