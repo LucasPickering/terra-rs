@@ -251,18 +251,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_common_assets"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f6b7df078908d118a55440470962f4393ac6a4ce89b13a3cd5bff49d4a06f29"
-dependencies = [
- "anyhow",
- "bevy",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "bevy_core"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1719,9 +1707,9 @@ dependencies = [
 
 [[package]]
 name = "itoa"
-version = "0.4.7"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd25036021b0de88a0aff6b850051563c6516d0bf53f8638938edbb9de732736"
+checksum = "fad582f4b9e86b6caa621cabeb0963332d92eea04729ab12892c2533951e6440"
 
 [[package]]
 name = "jni-sys"
@@ -2505,9 +2493,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.64"
+version = "1.0.91"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "799e97dc9fdae36a5c8b8f2cae9ce2ee9fdce2058c57a93e6099d919fd982f79"
+checksum = "877c235533714907a8c2464236f5c4b2a17262ef1bd71f38f35ea592c8da6883"
 dependencies = [
  "itoa",
  "ryu",
@@ -2710,7 +2698,6 @@ dependencies = [
  "anyhow",
  "assert_approx_eq",
  "bevy_ecs",
- "bevy_reflect",
  "derive_more",
  "fnv",
  "getrandom",
@@ -2736,9 +2723,9 @@ name = "terra-3d"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_common_assets",
  "bevy_egui",
  "console_error_panic_hook",
+ "serde_json",
  "terra",
 ]
 

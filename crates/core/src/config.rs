@@ -10,12 +10,8 @@ use validator::Validate;
 
 /// Configuration that defines a world gen process. Two worlds generated with
 /// same config will always be identical.
-#[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
-#[cfg_attr(
-    feature = "bevy",
-    derive(bevy_ecs::system::Resource, bevy_reflect::TypeUuid)
-)]
-#[cfg_attr(feature = "bevy", uuid = "7776774a-0678-46e2-8661-608f571cfce2")]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize, Validate)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::system::Resource))]
 #[serde(default)]
 pub struct WorldConfig {
     /// RNG seed to use for all randomized processes during world gen.
@@ -63,7 +59,7 @@ pub struct WorldConfig {
 /// Configuration for elevation map generation. This controls the elevation of
 /// each tile, which defines the shape of the terrain. Elevation is generated
 /// by a noise function, then some post-processing is applied.
-#[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize, Validate)]
 #[serde(default)]
 pub struct ElevationConfig {
     /// Configuration for the noise function used to generate elevation values
@@ -96,7 +92,7 @@ pub struct ElevationConfig {
 /// Configuration related to rainfall and evaporation simulation. These params
 /// control how rainfall is generated for the world, which in turn has a major
 /// impact on runoff and feature generation.
-#[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize, Validate)]
 #[serde(default)]
 pub struct RainfallConfig {
     /// Should rainfall and runoff be simulated? Rainfall and runoff simulation
@@ -143,7 +139,7 @@ pub struct RainfallConfig {
 
 /// Configuration surrounding how geographic features are generated. See
 /// [GeoFeature](crate::GeoFeature) for more info.
-#[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize, Validate)]
 #[serde(default)]
 pub struct GeoFeatureConfig {
     /// The minimum amount of runoff that must enter or exit a tile in a single
@@ -159,7 +155,7 @@ pub struct GeoFeatureConfig {
 /// https://crates.io/crates/noise for noise generation. This type is generic,
 /// i.e. not specific to a particular noise function, so as such it has no
 /// default implementation.
-#[derive(Copy, Clone, Debug, Serialize, Deserialize, Validate)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize, Validate)]
 pub struct NoiseFnConfig {
     pub noise_type: NoiseFnType,
 
@@ -197,7 +193,7 @@ pub struct NoiseFnConfig {
 /// be seedable and multi-fractal. See
 /// https://docs.rs/noise/0.7.0/noise/trait.MultiFractal.html for a list of
 /// types that could possibly be supported here.
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NoiseFnType {
     // if you add a variant here, make sure you update the type in wasm/lib.rs
