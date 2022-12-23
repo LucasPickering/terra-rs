@@ -1,11 +1,12 @@
+mod event;
 mod mesh;
 
-use crate::world::mesh::TileMeshBuilder;
+use crate::world::{event::GenerateWorldEvent, mesh::TileMeshBuilder};
 use bevy::prelude::{
     debug, default, info, Added, AlphaMode, App, AssetEvent, AssetServer,
     Assets, BuildChildren, Color, Commands, DespawnRecursiveExt,
-    DirectionalLight, DirectionalLightBundle, Entity, EventReader, Handle,
-    IntoSystemDescriptor, Mesh, PbrBundle, Plugin, Query, Res, ResMut,
+    DirectionalLight, DirectionalLightBundle, Entity, EventReader, EventWriter,
+    Handle, IntoSystemDescriptor, Mesh, PbrBundle, Plugin, Query, Res, ResMut,
     Resource, SpatialBundle, StandardMaterial, Transform, Vec3, With,
 };
 use bevy_common_assets::json::JsonAssetPlugin;
@@ -20,8 +21,10 @@ impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(JsonAssetPlugin::<WorldConfig>::new(&["terra.json"]))
             .insert_resource(RenderConfig::default())
+            .add_event::<GenerateWorldEvent>()
             .add_startup_system(load_config)
             .add_startup_system(init_scene)
+            .add_system(watch_config)
             .add_system(generate_world)
             // Always delete *before* generating so we don't clobber new stuff
             .add_system(delete_world.before(generate_world))
@@ -56,12 +59,10 @@ fn init_scene(mut commands: Commands) {
     });
 }
 
-/// Generate a world and add each tile as its own entity. This just creates the
-/// underlying world data, nothing visual.
-fn generate_world(
-    mut commands: Commands,
+fn watch_config(
     config_assets: Res<Assets<WorldConfig>>,
     mut asset_events: EventReader<AssetEvent<WorldConfig>>,
+    mut generate_world_events: EventWriter<GenerateWorldEvent>,
 ) {
     // Generate the world
     for event in asset_events.iter() {
@@ -69,33 +70,45 @@ fn generate_world(
         if let AssetEvent::Created { handle }
         | AssetEvent::Modified { handle } = event
         {
-            // We know the asset is loaded by now
-            let world_config = config_assets.get(handle).unwrap();
-
-            info!("Generating world");
-            let world = World::generate(world_config.to_owned()).unwrap();
-
-            // Spawn each tile as a separate entity
-            for tile in world.into_tiles().into_values() {
-                commands.spawn(tile);
-            }
+            debug!("World config changed, triggering generation");
+            generate_world_events.send(GenerateWorldEvent {
+                config: *config_assets.get(handle).unwrap(),
+            });
         }
     }
 }
 
-/// Delete the world whenever the config asset changes. This deletes the world
+/// Generate a world and add each tile as its own entity. This just creates the
+/// underlying world data, nothing visual.
+fn generate_world(
+    mut commands: Commands,
+    mut generate_world_events: EventReader<GenerateWorldEvent>,
+) {
+    // Generate the world
+    for event in generate_world_events.iter() {
+        info!("Generating world");
+        let world = World::generate(event.config.to_owned()).unwrap();
+
+        // Spawn each tile as a separate entity
+        for tile in world.into_tiles().into_values() {
+            commands.spawn(tile);
+        }
+    }
+}
+
+/// Delete the world before rendering a new one. This deletes the world
 /// data *and* the associated visuals
 fn delete_world(
     mut commands: Commands,
     tile_query: Query<Entity, With<Tile>>,
-    mut asset_events: EventReader<AssetEvent<WorldConfig>>,
+    mut generate_world_events: EventReader<GenerateWorldEvent>,
 ) {
-    for event in asset_events.iter() {
-        if let AssetEvent::Modified { .. } = event {
-            info!("Deleting old world");
-            for entity in tile_query.iter() {
-                commands.entity(entity).despawn();
-            }
+    for _ in generate_world_events.iter() {
+        info!("Deleting old world");
+        for entity in tile_query.iter() {
+            // Make sure to delete all _children_ too, which hold a lot of the
+            // visuals
+            commands.entity(entity).despawn_recursive();
         }
     }
 }
