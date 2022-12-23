@@ -1,15 +1,14 @@
-mod event;
+pub mod event;
 mod mesh;
 
 use crate::world::{event::GenerateWorldEvent, mesh::TileMeshBuilder};
 use bevy::prelude::{
-    debug, default, info, Added, AlphaMode, App, AssetEvent, AssetServer,
-    Assets, BuildChildren, Color, Commands, DespawnRecursiveExt,
-    DirectionalLight, DirectionalLightBundle, Entity, EventReader, EventWriter,
-    Handle, IntoSystemDescriptor, Mesh, PbrBundle, Plugin, Query, Res, ResMut,
-    Resource, SpatialBundle, StandardMaterial, Transform, Vec3, With,
+    debug, default, info, Added, AlphaMode, App, Assets, BuildChildren, Color,
+    Commands, DespawnRecursiveExt, DirectionalLight, DirectionalLightBundle,
+    Entity, EventReader, EventWriter, IntoSystemDescriptor, Mesh, PbrBundle,
+    Plugin, Query, Res, ResMut, SpatialBundle, StandardMaterial, Transform,
+    Vec3, With,
 };
-use bevy_common_assets::json::JsonAssetPlugin;
 use terra::{
     GeoFeature, HasHexPosition, RenderConfig, Tile, TileLens, World,
     WorldConfig, WorldRenderer,
@@ -19,28 +18,21 @@ pub struct WorldPlugin;
 
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(JsonAssetPlugin::<WorldConfig>::new(&["terra.json"]))
-            .insert_resource(RenderConfig::default())
-            .add_event::<GenerateWorldEvent>()
-            .add_startup_system(load_config)
-            .add_startup_system(init_scene)
-            .add_system(watch_config)
-            .add_system(generate_world)
-            // Always delete *before* generating so we don't clobber new stuff
-            .add_system(delete_world.before(generate_world))
-            .add_system(render_world)
-            // Always unrender before re-rendering
-            .add_system(unrender_world.before(render_world));
+        app.insert_resource(WorldConfig {
+            radius: 50, // 100 is too slow right now
+            ..default()
+        })
+        .insert_resource(RenderConfig::default())
+        .add_event::<GenerateWorldEvent>()
+        .add_startup_system(init_scene)
+        .add_startup_system(init_world)
+        .add_system(generate_world)
+        // Always delete *before* generating so we don't clobber new stuff
+        .add_system(delete_world.before(generate_world))
+        .add_system(render_world)
+        // Always unrender before re-rendering
+        .add_system(unrender_world.before(render_world));
     }
-}
-
-#[derive(Resource)]
-struct WorldConfigHandle(Handle<WorldConfig>);
-
-fn load_config(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let config_handle =
-        WorldConfigHandle(asset_server.load("worlds/medium.terra.json"));
-    commands.insert_resource(config_handle);
 }
 
 /// Add static entities to the scene
@@ -59,35 +51,21 @@ fn init_scene(mut commands: Commands) {
     });
 }
 
-fn watch_config(
-    config_assets: Res<Assets<WorldConfig>>,
-    mut asset_events: EventReader<AssetEvent<WorldConfig>>,
-    mut generate_world_events: EventWriter<GenerateWorldEvent>,
-) {
-    // Generate the world
-    for event in asset_events.iter() {
-        // On first config load, or whenever it's changed, generate a new world
-        if let AssetEvent::Created { handle }
-        | AssetEvent::Modified { handle } = event
-        {
-            debug!("World config changed, triggering generation");
-            generate_world_events.send(GenerateWorldEvent {
-                config: *config_assets.get(handle).unwrap(),
-            });
-        }
-    }
+/// Trigger initial world generation
+fn init_world(mut generate_world_events: EventWriter<GenerateWorldEvent>) {
+    generate_world_events.send(GenerateWorldEvent);
 }
 
 /// Generate a world and add each tile as its own entity. This just creates the
 /// underlying world data, nothing visual.
 fn generate_world(
     mut commands: Commands,
+    world_config: Res<WorldConfig>,
     mut generate_world_events: EventReader<GenerateWorldEvent>,
 ) {
-    // Generate the world
-    for event in generate_world_events.iter() {
+    for _ in generate_world_events.iter() {
         info!("Generating world");
-        let world = World::generate(event.config.to_owned()).unwrap();
+        let world = World::generate(world_config.to_owned()).unwrap();
 
         // Spawn each tile as a separate entity
         for tile in world.into_tiles().into_values() {
