@@ -1,27 +1,14 @@
-use crate::world::event::GenerateWorldEvent;
-use bevy::prelude::{
-    trace, App, EventWriter, IntoSystemDescriptor, Plugin, ResMut, Resource,
+use crate::{
+    ui::{enum_radio_select, section, UiState},
+    world::event::GenerateWorldEvent,
 };
+use bevy::prelude::{trace, EventWriter, ResMut};
 use bevy_egui::{
-    egui::{self, RichText, Slider, Ui, WidgetText},
-    EguiContext, EguiPlugin,
+    egui::{Slider, Window},
+    EguiContext,
 };
-use std::{
-    fmt::Display,
-    ops::{Deref, RangeInclusive},
-};
-use terra::{Meter3, NoiseFnType, RenderConfig, TileLens, WorldConfig};
-
-pub struct UiPlugin;
-
-impl Plugin for UiPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugin(EguiPlugin)
-            .insert_resource::<UiState>(UiState::default())
-            .add_system(world_config_ui)
-            .add_system(render_config_ui.after(world_config_ui));
-    }
-}
+use std::ops::{Deref, RangeInclusive};
+use terra::{Meter3, NoiseFnType, WorldConfig};
 
 /// Standard slider range for normal (0-1) fields
 const NORMAL_RANGE: RangeInclusive<f64> = 0.0..=1.0;
@@ -33,27 +20,14 @@ const EXPONENT_RANGE: RangeInclusive<f64> = 0.0..=3.0;
 /// Standard slider step size for exponent fields
 const EXPONENT_STEP: f64 = 0.1;
 
-#[derive(Resource)]
-struct UiState {
-    world_config_text: String,
-}
-
-impl Default for UiState {
-    fn default() -> Self {
-        let world_config_text =
-            serde_json::to_string_pretty(&WorldConfig::default()).unwrap();
-        Self { world_config_text }
-    }
-}
-
 /// UI for editing world config
-fn world_config_ui(
+pub(super) fn world_config_ui(
     mut egui_context: ResMut<EguiContext>,
     mut world_config: ResMut<WorldConfig>,
     mut generate_world_events: EventWriter<GenerateWorldEvent>,
     mut ui_state: ResMut<UiState>,
 ) {
-    egui::Window::new("World Config").show(egui_context.ctx_mut(), |ui| {
+    Window::new("World Config").show(egui_context.ctx_mut(), |ui| {
         // Directly edit the config JSON
         let mut json_changed = false;
         ui.collapsing("JSON", |ui| {
@@ -263,60 +237,6 @@ fn world_config_ui(
             }
         }
     });
-}
-
-/// UI for editing render config
-fn render_config_ui(
-    mut egui_context: ResMut<EguiContext>,
-    mut render_config: ResMut<RenderConfig>,
-) {
-    egui::Window::new("Render Config").show(egui_context.ctx_mut(), |ui| {
-        ui.label("Lens");
-        let mut lens = render_config.tile_lens;
-        ui.vertical(enum_radio_select(
-            &mut lens,
-            [
-                TileLens::Surface,
-                TileLens::Biome,
-                TileLens::Elevation,
-                TileLens::Humidity,
-                TileLens::Runoff,
-            ]
-            .into_iter(),
-        ));
-        // Defer updating the render config until we know something actuall
-        // changed. Otherwise we'll trigger a "change" in the render config
-        // on every frame
-        if lens != render_config.tile_lens {
-            render_config.tile_lens = lens;
-        }
-    });
-}
-
-/// Create a radio select widget for an enum. There will be one option for each
-/// given enum variant.
-fn enum_radio_select<'a, T: Display + PartialEq>(
-    value: &'a mut T,
-    options: impl Iterator<Item = T> + 'a,
-) -> impl FnOnce(&mut Ui) + 'a {
-    move |ui| {
-        for option in options {
-            let label = option.to_string();
-            ui.radio_value::<T>(value, option, label);
-        }
-    }
-}
-
-fn section(
-    heading: impl Into<String>,
-    add_contents: impl FnOnce(&mut Ui),
-) -> impl FnOnce(&mut Ui) {
-    move |ui| {
-        ui.group(|ui| {
-            ui.label(WidgetText::RichText(RichText::new(heading).heading()));
-            add_contents(ui);
-        });
-    }
 }
 
 /// Format a Meter3 (cubic meter) as a string
