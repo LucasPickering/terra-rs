@@ -3,11 +3,14 @@ use bevy::prelude::{
     debug, App, EventWriter, IntoSystemDescriptor, Plugin, ResMut, Resource,
 };
 use bevy_egui::{
-    egui::{self, Slider},
+    egui::{self, Slider, Ui},
     EguiContext, EguiPlugin,
 };
-use std::ops::Deref;
-use terra::{RenderConfig, TileLens, WorldConfig};
+use std::{
+    fmt::Display,
+    ops::{Deref, RangeInclusive},
+};
+use terra::{NoiseFnType, RenderConfig, TileLens, WorldConfig};
 
 pub struct UiPlugin;
 
@@ -19,6 +22,16 @@ impl Plugin for UiPlugin {
             .add_system(render_config_ui.after(world_config_ui));
     }
 }
+
+/// Standard slider range for normal (0-1) fields
+const NORMAL_RANGE: RangeInclusive<f64> = 0.0..=1.0;
+/// Standard slider step size for normal (0-1) fields
+const NORMAL_STEP: f64 = 0.05;
+
+/// Standard slider range for exponent fields
+const EXPONENT_RANGE: RangeInclusive<f64> = 0.0..=3.0;
+/// Standard slider step size for exponent fields
+const EXPONENT_STEP: f64 = 0.1;
 
 #[derive(Resource)]
 struct UiState {
@@ -41,36 +54,190 @@ fn world_config_ui(
     mut ui_state: ResMut<UiState>,
 ) {
     egui::Window::new("World Config").show(egui_context.ctx_mut(), |ui| {
-        ui.label("JSON");
-        let json_text_edit =
-            ui.text_edit_multiline(&mut ui_state.world_config_text);
+        // Directly edit the config JSON
+        let mut json_changed = false;
+        ui.collapsing("JSON", |ui| {
+            json_changed = ui
+                .text_edit_multiline(&mut ui_state.world_config_text)
+                .changed();
+        });
 
         // Any mutable access to world_config will mark it as changed, so we
         // want to defer mutable acces until we know we actually change
         // something. So we'll copy the config, then re-assign at the end if the
         // copy changed
         let mut controls_config = *world_config;
-        ui.label("General");
-        ui.add(
-            Slider::new(&mut controls_config.radius, 0..=500)
-                .step_by(10.0)
-                .text("World Radius"),
-        );
 
-        ui.label("Edge Buffer");
-        ui.add(
-            Slider::new(
-                &mut controls_config.elevation.edge_buffer_exponent,
-                0.0..=3.0,
-            )
-            .step_by(0.1)
-            .text("Edge Buffer Fraction"),
-        );
+        // ===== General =====
+        ui.group(|ui| {
+            ui.label("General");
 
-        let generate_button = ui.button("Generate World");
+            // TODO seed text field
+
+            ui.add(
+                Slider::new(&mut controls_config.radius, 0..=500)
+                    .step_by(10.0)
+                    .text("World Radius"),
+            );
+        });
+
+        // ===== Edge Buffer =====
+        ui.group(|ui| {
+            ui.label("Edge Buffer");
+
+            ui.add(
+                Slider::new(
+                    &mut controls_config.elevation.edge_buffer_fraction,
+                    NORMAL_RANGE,
+                )
+                .step_by(NORMAL_STEP)
+                .text("Fraction"),
+            );
+
+            ui.add(
+                Slider::new(
+                    &mut controls_config.elevation.edge_buffer_exponent,
+                    EXPONENT_RANGE,
+                )
+                .step_by(EXPONENT_STEP)
+                .text("Exponent"),
+            );
+        });
+
+        // ===== Elevation =====
+        ui.group(|ui| {
+            ui.label("Elevation");
+
+            ui.label("Noise Type");
+            ui.vertical(enum_radio_select(
+                &mut controls_config.elevation.noise_fn.noise_type,
+                [
+                    NoiseFnType::BasicMulti,
+                    NoiseFnType::Billow,
+                    NoiseFnType::Fbm,
+                    NoiseFnType::HybridMulti,
+                    NoiseFnType::RidgedMulti,
+                ]
+                .into_iter(),
+            ));
+
+            ui.add(
+                Slider::new(
+                    &mut controls_config.elevation.noise_fn.octaves,
+                    1..=10,
+                )
+                .step_by(1.0)
+                .text("Octaves"),
+            );
+
+            ui.add(
+                Slider::new(
+                    &mut controls_config.elevation.noise_fn.frequency,
+                    0.1..=5.0,
+                )
+                .step_by(0.1)
+                .text("Frequency"),
+            );
+
+            ui.add(
+                Slider::new(
+                    &mut controls_config.elevation.noise_fn.lacunarity,
+                    0.5..=10.0,
+                )
+                .step_by(0.5)
+                .text("Lacunarity"),
+            );
+
+            ui.add(
+                Slider::new(
+                    &mut controls_config.elevation.noise_fn.persistence,
+                    0.0..=2.0,
+                )
+                .step_by(0.1)
+                .text("Persistence"),
+            );
+
+            ui.add(
+                Slider::new(
+                    &mut controls_config.elevation.noise_fn.exponent,
+                    EXPONENT_RANGE,
+                )
+                .step_by(EXPONENT_STEP)
+                .text("Exponent"),
+            );
+        });
+
+        // ===== Rainfall =====
+        ui.group(|ui| {
+            ui.label("Rainfall");
+
+            ui.checkbox(&mut controls_config.rainfall.enabled, "Enabled?");
+
+            // TODO add units to tick labels
+            ui.add(
+                Slider::new(
+                    &mut controls_config.rainfall.evaporation_default.0,
+                    0.0..=10.0,
+                )
+                .step_by(0.5)
+                .text("Default Evaporation Volume"),
+            );
+
+            ui.add(
+                Slider::new(
+                    &mut controls_config.rainfall.evaporation_land_scale,
+                    NORMAL_RANGE,
+                )
+                .step_by(NORMAL_STEP)
+                .text("Land Evaporation Scale"),
+            );
+
+            ui.add(
+                Slider::new(
+                    &mut controls_config.rainfall.evaporation_spread_distance,
+                    0..=100,
+                )
+                .step_by(5.0)
+                .text("Evaporation Spread Distance"),
+            );
+
+            ui.add(
+                Slider::new(
+                    &mut controls_config.rainfall.evaporation_spread_exponent,
+                    EXPONENT_RANGE,
+                )
+                .step_by(EXPONENT_STEP)
+                .text("Evaporation Spread Exponent"),
+            );
+
+            ui.add(
+                Slider::new(
+                    &mut controls_config.rainfall.rainfall_fraction_limit,
+                    0.0..=0.5,
+                )
+                .step_by(0.05)
+                .text("Rainfall Fraction Limit"),
+            );
+        });
+
+        // ===== Geographic Features =====
+        ui.group(|ui| {
+            // TODO add units to tick labels
+            ui.add(
+                Slider::new(
+                    &mut controls_config
+                        .geo_feature
+                        .river_runoff_traversed_threshold
+                        .0,
+                    0.0..=1000.0,
+                )
+                .step_by(50.0)
+                .text("River Runoff-Traversed Threshold"),
+            );
+        });
 
         // If clicked, trigger a world gen
-        if generate_button.clicked() {
+        if ui.button("Generate World").clicked() {
             generate_world_events.send(GenerateWorldEvent);
         }
 
@@ -82,7 +249,7 @@ fn world_config_ui(
             debug!("World config changed, syncing JSON text: {world_config:?}");
             ui_state.world_config_text =
                 serde_json::to_string_pretty(world_config.deref()).unwrap();
-        } else if json_text_edit.changed() {
+        } else if json_changed {
             // If the JSON text was changed, try to deserialize it and update
             // the config. If deserialization fails, assume the user is still
             // making changes so just leave it be.
@@ -106,20 +273,37 @@ fn render_config_ui(
 ) {
     egui::Window::new("Render Config").show(egui_context.ctx_mut(), |ui| {
         ui.label("Lens");
-        ui.vertical(|ui| {
-            let mut lens = render_config.tile_lens;
-            ui.radio_value(&mut lens, TileLens::Surface, "Surface");
-            ui.radio_value(&mut lens, TileLens::Biome, "Biome");
-            ui.radio_value(&mut lens, TileLens::Elevation, "Elevation");
-            ui.radio_value(&mut lens, TileLens::Humidity, "Humidity");
-            ui.radio_value(&mut lens, TileLens::Runoff, "Runoff");
-
-            // Defer updating the render config until we know something actuall
-            // changed. Otherwise we'll trigger a "change" in the render config
-            // on every frame
-            if lens != render_config.tile_lens {
-                render_config.tile_lens = lens;
-            }
-        });
+        let mut lens = render_config.tile_lens;
+        ui.vertical(enum_radio_select(
+            &mut lens,
+            [
+                TileLens::Surface,
+                TileLens::Biome,
+                TileLens::Elevation,
+                TileLens::Humidity,
+                TileLens::Runoff,
+            ]
+            .into_iter(),
+        ));
+        // Defer updating the render config until we know something actuall
+        // changed. Otherwise we'll trigger a "change" in the render config
+        // on every frame
+        if lens != render_config.tile_lens {
+            render_config.tile_lens = lens;
+        }
     });
+}
+
+/// Create a radio select widget for an enum. There will be one option for each
+/// given enum variant.
+fn enum_radio_select<'a, T: Display + PartialEq>(
+    value: &'a mut T,
+    options: impl Iterator<Item = T> + 'a,
+) -> impl FnOnce(&mut Ui) + 'a {
+    move |ui| {
+        for option in options {
+            let label = option.to_string();
+            ui.radio_value::<T>(value, option, label);
+        }
+    }
 }
