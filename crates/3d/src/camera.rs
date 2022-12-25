@@ -4,11 +4,12 @@ use bevy::{
     input::mouse::{MouseMotion, MouseWheel},
     prelude::{
         Camera3dBundle, Commands, Component, EventReader, Input, Mat3,
-        MouseButton, Plugin, Projection, Quat, Query, Res, Transform, Vec2,
-        Vec3,
+        MouseButton, Plugin, Projection, Quat, Query, Res, ResMut, Transform,
+        Vec2, Vec3,
     },
     window::Windows,
 };
+use bevy_egui::EguiContext;
 
 const ZOOM_SPEED: f32 = 0.02;
 const MIN_RADIUS: f32 = 0.1;
@@ -46,11 +47,19 @@ impl Default for PanOrbitCamera {
 /// right mouse click.
 fn pan_orbit_camera(
     windows: Res<Windows>,
+    mut egui_context: ResMut<EguiContext>,
     mut ev_motion: EventReader<MouseMotion>,
     mut ev_scroll: EventReader<MouseWheel>,
     input_mouse: Res<Input<MouseButton>>,
     mut query: Query<(&mut PanOrbitCamera, &mut Transform, &Projection)>,
 ) {
+    // If the UI has the cursor captured, ignore all input events
+    let egui_context = egui_context.ctx_mut();
+    if egui_context.is_pointer_over_area() || egui_context.wants_pointer_input()
+    {
+        return;
+    }
+
     // change input mapping for orbit and panning here
     let orbit_button = MouseButton::Right;
     let pan_button = MouseButton::Left;

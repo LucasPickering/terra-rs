@@ -1,4 +1,5 @@
 use crate::{Meter, Meter3};
+use derive_more::Display;
 use fnv::FnvHasher;
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
@@ -193,14 +194,20 @@ pub struct NoiseFnConfig {
 /// be seedable and multi-fractal. See
 /// https://docs.rs/noise/0.7.0/noise/trait.MultiFractal.html for a list of
 /// types that could possibly be supported here.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Copy, Clone, Debug, Display, Eq, PartialEq, Serialize, Deserialize,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum NoiseFnType {
     // if you add a variant here, make sure you update the type in wasm/lib.rs
+    #[display(fmt = "Basic Multi")]
     BasicMulti,
     Billow,
+    #[display(fmt = "Fractal Brownian Motion")]
     Fbm,
+    #[display(fmt = "Hybrid Multi")]
     HybridMulti,
+    #[display(fmt = "Ridged Multi")]
     RidgedMulti,
 }
 

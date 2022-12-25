@@ -14,6 +14,7 @@ use crate::{
     Biome, BiomeType, GeoFeature, HasHexPosition, Meter, Meter3, NumRange,
     Tile, World,
 };
+use derive_more::Display;
 use nalgebra::{Matrix3, Point3, Rotation3};
 use serde::{Deserialize, Serialize};
 use std::f64;
@@ -285,7 +286,15 @@ impl WorldRenderer {
 /// A definition of what data is used to compute a tile's color.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(
-    Copy, Clone, Debug, Eq, PartialEq, EnumString, Serialize, Deserialize,
+    Copy,
+    Clone,
+    Debug,
+    Display,
+    Eq,
+    PartialEq,
+    EnumString,
+    Serialize,
+    Deserialize,
 )]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
