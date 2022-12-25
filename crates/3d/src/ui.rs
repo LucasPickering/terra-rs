@@ -1,16 +1,16 @@
 use crate::world::event::GenerateWorldEvent;
 use bevy::prelude::{
-    debug, App, EventWriter, IntoSystemDescriptor, Plugin, ResMut, Resource,
+    trace, App, EventWriter, IntoSystemDescriptor, Plugin, ResMut, Resource,
 };
 use bevy_egui::{
-    egui::{self, Slider, Ui},
+    egui::{self, RichText, Slider, Ui, WidgetText},
     EguiContext, EguiPlugin,
 };
 use std::{
     fmt::Display,
     ops::{Deref, RangeInclusive},
 };
-use terra::{NoiseFnType, RenderConfig, TileLens, WorldConfig};
+use terra::{Meter3, NoiseFnType, RenderConfig, TileLens, WorldConfig};
 
 pub struct UiPlugin;
 
@@ -69,9 +69,7 @@ fn world_config_ui(
         let mut controls_config = *world_config;
 
         // ===== General =====
-        ui.group(|ui| {
-            ui.label("General");
-
+        ui.scope(section("General", |ui| {
             // TODO seed text field
 
             ui.add(
@@ -79,12 +77,10 @@ fn world_config_ui(
                     .step_by(10.0)
                     .text("World Radius"),
             );
-        });
+        }));
 
         // ===== Edge Buffer =====
-        ui.group(|ui| {
-            ui.label("Edge Buffer");
-
+        ui.scope(section("Edge Buffer", |ui| {
             ui.add(
                 Slider::new(
                     &mut controls_config.elevation.edge_buffer_fraction,
@@ -102,12 +98,10 @@ fn world_config_ui(
                 .step_by(EXPONENT_STEP)
                 .text("Exponent"),
             );
-        });
+        }));
 
         // ===== Elevation =====
-        ui.group(|ui| {
-            ui.label("Elevation");
-
+        ui.scope(section("Elevation", |ui| {
             ui.label("Noise Type");
             ui.vertical(enum_radio_select(
                 &mut controls_config.elevation.noise_fn.noise_type,
@@ -165,64 +159,68 @@ fn world_config_ui(
                 .step_by(EXPONENT_STEP)
                 .text("Exponent"),
             );
-        });
+        }));
 
         // ===== Rainfall =====
-        ui.group(|ui| {
-            ui.label("Rainfall");
-
+        ui.scope(section("Rainfall", |ui| {
             ui.checkbox(&mut controls_config.rainfall.enabled, "Enabled?");
 
-            // TODO add units to tick labels
-            ui.add(
-                Slider::new(
-                    &mut controls_config.rainfall.evaporation_default.0,
-                    0.0..=10.0,
-                )
-                .step_by(0.5)
-                .text("Default Evaporation Volume"),
-            );
+            // Disable the rest of the controls if rainfall gen is disabled
+            ui.add_enabled_ui(controls_config.rainfall.enabled, |ui| {
+                ui.add(
+                    Slider::new(
+                        &mut controls_config.rainfall.evaporation_default.0,
+                        0.0..=10.0,
+                    )
+                    .step_by(0.5)
+                    .custom_formatter(format_meter3)
+                    .text("Default Evaporation Volume"),
+                );
 
-            ui.add(
-                Slider::new(
-                    &mut controls_config.rainfall.evaporation_land_scale,
-                    NORMAL_RANGE,
-                )
-                .step_by(NORMAL_STEP)
-                .text("Land Evaporation Scale"),
-            );
+                ui.add(
+                    Slider::new(
+                        &mut controls_config.rainfall.evaporation_land_scale,
+                        NORMAL_RANGE,
+                    )
+                    .step_by(NORMAL_STEP)
+                    .text("Land Evaporation Scale"),
+                );
 
-            ui.add(
-                Slider::new(
-                    &mut controls_config.rainfall.evaporation_spread_distance,
-                    0..=100,
-                )
-                .step_by(5.0)
-                .text("Evaporation Spread Distance"),
-            );
+                ui.add(
+                    Slider::new(
+                        &mut controls_config
+                            .rainfall
+                            .evaporation_spread_distance,
+                        0..=100,
+                    )
+                    .step_by(5.0)
+                    .text("Evaporation Spread Distance"),
+                );
 
-            ui.add(
-                Slider::new(
-                    &mut controls_config.rainfall.evaporation_spread_exponent,
-                    EXPONENT_RANGE,
-                )
-                .step_by(EXPONENT_STEP)
-                .text("Evaporation Spread Exponent"),
-            );
+                ui.add(
+                    Slider::new(
+                        &mut controls_config
+                            .rainfall
+                            .evaporation_spread_exponent,
+                        EXPONENT_RANGE,
+                    )
+                    .step_by(EXPONENT_STEP)
+                    .text("Evaporation Spread Exponent"),
+                );
 
-            ui.add(
-                Slider::new(
-                    &mut controls_config.rainfall.rainfall_fraction_limit,
-                    0.0..=0.5,
-                )
-                .step_by(0.05)
-                .text("Rainfall Fraction Limit"),
-            );
-        });
+                ui.add(
+                    Slider::new(
+                        &mut controls_config.rainfall.rainfall_fraction_limit,
+                        0.0..=0.5,
+                    )
+                    .step_by(0.05)
+                    .text("Rainfall Fraction Limit"),
+                );
+            });
+        }));
 
         // ===== Geographic Features =====
-        ui.group(|ui| {
-            // TODO add units to tick labels
+        ui.scope(section("Geographic Features", |ui| {
             ui.add(
                 Slider::new(
                     &mut controls_config
@@ -232,9 +230,10 @@ fn world_config_ui(
                     0.0..=1000.0,
                 )
                 .step_by(50.0)
+                .custom_formatter(format_meter3)
                 .text("River Runoff-Traversed Threshold"),
             );
-        });
+        }));
 
         // If clicked, trigger a world gen
         if ui.button("Generate World").clicked() {
@@ -246,7 +245,7 @@ fn world_config_ui(
         if world_config.deref() != &controls_config {
             *world_config = controls_config;
 
-            debug!("World config changed, syncing JSON text: {world_config:?}");
+            trace!("World config changed, syncing JSON text: {world_config:?}");
             ui_state.world_config_text =
                 serde_json::to_string_pretty(world_config.deref()).unwrap();
         } else if json_changed {
@@ -256,7 +255,7 @@ fn world_config_ui(
             if let Ok(deserialized_config) =
                 serde_json::from_str(&ui_state.world_config_text)
             {
-                debug!(
+                trace!(
                     "JSON text changed, using deserialized config: {:?}",
                     deserialized_config
                 );
@@ -306,4 +305,21 @@ fn enum_radio_select<'a, T: Display + PartialEq>(
             ui.radio_value::<T>(value, option, label);
         }
     }
+}
+
+fn section(
+    heading: impl Into<String>,
+    add_contents: impl FnOnce(&mut Ui),
+) -> impl FnOnce(&mut Ui) {
+    move |ui| {
+        ui.group(|ui| {
+            ui.label(WidgetText::RichText(RichText::new(heading).heading()));
+            add_contents(ui);
+        });
+    }
+}
+
+/// Format a Meter3 (cubic meter) as a string
+fn format_meter3(value: f64, _: RangeInclusive<usize>) -> String {
+    Meter3(value).to_string()
 }
