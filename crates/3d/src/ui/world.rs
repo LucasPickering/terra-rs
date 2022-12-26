@@ -1,8 +1,8 @@
 use crate::{
-    ui::{enum_radio_select, section, UiState},
+    ui::{enum_radio_select, section},
     world::event::GenerateWorldEvent,
 };
-use bevy::prelude::{trace, EventWriter, ResMut};
+use bevy::prelude::{trace, EventWriter, Res, ResMut, Resource};
 use bevy_egui::{
     egui::{Slider, Ui, Window},
     EguiContext,
@@ -20,12 +20,34 @@ const EXPONENT_RANGE: RangeInclusive<f64> = 0.0..=3.0;
 /// Standard slider step size for exponent fields
 const EXPONENT_STEP: f64 = 0.1;
 
+#[derive(Default, Resource)]
+pub struct WorldConfigUiState {
+    /// Raw JSON editor for the world config
+    world_config_text: String,
+}
+
+impl WorldConfigUiState {
+    /// Reset UI state to match the current world congig
+    fn reset(&mut self, world_config: &WorldConfig) {
+        self.world_config_text =
+            serde_json::to_string_pretty(world_config).unwrap();
+    }
+}
+
+/// Initialize UI state to match the initial world config
+pub(super) fn init_world_config_ui(
+    world_config: Res<WorldConfig>,
+    mut ui_state: ResMut<WorldConfigUiState>,
+) {
+    ui_state.reset(&world_config);
+}
+
 /// UI for editing world config
 pub(super) fn world_config_ui(
     mut egui_context: ResMut<EguiContext>,
     mut world_config: ResMut<WorldConfig>,
     mut generate_world_events: EventWriter<GenerateWorldEvent>,
-    mut ui_state: ResMut<UiState>,
+    mut ui_state: ResMut<WorldConfigUiState>,
 ) {
     // Did the JSON editor change on this frame?
     let mut json_changed = false;
@@ -48,10 +70,17 @@ pub(super) fn world_config_ui(
             // Render all the controls that can edit the config
             controls_ui(ui, &mut controls_config);
 
-            // If clicked, trigger a world gen
-            if ui.button("Generate World").clicked() {
-                generate_world_events.send(GenerateWorldEvent);
-            }
+            ui.horizontal(|ui| {
+                // Button to reset config to default value
+                if ui.button("Reset to Default").clicked() {
+                    controls_config = WorldConfig::default();
+                }
+
+                // Button to trigger a world gen
+                if ui.button("Generate World").clicked() {
+                    generate_world_events.send(GenerateWorldEvent);
+                }
+            });
         },
     );
 
@@ -61,8 +90,8 @@ pub(super) fn world_config_ui(
     if world_config.deref() != &controls_config {
         *world_config = controls_config;
         trace!("World config changed, syncing JSON text: {world_config:?}");
-        ui_state.world_config_text =
-            serde_json::to_string_pretty(world_config.deref()).unwrap();
+        // Reset JSON editor to match current config
+        ui_state.reset(&world_config);
     } else if json_changed {
         // If the JSON text was changed, try to deserialize it and
         // update the config. If deserialization fails, assume the user
