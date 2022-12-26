@@ -12,7 +12,6 @@ bevy = {version = "0.9.1", default-features = false, features = [
   "bevy_asset",
   "bevy_winit",
   "dynamic", # Warning - does not work with wasm!!
-  "filesystem_watcher",
   "render",
   "x11",
 ]}
