@@ -44,14 +44,14 @@ use std::{cmp, fmt::Debug};
 /// reference to one tile in a collection, you can't grab references to any
 /// other items. But it turns out that doing it this way is usually a lot faster
 /// and simpler than using a hack like `Rc<RefCell<_>>`.
-pub struct WorldBuilder {
+pub struct WorldBuilder<'a> {
     /// This config determinisitically controls world config, meaning two
     /// worlds with the same config will always be identical (provided they
     /// were generated on the same version of the code).
     ///
     /// This is public to allow for disjoint borrowing, but please **do not
     /// mutate the config**.
-    pub config: WorldConfig,
+    pub config: &'a WorldConfig,
 
     /// RNG provider.
     pub rng: Pcg64,
@@ -65,10 +65,10 @@ pub struct WorldBuilder {
     pub wind_direction: Option<HexAxialDirection>,
 }
 
-impl WorldBuilder {
+impl<'a> WorldBuilder<'a> {
     /// Initialize a builder that will construct a new world. **This assumes
     /// that the given config is already validated!**
-    pub fn new(config: WorldConfig) -> Self {
+    pub fn new(config: &'a WorldConfig) -> Self {
         // Initialize each tile
         let tiles = timed!("World initialization", {
             let capacity = util::world_len(config.radius);
@@ -99,7 +99,7 @@ impl WorldBuilder {
         info!("Initialized world with {} tiles", tiles.len());
         Self {
             config,
-            rng: Pcg64::seed_from_u64(config.seed),
+            rng: Pcg64::seed_from_u64(config.seed.to_u64()),
             tiles,
             wind_direction: None,
         }

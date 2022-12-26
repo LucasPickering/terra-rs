@@ -55,7 +55,7 @@ pub(super) fn world_config_ui(
     // Any mutable access to world_config will mark it as changed, so we want to
     // defer mutable acces until we know we actually change something. So we'll
     // copy the config, then re-assign at the end if the copy changed
-    let mut controls_config = *world_config;
+    let mut controls_config = world_config.clone();
 
     Window::new("World Config").vscroll(true).show(
         egui_context.ctx_mut(),

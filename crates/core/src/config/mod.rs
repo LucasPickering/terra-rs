@@ -1,6 +1,9 @@
+mod seed;
+
 use crate::{Meter, Meter3};
 use derive_more::Display;
 use fnv::FnvHasher;
+pub use seed::Seed;
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
 use validator::Validate;
@@ -11,34 +14,13 @@ use validator::Validate;
 
 /// Configuration that defines a world gen process. Two worlds generated with
 /// same config will always be identical.
-#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize, Validate)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Validate)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::system::Resource))]
 #[serde(default)]
 pub struct WorldConfig {
-    /// RNG seed to use for all randomized processes during world gen.
-    ///
-    /// When deserializing a config, this field supports a few options:
-    /// - If the value is an integer that fits into `u64`, use that value
-    /// - If it's a string that can be parsed into a `u64`, use the parsed
-    ///   value
-    /// - If it's_any other string, hash it and use the hash value
-    /// - If it's anything else (out of range number, float, array, etc.),
-    ///   error
-    ///
-    /// **Note:** It seems that some serde implementations (including
-    /// serde_json) will be overzealous and accidentally support additional
-    /// data types here. E.g. if you pass a bool, it will stringify it then
-    /// hash the string. Don't consider that supported behavior, just a
-    /// bug.
-    ///
-    /// Regardless of how the seed value is input, it will always be serialized
-    /// as a **string**. JSON and TOML don't allow 64-bit unsigned integers,
-    /// so certain seeds can have issues if the value is serialized as a
-    /// number. By serializing as a string, we avoid that, and the seed
-    /// will still be parsed back into the same number next time it is
-    /// deserialized.
-    #[serde(with = "serde_seed")]
-    pub seed: u64,
+    /// RNG seed to use for all randomized processes during world gen. See the
+    /// [Seed] type for details on the different values supported here.
+    pub seed: Seed,
 
     /// Distance from the center of the world to the edge (in tiles).
     #[validate(range(min = 0, max = 10000))]
@@ -231,14 +213,19 @@ impl Default for WorldConfig {
         // that whenever someone generates a world with the default config,
         // it looks pretty good.
         Self {
-            // Danger! This means the default will vary between calls!
-            seed: rand::random(),
-
+            seed: Default::default(),
             radius: 100,
-            rainfall: RainfallConfig::default(),
-            geo_feature: GeoFeatureConfig::default(),
-            elevation: ElevationConfig::default(),
+            elevation: Default::default(),
+            rainfall: Default::default(),
+            geo_feature: Default::default(),
         }
+    }
+}
+
+impl Default for Seed {
+    fn default() -> Self {
+        // Danger! This means the default will vary between calls!
+        Self::Int(rand::random())
     }
 }
 
@@ -278,73 +265,5 @@ impl Default for GeoFeatureConfig {
         Self {
             river_runoff_traversed_threshold: Meter3(100.0),
         }
-    }
-}
-
-/// The seed field has some fancy deserialization behavior implemented here. See
-/// the `seed` field definition for a description.
-mod serde_seed {
-    use super::*;
-    use serde::{de::Visitor, Deserializer, Serializer};
-    use std::{convert::TryInto, fmt};
-
-    /// Serialize a seed as a string, to avoid issues with large ints
-    pub fn serialize<S>(seed: &u64, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&seed.to_string())
-    }
-
-    /// Macro to make it easier to implement visit logic for different types
-    macro_rules! impl_visit {
-        ($fname:ident, $type:ty) => {
-            fn $fname<E>(self, value: $type) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                value.try_into().map_err(|_| {
-                    E::custom(format!("u64 out of range: {}", value))
-                })
-            }
-        };
-    }
-
-    struct SeedVisitor;
-
-    impl<'de> Visitor<'de> for SeedVisitor {
-        type Value = u64;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("an integer or string")
-        }
-
-        // yay for metaprogramming
-        impl_visit!(visit_u8, u8);
-        impl_visit!(visit_u16, u16);
-        impl_visit!(visit_u32, u32);
-        impl_visit!(visit_u64, u64);
-        impl_visit!(visit_u128, u128);
-        impl_visit!(visit_i8, i8);
-        impl_visit!(visit_i16, i16);
-        impl_visit!(visit_i32, i32);
-        impl_visit!(visit_i64, i64);
-        impl_visit!(visit_i128, i128);
-
-        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-        where
-            E: serde::de::Error,
-        {
-            Ok(WorldConfig::str_to_seed(value))
-        }
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<u64, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        // We can deserialize from a bunch of different types so we can't give
-        // a type hint here
-        deserializer.deserialize_any(SeedVisitor)
     }
 }

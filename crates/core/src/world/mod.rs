@@ -102,7 +102,7 @@ impl World {
         let tiles = timed!(
             "World generation",
             log::Level::Info,
-            WorldBuilder::new(config).generate_world()
+            WorldBuilder::new(&config).generate_world()
         );
 
         Ok(Self { config, tiles })

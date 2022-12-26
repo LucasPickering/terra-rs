@@ -8,7 +8,7 @@ use validator::ValidationErrors;
 #[test]
 fn test_world_config_validation() {
     let config = WorldConfig {
-        seed: 0,
+        seed: 0.into(),
         radius: 10001, // invalid (too big)
         elevation: ElevationConfig {
             noise_fn: NoiseFnConfig {
@@ -33,7 +33,6 @@ fn test_world_config_validation() {
         },
         geo_feature: GeoFeatureConfig {
             // Unfortunately we can't validate Meter3s right now
-            lake_runoff_threshold: Meter3(-1.0),
             river_runoff_traversed_threshold: Meter3(-1.0),
         },
     };

@@ -31,7 +31,7 @@ impl Generate for RainfallGenerator {
         // This step can be disabled to improve performance
         if world.config.rainfall.enabled {
             let mut cloud_line =
-                CloudLine::new(&world.config, world.wind_direction());
+                CloudLine::new(world.config, world.wind_direction());
 
             let radius = world.config.radius as i16;
             for _ in -radius..=radius {
