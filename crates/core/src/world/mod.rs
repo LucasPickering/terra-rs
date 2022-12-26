@@ -110,6 +110,7 @@ impl World {
 
     /// Deserialize a world from JSON. A world can be serialized into JSON with
     /// [World::to_json]. Will fail if the input is malformed.
+    #[cfg(feature = "json")]
     pub fn from_json(&self, json: &str) -> anyhow::Result<Self> {
         serde_json::from_str(json).context("error deserializing world")
     }
@@ -129,6 +130,7 @@ impl World {
 impl World {
     /// Serializes this world into JSON. This is a recoverable format, which can
     /// be loaded back into a [World] with [World::from_json].
+    #[cfg(feature = "json")]
     pub fn to_json(&self) -> String {
         // Panic here indicates an internal bug in the data format
         serde_json::to_string(self).expect("error serializing world")
