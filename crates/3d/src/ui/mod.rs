@@ -1,35 +1,23 @@
 mod render;
 mod world;
 
-use bevy::prelude::{App, IntoSystemDescriptor, Plugin, Resource};
+use crate::ui::world::WorldConfigUiState;
+use bevy::prelude::{App, IntoSystemDescriptor, Plugin};
 use bevy_egui::{
     egui::{RichText, Ui, WidgetText},
     EguiPlugin,
 };
 use std::fmt::Display;
-use terra::WorldConfig;
 
 pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(EguiPlugin)
-            .insert_resource::<UiState>(UiState::default())
+            .insert_resource(WorldConfigUiState::default())
+            .add_startup_system(world::init_world_config_ui)
             .add_system(world::world_config_ui)
             .add_system(render::render_config_ui.after(world::world_config_ui));
-    }
-}
-
-#[derive(Resource)]
-struct UiState {
-    world_config_text: String,
-}
-
-impl Default for UiState {
-    fn default() -> Self {
-        let world_config_text =
-            serde_json::to_string_pretty(&WorldConfig::default()).unwrap();
-        Self { world_config_text }
     }
 }
 
