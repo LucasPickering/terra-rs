@@ -23,14 +23,13 @@ const EXPONENT_STEP: f64 = 0.1;
 #[derive(Default, Resource)]
 pub struct WorldConfigUiState {
     /// Raw JSON editor for the world config
-    world_config_text: String,
+    config_json: String,
 }
 
 impl WorldConfigUiState {
     /// Reset UI state to match the current world congig
     fn reset(&mut self, world_config: &WorldConfig) {
-        self.world_config_text =
-            serde_json::to_string_pretty(world_config).unwrap();
+        self.config_json = serde_json::to_string_pretty(world_config).unwrap();
     }
 }
 
@@ -62,9 +61,8 @@ pub(super) fn world_config_ui(
         |ui| {
             // Directly edit the config JSON
             ui.collapsing("JSON", |ui| {
-                json_changed = ui
-                    .text_edit_multiline(&mut ui_state.world_config_text)
-                    .changed();
+                json_changed =
+                    ui.text_edit_multiline(&mut ui_state.config_json).changed();
             });
 
             // Render all the controls that can edit the config
@@ -97,7 +95,7 @@ pub(super) fn world_config_ui(
         // update the config. If deserialization fails, assume the user
         // is still making changes so just leave it be.
         if let Ok(deserialized_config) =
-            serde_json::from_str(&ui_state.world_config_text)
+            serde_json::from_str(&ui_state.config_json)
         {
             trace!(
                 "JSON text changed, using deserialized config: {:?}",
@@ -112,7 +110,21 @@ pub(super) fn world_config_ui(
 fn controls_ui(ui: &mut Ui, world_config: &mut WorldConfig) {
     // ===== General =====
     ui.scope(section("General", |ui| {
-        // TODO seed text field
+        // This is a little funky - we need to get a textual version of the
+        // current seed so it can be edited in a text box. If the seed is an
+        // int, we'll need to convert it to a string. Then we'll convert it
+        // back after editing, if it's still an int. This does some cloning
+        // that probably shouldn't be necessary, but who cares.
+        ui.label("Seed");
+        let mut seed_text = match &world_config.seed {
+            terra::Seed::Int(seed) => seed.to_string(),
+            terra::Seed::Text(seed) => seed.clone(),
+        };
+        if ui.text_edit_singleline(&mut seed_text).changed() {
+            // Convert text back to a seed. This will parse it as an int if
+            // possible, then fall back to storing it as a string
+            world_config.seed = seed_text.as_str().into();
+        }
 
         ui.add(
             Slider::new(&mut world_config.radius, 0..=500)
