@@ -8,7 +8,7 @@ use terra::{ElevationConfig, World, WorldConfig};
 #[test]
 fn test_world_gen_default() {
     let config = WorldConfig::default();
-    let world = World::generate(config).unwrap();
+    let world = World::generate(config.clone()).unwrap();
     // Default config uses a random seed each time, so we want to log the
     // config to make sure we can reproduce the failure
     assert_eq!(
@@ -23,7 +23,7 @@ fn test_world_gen_default() {
 #[test]
 fn test_world_gen_tiny() {
     let config = WorldConfig {
-        seed: 12506774975058000,
+        seed: 12506774975058000.into(),
         radius: 2,
         elevation: ElevationConfig {
             edge_buffer_fraction: 0.25,
@@ -39,7 +39,7 @@ fn test_world_gen_tiny() {
 #[test]
 fn test_world_gen_large() {
     let config = WorldConfig {
-        seed: 1021522790211909,
+        seed: 1021522790211909.into(),
         radius: 400,
         elevation: ElevationConfig {
             edge_buffer_fraction: 0.25,
@@ -59,7 +59,7 @@ fn test_world_gen_large() {
 #[test]
 fn test_world_gen_mega_lake() {
     let config = WorldConfig {
-        seed: 12507776774975058000,
+        seed: 12507776774975058000.into(),
         radius: 60,
         elevation: ElevationConfig {
             edge_buffer_fraction: 0.025,

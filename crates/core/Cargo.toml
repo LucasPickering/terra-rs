@@ -34,6 +34,9 @@ strum = {version = "0.20", features = ["derive"]}
 svg = {version = "0.8", optional = true}
 validator = {version = "0.12", default-features = false, features = ["derive"]}
 
+[dev-dependencies]
+serde_test = "1.0"
+
 # wasm-only dependencies
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = {version = "*", features = ["js"]}
