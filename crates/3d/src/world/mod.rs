@@ -1,7 +1,10 @@
 pub mod event;
 mod mesh;
+pub mod storage;
 
-use crate::world::{event::GenerateWorldEvent, mesh::TileMeshBuilder};
+use crate::world::{
+    event::GenerateWorldEvent, mesh::TileMeshBuilder, storage::TileStorage,
+};
 use bevy::prelude::{
     debug, default, info, Added, AlphaMode, App, Assets, BuildChildren, Color,
     Commands, DespawnRecursiveExt, DirectionalLight, DirectionalLightBundle,
@@ -67,10 +70,15 @@ fn generate_world(
         info!("Generating world");
         let world = World::generate(world_config.to_owned()).unwrap();
 
+        // This will store a mapping of tile position : entity ID
+        let mut tile_storage = TileStorage::default();
+
         // Spawn each tile as a separate entity
         for tile in world.into_tiles().into_values() {
-            commands.spawn(tile);
+            tile_storage.spawn_tile(&mut commands, tile);
         }
+
+        commands.spawn(tile_storage);
     }
 }
 
@@ -78,12 +86,13 @@ fn generate_world(
 /// data *and* the associated visuals
 fn delete_world(
     mut commands: Commands,
+    tile_storage_query: Query<Entity, With<TileStorage>>,
     tile_query: Query<Entity, With<Tile>>,
     mut generate_world_events: EventReader<GenerateWorldEvent>,
 ) {
     for _ in generate_world_events.iter() {
         info!("Deleting old world");
-        for entity in tile_query.iter() {
+        for entity in tile_query.iter().chain(tile_storage_query.iter()) {
             // Make sure to delete all _children_ too, which hold a lot of the
             // visuals
             commands.entity(entity).despawn_recursive();
