@@ -20,5 +20,5 @@ serde_json = "1.0"
 simple_logger = "1.11"
 structopt = "0.3"
 strum = "*"
-terra = {path = "../core", features = ["bin", "svg", "stl"]}
+terra = {path = "../core", features = ["bin", "json", "svg", "stl"]}
 toml = "*"
