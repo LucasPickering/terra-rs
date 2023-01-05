@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - bevy
   pull_request:
 
 jobs:
