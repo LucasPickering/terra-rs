@@ -37,10 +37,16 @@ impl TileMeshBuilder {
             // Bottom 6
             .map(|point2| [point2.x as f32, 0.0, point2.y as f32])
             // Top 6
-            .chain(self.top.then(|| vertices_2d
-                .iter()
-                .map(|point2| [point2.x as f32, 1.0, point2.y as f32])
-              ).into_iter().flatten())
+            .chain(
+                self.top
+                    .then(|| {
+                        vertices_2d.iter().map(|point2| {
+                            [point2.x as f32, 1.0, point2.y as f32]
+                        })
+                    })
+                    .into_iter()
+                    .flatten(),
+            )
             .collect();
 
         // REMEMBER: all vertices are specified CLOCKWISE
@@ -89,19 +95,19 @@ impl TileMeshBuilder {
 
         indexes_used.extend((0..6).into_iter());
         indices.extend([
-            0,  1,  5, // T1
-            1,  4,  5, // T2
-            1,  2,  4, // T3
-            2,  3,  4, // T4
+            0, 1, 5, // T1
+            1, 4, 5, // T2
+            1, 2, 4, // T3
+            2, 3, 4, // T4
         ]);
 
         if self.top {
             indexes_used.extend((6..12).into_iter());
             indices.extend([
-                6,  7, 11, // T1
+                6, 7, 11, // T1
                 7, 10, 11, // T2
-                7,  8, 10, // T3
-                8,  9, 10, // T4
+                7, 8, 10, // T3
+                8, 9, 10, // T4
             ]);
         }
 
@@ -110,9 +116,9 @@ impl TileMeshBuilder {
             if self.sides[i] {
                 // The side has 4 vertices
                 let bottom_right = i as u32;
-                let bottom_left  = (bottom_right + 1) % 6;
-                let top_right    =  bottom_right + 6;
-                let top_left     =  bottom_left  + 6;
+                let bottom_left = (bottom_right + 1) % 6;
+                let top_right = bottom_right + 6;
+                let top_left = bottom_left + 6;
                 // Split the rectangle into two triangles
                 indices.extend([
                     // Bottom-right triangle
@@ -128,34 +134,33 @@ impl TileMeshBuilder {
         }
 
         // Compute face normals and group them by the vertex indexes they touch
-        let face_normal_groups: Vec<Vec<Vec3>> = indices
-            .chunks_exact(3)
-            .fold(
-              indexes_used.iter().map(|_| Vec::new()).collect(),
-              |mut vector: Vec<Vec<Vec3>>, chunk| {
+        let face_normal_groups: Vec<Vec<Vec3>> = indices.chunks_exact(3).fold(
+            indexes_used.iter().map(|_| Vec::new()).collect(),
+            |mut vector: Vec<Vec<Vec3>>, chunk| {
                 let normal = face_normal(
-                  positions[chunk[0] as usize],
-                  positions[chunk[1] as usize],
-                  positions[chunk[2] as usize]
+                    positions[chunk[0] as usize],
+                    positions[chunk[1] as usize],
+                    positions[chunk[2] as usize],
                 );
                 vector[chunk[0] as usize].push(normal);
                 vector[chunk[1] as usize].push(normal);
                 vector[chunk[2] as usize].push(normal);
                 vector
-              });
+            },
+        );
 
         let vertex_normals: Vec<Vec3> = indexes_used
             .iter()
             .map(|i| {
-              let face_normals = &face_normal_groups[*i as usize];
-              average_normals(face_normals)
+                let face_normals = &face_normal_groups[*i as usize];
+                average_normals(face_normals)
             })
             .collect();
-        
+
         let positions_used: Vec<[f32; 3]> = indexes_used
-          .iter()
-          .map(|i| positions[*i as usize])
-          .collect();
+            .iter()
+            .map(|i| positions[*i as usize])
+            .collect();
 
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vertex_normals);
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions_used);
@@ -172,16 +177,16 @@ fn face_normal(a: [f32; 3], b: [f32; 3], c: [f32; 3]) -> Vec3 {
 }
 
 fn average_normals(vectors: &Vec<Vec3>) -> Vec3 {
-  let mut average = Vec3::new(0.0, 0.0, 0.0);
-  let len = vectors.len() as f32;
+    let mut average = Vec3::new(0.0, 0.0, 0.0);
+    let len = vectors.len() as f32;
 
-  for vector in vectors {
-    average.x += vector.x.abs() / len;
-    average.y += vector.y.abs() / len;
-    average.z += vector.z.abs() / len;
-  }
+    for vector in vectors {
+        average.x += vector.x.abs() / len;
+        average.y += vector.y.abs() / len;
+        average.z += vector.z.abs() / len;
+    }
 
-  return average.normalize();
+    return average.normalize();
 }
 
 impl Default for TileMeshBuilder {
