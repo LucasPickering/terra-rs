@@ -8,7 +8,7 @@ import SelectConfigInput from "./SelectConfigInput";
 import TextConfigInput from "./TextConfigInput";
 import { worldDescriptions } from "./descriptions";
 import ConfigEditor from "./ConfigEditor";
-import type { WorldConfigObject } from "terra-wasm";
+import type { WorldConfigObject } from "terra";
 import { formatMeter3 } from "../../../util";
 import { Redirect, useLocation } from "react-router";
 import CheckboxConfigInput from "./CheckboxConfigInput";

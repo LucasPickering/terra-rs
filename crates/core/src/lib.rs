@@ -17,16 +17,22 @@
 //!
 //! ## Features
 //!
+//! - `bevy` - Enable Bevy ECS traits on types from this crate
 //! - `bin` - Import/export worlds to/from binary format
 //!   ([World::from_bin]/[World::to_bin])
+//! - `json` - Import/export worlds to/from JSON format
+//!   ([World::from_json]/[World::to_json])
 //! - `stl` - Render worlds in 3D STL format ([World::to_stl])
 //! - `svg` - Render worlds in 2D SVG format ([World::to_svg])
+//! - `js` - Enable Wasm entrypoint for direct access from JS
 
 #![feature(const_fn_floating_point_arithmetic)]
 
 // TODO rework these to have one level of module depth
 
 mod config;
+#[cfg(feature = "js")]
+pub mod js;
 mod render;
 mod util;
 mod world;

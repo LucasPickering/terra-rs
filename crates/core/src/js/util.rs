@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use terra::validator::Validate;
+use validator::Validate;
 use wasm_bindgen::{prelude::*, JsCast};
 
 pub fn to_js_error(error: impl Display) -> JsValue {

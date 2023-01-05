@@ -2,7 +2,7 @@ import React, { useContext } from "react";
 import { saveAs } from "file-saver";
 import { Menu, MenuItem } from "@material-ui/core";
 import DemoContext from "context/DemoContext";
-const { build_renderer } = await import("terra-wasm");
+const { build_renderer } = await import("terra");
 
 const DownloadMenu: React.FC<React.ComponentProps<typeof Menu>> = (props) => {
   const { worldState, renderConfigHandler } = useContext(DemoContext);

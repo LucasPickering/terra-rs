@@ -4,11 +4,11 @@ use derive_more::{
 };
 use serde::{Deserialize, Serialize};
 use std::ops;
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "js")]
 use wasm_bindgen::prelude::*;
 
 /// Unit used for elevation
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(feature = "js", wasm_bindgen)]
 #[derive(
     Copy,
     Clone,
@@ -35,7 +35,7 @@ use wasm_bindgen::prelude::*;
 #[display(fmt = "{} m", "self.0")]
 pub struct Meter(pub f64);
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "js")]
 #[wasm_bindgen]
 impl Meter {
     #[wasm_bindgen(constructor)]
@@ -49,7 +49,7 @@ impl Meter {
 /// **Note:** Tiles may not actually be rendered such that the area is exactly
 /// 1m^2 with reference to the elevation, but that's fine. This is just a nice
 /// simplification that makes math easier.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(feature = "js", wasm_bindgen)]
 #[derive(
     Copy,
     Clone,
@@ -76,7 +76,7 @@ impl Meter {
 #[display(fmt = "{} m²", "self.0")]
 pub struct Meter2(pub f64);
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "js")]
 #[wasm_bindgen]
 impl Meter2 {
     #[wasm_bindgen(constructor)]
@@ -89,7 +89,7 @@ impl Meter2 {
 /// 1 volumetric meter. See caveat on [Meter2], this may not actually appear
 /// to be 1m*1m*1m when compared to elevation, depending on what ratios the
 /// renderer uses.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(feature = "js", wasm_bindgen)]
 #[derive(
     Copy,
     Clone,
@@ -116,7 +116,7 @@ impl Meter2 {
 #[display(fmt = "{} m³", "self.0")]
 pub struct Meter3(pub f64);
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "js")]
 #[wasm_bindgen]
 impl Meter3 {
     #[wasm_bindgen(constructor)]

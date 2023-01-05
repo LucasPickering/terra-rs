@@ -1,18 +1,23 @@
-//! This crate provides WebAssembly bindings for Terra. The global functions
-//! exported from this module provide all the interfaces you will need into
-//! Terra. You can modify and validate configs, generate worlds, and render
-//! them.
+//! JS-compatibility code. This code is meant for Wasm contexts, specifically
+//! where the library is being used to generate worlds, but the world data is
+//! then being processed in JS/TS. This module/feature should **not** be
+//! enabled when compiling to Wasm in a pure-Rust context.
 //!
-//! You probably won't ever want to include this crate in another Rust project.
-//! Instead, use `wasm-pack` to build this into an npm package, then import that
-//! into your JS project.
+//! There are some other wasm-bindgen-enabled functions and types elsewhere in
+//! the crate. This module is the home for stuff that is **exclusively** for
+//! Wasm boundary usage.
+//!
+//! You probably won't ever want to enable this feature when including this
+//! crate in another Rust project. Instead, use `wasm-pack` to build this into
+//! an npm package, then import that into your JS project.
 //!
 //! See the [demo code](https://github.com/LucasPickering/terra-rs/tree/master/demo) for a usage example.
 
 mod util;
 
-use crate::util::ResultExt;
-use terra::{RenderConfig, World, WorldConfig, WorldRenderer};
+use crate::{
+    js::util::ResultExt, RenderConfig, World, WorldConfig, WorldRenderer,
+};
 use wasm_bindgen::{prelude::*, JsCast};
 
 /// Executed when the Wasm module is first loaded

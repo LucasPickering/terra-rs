@@ -41,8 +41,6 @@ Currently we use Rust nightly because of a handful of features. Once this list g
 - rustfmt
   - [imports_granularity](https://github.com/rust-lang/rustfmt/blob/master/Configurations.md#imports_granularity)
   - [wrap_comments](https://github.com/rust-lang/rustfmt/issues/3347)
-- cargo
-  - [per-package-target](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#per-package-target)
 
 ## Troubleshooting
 

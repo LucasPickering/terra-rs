@@ -5,12 +5,12 @@ use derive_more::{
 };
 use serde::{Deserialize, Serialize};
 use std::ops;
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "js")]
 use wasm_bindgen::prelude::*;
 
 /// A 2D point in screen space. See module-level docs in [crate::hex] for a
 /// description of what screen space means.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(feature = "js", wasm_bindgen)]
 #[derive(
     Copy,
     Clone,
@@ -51,7 +51,7 @@ impl From<nalgebra::Point2<f64>> for Point2 {
 
 /// An RGB color. Values are stored as floats between 0 and 1 (inclusive).
 /// This uses f32 because the extra precision from f64 is pointless.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(feature = "js", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Color3 {
     pub red: f32,

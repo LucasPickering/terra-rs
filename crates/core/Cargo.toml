@@ -10,14 +10,26 @@ version = "0.1.0"
 [features]
 bevy = ["dep:bevy_ecs"]
 bin = ["dep:serde_cbor"]
+js = [
+  "dep:console_error_panic_hook",
+  "dep:getrandom",
+  "dep:js-sys",
+  "dep:wasm-bindgen",
+  "dep:wasm-logger",
+  "dep:web-sys",
+]
 json = ["dep:serde_json"]
 stl = ["dep:stl_io"]
 svg = ["dep:svg"]
 
+[lib]
+# Needed for wasm/js usage
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 anyhow = "1.0"
 assert_approx_eq = "1.1"
-bevy_ecs = {version = "0.9", optional = true, default-features = false}
+bevy_ecs = {version = "0.9", default-features = false, optional = true}
 derive_more = "0.99"
 fnv = "1.0"
 indexmap = "1.6"
@@ -27,18 +39,22 @@ noise = {version = "0.6", default-features = false}
 rand = "0.8"
 rand_pcg = "0.3"
 serde = {version = "1.0", features = ["derive"]}
+strum = {version = "0.20", features = ["derive"]}
+validator = {version = "0.12", default-features = false, features = ["derive"]}
+
+# Dependencies for specific output formats
 serde_cbor = {version = "0.11", optional = true}
 serde_json = {version = "1.0", optional = true}
 stl_io = {version = "0.6", optional = true}
-strum = {version = "0.20", features = ["derive"]}
 svg = {version = "0.8", optional = true}
-validator = {version = "0.12", default-features = false, features = ["derive"]}
+
+# JS-only dependencies (when being used as a wasm entrypoint)
+console_error_panic_hook = {version = "0.1", optional = true}
+getrandom = {version = "*", features = ["js"], optional = true}
+js-sys = {version = "0.3", optional = true}
+wasm-bindgen = {version = "0.2", features = ["serde-serialize"], optional = true}
+wasm-logger = {version = "0.2", optional = true}
+web-sys = {version = "0.3", features = ["console"], optional = true}
 
 [dev-dependencies]
 serde_test = "1.0"
-
-# wasm-only dependencies
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = {version = "*", features = ["js"]}
-wasm-bindgen = "0.2"
-web-sys = {version = "0.3", features = ["console"]}

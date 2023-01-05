@@ -31,8 +31,7 @@ module.exports = {
         // Plain import statements on wasm imports "work", but they create weird
         // issues with webpack and force us to use React Suspense, so best to
         // just avoid them
-        selector:
-          'ImportDeclaration[importKind="value"][source.value="terra-wasm"]',
+        selector: 'ImportDeclaration[importKind="value"][source.value="terra"]',
         message:
           "Use `import type` or `const ... = await import(...)` for Wasm imports",
       },

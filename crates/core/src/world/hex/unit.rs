@@ -15,7 +15,7 @@ use std::{
     ops::Add,
 };
 use strum::{EnumIter, IntoEnumIterator};
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "js")]
 use wasm_bindgen::prelude::*;
 
 // TODO make all From/TryFrom impls in here more generic after https://github.com/rust-lang/rust/issues/31844
@@ -83,7 +83,7 @@ pub trait HexThing: HexCoordinateValue {
 /// The x and y coordinates are stored as `i16`s. We'll never have a world with
 /// a radius of more than 32k (that'd be ~4 billion tiles), so this saves on
 /// a lot of memory.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(feature = "js", wasm_bindgen)]
 #[derive(
     Copy, Clone, Debug, PartialEq, Eq, Hash, Display, Serialize, Deserialize,
 )]

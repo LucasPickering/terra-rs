@@ -7,7 +7,7 @@ import {
 } from "@babylonjs/core";
 import TileMeshHandler from "./TileMeshHandler";
 import InputHandler from "./InputHandler";
-import type { RenderConfigObject, World } from "terra-wasm";
+import type { RenderConfigObject, World } from "terra";
 import { hexCodeToColor4 } from "../util";
 import theme from "../theme";
 
