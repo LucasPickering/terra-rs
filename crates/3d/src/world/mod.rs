@@ -3,10 +3,12 @@ mod mesh;
 pub mod storage;
 
 use crate::world::{
-    event::GenerateWorldEvent, mesh::TileMeshBuilder, storage::TileStorage,
+    event::{GenerateWorldEvent, RenderWorldEvent},
+    mesh::TileMeshBuilder,
+    storage::TileStorage,
 };
 use bevy::prelude::{
-    debug, default, info, Added, AlphaMode, App, Assets, BuildChildren, Color,
+    debug, default, info, AlphaMode, App, Assets, BuildChildren, Color,
     Commands, DespawnRecursiveExt, DirectionalLight, DirectionalLightBundle,
     Entity, EventReader, EventWriter, IntoSystemDescriptor, Mesh, PbrBundle,
     Plugin, Query, Res, ResMut, SpatialBundle, StandardMaterial, Transform,
@@ -27,6 +29,7 @@ impl Plugin for WorldPlugin {
         })
         .insert_resource(RenderConfig::default())
         .add_event::<GenerateWorldEvent>()
+        .add_event::<RenderWorldEvent>()
         .add_startup_system(init_scene)
         .add_startup_system(init_world)
         .add_system(generate_world)
@@ -65,6 +68,7 @@ fn generate_world(
     mut commands: Commands,
     world_config: Res<WorldConfig>,
     mut generate_world_events: EventReader<GenerateWorldEvent>,
+    mut render_world_events: EventWriter<RenderWorldEvent>,
 ) {
     for _ in generate_world_events.iter() {
         info!("Generating world");
@@ -79,6 +83,8 @@ fn generate_world(
         }
 
         commands.spawn(tile_storage);
+        // We have a new world, it needs to be rendered now
+        render_world_events.send(RenderWorldEvent);
     }
 }
 
@@ -105,102 +111,101 @@ fn delete_world(
 fn render_world(
     mut commands: Commands,
     tile_query: Query<(Entity, &Tile)>,
-    tile_added_query: Query<(), Added<Tile>>,
     render_config: Res<RenderConfig>,
+    mut render_world_events: EventReader<RenderWorldEvent>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // Check for anything that should trigger a re-render. We split the tile
-    // query into two so we can still access all tiles when config changes
-    if !render_config.is_changed() && tile_added_query.is_empty() {
-        return;
-    }
+    for _ in render_world_events.iter() {
+        debug!("Rendering tiles");
+        let renderer =
+            WorldRenderer::new(*render_config).expect("Invalid render config");
 
-    debug!("Rendering tiles");
-    let renderer =
-        WorldRenderer::new(*render_config).expect("Invalid render config");
-    // TODO we're duping these meshes on every render, we should skip that
-    let tile_mesh_handle =
-        meshes.add(TileMeshBuilder::default().build(&renderer));
-    let water_mesh_handle =
-        meshes.add(TileMeshBuilder::default().disable_sides().build(&renderer));
-    let water_material_handle = materials.add(water_material());
+        // We're duping these meshes on every render, but the old meshes should
+        // just get thrown away so it's fine I guess
+        let tile_mesh_handle =
+            meshes.add(TileMeshBuilder::default().build(&renderer));
+        let water_mesh_handle = meshes
+            .add(TileMeshBuilder::default().disable_sides().build(&renderer));
+        let water_material_handle = materials.add(water_material());
 
-    // For each tile entity, we'll attach additional visual components
-    for (entity, tile) in tile_query.iter() {
-        let position_2d = renderer.hex_to_screen_space(tile.position());
-        let tile_height = renderer.tile_height(tile) as f32;
-        let color = renderer.tile_color(tile);
+        // For each tile entity, we'll attach additional visual components
+        for (entity, tile) in tile_query.iter() {
+            let position_2d = renderer.hex_to_screen_space(tile.position());
+            let tile_height = renderer.tile_height(tile) as f32;
+            let color = renderer.tile_color(tile);
 
-        // We'll add a root transform that provides x/z position. Then add
-        // actual visual objects as children. This makes sure transform stay
-        // isolated, e.g. tile height doesn't affect water or vice/versa
-        commands
-            .entity(entity)
-            .insert(SpatialBundle {
-                transform: Transform::from_xyz(
-                    position_2d.x as f32,
-                    0.0,
-                    position_2d.y as f32,
-                ),
-                ..default()
-            })
-            .with_children(|parent| {
-                // Spawn the hex mesh
-                parent.spawn(PbrBundle {
-                    mesh: tile_mesh_handle.clone(),
-                    material: materials.add(StandardMaterial {
-                        base_color: Color::rgb(
-                            color.red,
-                            color.green,
-                            color.blue,
-                        ),
-                        perceptual_roughness: 1.0,
-                        ..default()
-                    }),
-                    transform: Transform::from_scale(
-                        [1.0, tile_height, 1.0].into(),
+            // We'll add a root transform that provides x/z position. Then add
+            // actual visual objects as children. This makes sure transform stay
+            // isolated, e.g. tile height doesn't affect water or vice/versa
+            commands
+                .entity(entity)
+                .insert(SpatialBundle {
+                    transform: Transform::from_xyz(
+                        position_2d.x as f32,
+                        0.0,
+                        position_2d.y as f32,
                     ),
                     ..default()
+                })
+                .with_children(|parent| {
+                    // Spawn the hex mesh
+                    parent.spawn(PbrBundle {
+                        mesh: tile_mesh_handle.clone(),
+                        material: materials.add(StandardMaterial {
+                            base_color: Color::rgb(
+                                color.red,
+                                color.green,
+                                color.blue,
+                            ),
+                            perceptual_roughness: 1.0,
+                            ..default()
+                        }),
+                        transform: Transform::from_scale(
+                            [1.0, tile_height, 1.0].into(),
+                        ),
+                        ..default()
+                    });
+
+                    // Spawn additional visuals for **surface lens only**
+                    if render_config.tile_lens == TileLens::Surface {
+                        // Add water for ocean tiles
+                        if tile.is_water_biome() {
+                            // Span the distance between the tile and sea level
+                            let sea_level_height =
+                                renderer.sea_level_height() as f32;
+                            parent.spawn(PbrBundle {
+                                mesh: water_mesh_handle.clone(),
+                                material: water_material_handle.clone(),
+                                transform: Transform::from_xyz(
+                                    0.0,
+                                    sea_level_height,
+                                    0.0,
+                                ),
+                                ..default()
+                            });
+                        }
+
+                        // Add water for lakes (which is a *feature*, not a
+                        // biome)
+                        if tile.features().contains(&GeoFeature::Lake) {
+                            let runoff_height = renderer
+                                .elevation_to_height(tile.runoff_elevation())
+                                as f32;
+                            parent.spawn(PbrBundle {
+                                mesh: water_mesh_handle.clone(),
+                                material: water_material_handle.clone(),
+                                transform: Transform::from_xyz(
+                                    0.0,
+                                    runoff_height,
+                                    0.0,
+                                ),
+                                ..default()
+                            });
+                        }
+                    }
                 });
-
-                // Spawn additional visuals for **surface lens only**
-                if render_config.tile_lens == TileLens::Surface {
-                    // Add water for ocean tiles
-                    if tile.is_water_biome() {
-                        // Span the distance between the tile and sea level
-                        let sea_level_height =
-                            renderer.sea_level_height() as f32;
-                        parent.spawn(PbrBundle {
-                            mesh: water_mesh_handle.clone(),
-                            material: water_material_handle.clone(),
-                            transform: Transform::from_xyz(
-                                0.0,
-                                sea_level_height,
-                                0.0,
-                            ),
-                            ..default()
-                        });
-                    }
-
-                    // Add water for lakes (which is a *feature*, not a biome)
-                    if tile.features().contains(&GeoFeature::Lake) {
-                        let runoff_height = renderer
-                            .elevation_to_height(tile.runoff_elevation())
-                            as f32;
-                        parent.spawn(PbrBundle {
-                            mesh: water_mesh_handle.clone(),
-                            material: water_material_handle.clone(),
-                            transform: Transform::from_xyz(
-                                0.0,
-                                runoff_height,
-                                0.0,
-                            ),
-                            ..default()
-                        });
-                    }
-                }
-            });
+        }
     }
 }
 
@@ -209,14 +214,11 @@ fn render_world(
 fn unrender_world(
     mut commands: Commands,
     tile_query: Query<Entity, With<Tile>>,
-    render_config: Res<RenderConfig>,
+    mut render_world_events: EventReader<RenderWorldEvent>,
 ) {
-    // TODO this is kinda jank, could be improved:
-    // - Create an intermediate WorldEvent type, to consolidate the conditions
-    // to trigger a re-generate vs re-render in one place
-    // - Figure out how to remove "everyting but tile" without having to
+    // TODO Figure out how to remove "everything but tile" without having to
     // keep track of what we create during rendering
-    if render_config.is_changed() {
+    for _ in render_world_events.iter() {
         debug!("Un-rendering tiles");
         for entity in tile_query.iter() {
             commands
