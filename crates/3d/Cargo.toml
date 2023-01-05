@@ -11,7 +11,6 @@ version = "0.1.0"
 bevy = {version = "0.9.1", default-features = false, features = [
   "bevy_asset",
   "bevy_winit",
-  "dynamic", # Warning - does not work with wasm!!
   "render",
   "x11",
 ]}
