@@ -1,0 +1,67 @@
+name: Build Artifacts
+
+on:
+  push:
+    branches:
+      - master
+      - bevy
+  pull_request:
+
+jobs:
+  build:
+    name: build
+    runs-on: ${{ matrix.os }}
+    env:
+      # Emit backtraces on panics.
+      RUST_BACKTRACE: 1
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          # TODO fix this build and re-enable
+          # - target: aarch64-apple-darwin
+          #   os: macos-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-2019
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Cache Rust files
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.rustup
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+
+      - name: Build release binaries
+        id: build
+        shell: bash # Makes it work on windows
+        run: |
+          cargo build --verbose --release --target ${{ matrix.target }} --message-format=json | tee cargo-output.txt
+          # Grab the list of built binaries and store it for later
+          echo 'BINARY_FILES<<EOF' >> $GITHUB_OUTPUT
+          jq -r '.executable | select(. != null)' cargo-output.txt >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+
+      # Just a debug step to make sure we read the list correctly
+      - name: List binaries
+        run: echo "${{ steps.build.outputs.BINARY_FILES }}"
+
+      - name: Strip binaries (unix)
+        if: matrix.build == 'linux' || matrix.build == 'macos'
+        run: echo "${{ steps.build.outputs.BINARY_FILES }}" | xargs strip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: terra-${{ matrix.target }}
+          path: ${{ steps.build.outputs.BINARY_FILES }}
+          if-no-files-found: error
