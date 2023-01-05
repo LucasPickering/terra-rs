@@ -20,7 +20,7 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use validator::Validate;
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "js")]
 use wasm_bindgen::prelude::*;
 
 /// A fully generated world. Contains a collection of tiles as well the
@@ -42,7 +42,7 @@ use wasm_bindgen::prelude::*;
 /// reloaded via [World::from_bin]. Currently the binary format is
 /// [CBOR](https://cbor.io/), but that is subject to change so beware of that if
 /// you write other programs that load the format.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(feature = "js", wasm_bindgen)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
     /// The config used to generate this world. World generation is
@@ -126,7 +126,7 @@ impl World {
 }
 
 // Wasm-friendly API
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(feature = "js", wasm_bindgen)]
 impl World {
     /// Serializes this world into JSON. This is a recoverable format, which can
     /// be loaded back into a [World] with [World::from_json].
@@ -161,7 +161,7 @@ pub enum BiomeType {
 /// be assigned a single biome based on its characteristics.
 ///
 /// https://en.wikipedia.org/wiki/Biome
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(feature = "js", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Biome {

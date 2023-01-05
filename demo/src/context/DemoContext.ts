@@ -1,6 +1,6 @@
 import { ConfigHandler } from "hooks/useConfigHandler";
 import React from "react";
-import type { WorldConfigObject, World, RenderConfigObject } from "terra-wasm";
+import type { WorldConfigObject, World, RenderConfigObject } from "terra";
 
 export type WorldState =
   | { phase: "empty" }

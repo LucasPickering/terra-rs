@@ -5,13 +5,11 @@ members = [
 resolver = "2" # Needed for bevy/wgpu stuff
 
 # wasm-pack-plugin doesn't allow us to set the mode to 'profiling', so we have
-# to turn dev into profiling (optimized, but with debug symbols)
+# to turn dev into profiling (optimized, but with debug symbols). Techincally
+# this is only needed for wasm, but we have no way to make this target-specific
+# so we just have to set it for everyone
 # https://github.com/wasm-tool/wasm-pack-plugin/issues/86
-# TODO figure out how to make this only apply when compiling for wasm. We can
-# use [profile.dev.package.terra-wasm], but that seems to only optimize the
-# code in that crate (not the code in the terra crate or others), so it's
-# still super slow.
-[profile.dev]
+[profile.dev.package.terra]
 opt-level = 3
 
 # https://bevy-cheatbook.github.io/pitfalls/performance.html

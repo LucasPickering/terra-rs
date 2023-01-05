@@ -6,7 +6,7 @@ import ConfigSection from "./ConfigSection";
 import RangeConfigInput from "./RangeConfigInput";
 import SelectConfigInput from "./SelectConfigInput";
 import ConfigEditor from "./ConfigEditor";
-import type { RenderConfigObject } from "terra-wasm";
+import type { RenderConfigObject } from "terra";
 import { renderDescriptions } from "./descriptions";
 
 /**

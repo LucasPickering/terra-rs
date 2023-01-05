@@ -1,6 +1,6 @@
 import { Matrix, Mesh, MeshBuilder, Scene } from "@babylonjs/core";
-import type { Tile, World, RenderConfigObject, Point2 } from "terra-wasm";
-const { build_renderer, copy_tiles } = await import("terra-wasm");
+import type { Tile, World, RenderConfigObject, Point2 } from "terra";
+const { build_renderer, copy_tiles } = await import("terra");
 
 /**
  * Util class for generating and rendering meshes for a world of tiles

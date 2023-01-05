@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import { Redirect, Route, Switch } from "react-router-dom";
 import WorldCanvasWrapper from "./WorldCanvasWrapper";
 import DemoContext, { WorldState } from "context/DemoContext";
-import type { RenderConfigObject, WorldConfigObject } from "terra-wasm";
+import type { RenderConfigObject, WorldConfigObject } from "terra";
 import { useConfigHandler } from "hooks/useConfigHandler";
 import WorldConfigEditor from "./config/WorldConfigEditor";
 const { generate_world, validate_world_config, validate_render_config } =
-  await import("terra-wasm");
+  await import("terra");
 
 /**
  * Configure and generate a demo Terra world.

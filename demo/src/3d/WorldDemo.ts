@@ -2,7 +2,7 @@ import "@babylonjs/core/Debug/debugLayer";
 import "@babylonjs/loaders/glTF";
 import { Engine } from "@babylonjs/core";
 import WorldScene from "./WorldScene";
-import type { RenderConfigObject, World } from "terra-wasm";
+import type { RenderConfigObject, World } from "terra";
 import { debounce } from "../util";
 
 // This dependency is huge so only pull it in for dev

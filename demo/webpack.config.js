@@ -3,8 +3,7 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 const { BundleAnalyzerPlugin } = require("webpack-bundle-analyzer");
 
-const coreCrateDir = path.resolve(__dirname, "../crates/core");
-const wasmCrateDir = path.resolve(__dirname, "../crates/wasm");
+const crateDir = path.resolve(__dirname, "../crates/core");
 
 module.exports = {
   mode: process.env.NODE_ENV || "development",
@@ -51,15 +50,11 @@ module.exports = {
       favicon: "public/favicon.ico",
     }),
     new WasmPackPlugin({
-      outName: "terra-wasm",
-      crateDirectory: wasmCrateDir,
-      watchDirectories: [
-        path.resolve(coreCrateDir, "Cargo.toml"),
-        path.resolve(coreCrateDir, "src"),
-        path.resolve(wasmCrateDir, "Cargo.toml"),
-        path.resolve(wasmCrateDir, "src"),
-      ],
-      outDir: path.resolve(wasmCrateDir, "pkg"),
+      outName: "terra",
+      crateDirectory: crateDir,
+      watchDirectories: [path.resolve(crateDir, "src")],
+      extraArgs: "-- --features js,bin,json,stl,svg",
+      outDir: path.resolve(crateDir, "pkg"),
     }),
     new BundleAnalyzerPlugin({
       analyzerMode: process.env.WEBPACK_BUNDLE_ANALYZER_MODE || "disabled",
@@ -97,9 +92,11 @@ module.exports = {
   },
   devServer: {
     port: 3000,
-    contentBase: path.join(__dirname, "public"),
     historyApiFallback: true,
-    watchContentBase: true,
+    static: {
+      directory: path.join(__dirname, "public"),
+      watch: true,
+    },
     hot: true,
   },
 };

@@ -2608,10 +2608,12 @@ dependencies = [
  "anyhow",
  "assert_approx_eq",
  "bevy_ecs",
+ "console_error_panic_hook",
  "derive_more",
  "fnv",
  "getrandom",
  "indexmap",
+ "js-sys",
  "log",
  "nalgebra",
  "noise",
@@ -2626,6 +2628,7 @@ dependencies = [
  "svg",
  "validator",
  "wasm-bindgen",
+ "wasm-logger",
  "web-sys",
 ]
 
@@ -2654,19 +2657,6 @@ dependencies = [
  "strum",
  "terra",
  "toml",
-]
-
-[[package]]
-name = "terra-wasm"
-version = "0.1.0"
-dependencies = [
- "console_error_panic_hook",
- "js-sys",
- "log",
- "serde",
- "terra",
- "wasm-bindgen",
- "wasm-logger",
 ]
 
 [[package]]

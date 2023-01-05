@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use std::f64;
 use strum::EnumString;
 use validator::Validate;
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "js")]
 use wasm_bindgen::prelude::*;
 
 /// A world renderer is used to convert worlds into various visual output
@@ -38,7 +38,7 @@ use wasm_bindgen::prelude::*;
 /// ## Supported Formats
 /// - STL (3D, no colors or textures)
 /// - SVG (2D with colors and textures)
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(feature = "js", wasm_bindgen)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WorldRenderer {
     /// Config that determines how rendering is done
@@ -125,7 +125,7 @@ impl WorldRenderer {
 }
 
 // Wasm-friendly API
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(feature = "js", wasm_bindgen)]
 impl WorldRenderer {
     /// Get the position of a tile, in screen space. See the module-level doc
     /// at [crate::hex] for a description of screen coordinate space.
@@ -284,7 +284,7 @@ impl WorldRenderer {
 }
 
 /// A definition of what data is used to compute a tile's color.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(feature = "js", wasm_bindgen)]
 #[derive(
     Copy,
     Clone,

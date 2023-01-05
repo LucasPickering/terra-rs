@@ -3,7 +3,7 @@ use crate::{
     HasHexPosition, Meter, Meter2, Meter3, TilePoint, World,
 };
 use serde::{Deserialize, Serialize};
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "js")]
 use wasm_bindgen::prelude::*;
 
 /// A world is comprised of tiles. Each tile is a hexagon (in 2D renderings) or
@@ -16,7 +16,7 @@ use wasm_bindgen::prelude::*;
 /// Tiles can't be constructed directly, they can only be made by the world
 /// generation process. See [World::generate]. They also can't be modified after
 /// world generation.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(feature = "js", wasm_bindgen)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
 pub struct Tile {
