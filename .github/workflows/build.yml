@@ -17,14 +17,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # The packages that we want to build binaries for
+        package:
+          - terra-cli
+          - terra-3d
+        # The platforms we want to distribute to
+        build:
+          - x86_64-unknown-linux-gnu
+          - x86_64-apple-darwin
+          # TODO fix this build and re-enable
+          # - aarch64-apple-darwin
+          - x86_64-pc-windows-msvc
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
           - target: x86_64-apple-darwin
             os: macos-latest
-          # TODO fix this build and re-enable
-          # - target: aarch64-apple-darwin
-          #   os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
           - target: x86_64-pc-windows-msvc
             os: windows-2019
 
@@ -45,23 +55,21 @@ jobs:
         id: build
         shell: bash # Makes it work on windows
         run: |
-          cargo build --verbose --release --target ${{ matrix.target }} --message-format=json | tee cargo-output.txt
-          # Grab the list of built binaries and store it for later
-          echo 'BINARY_FILES<<EOF' >> $GITHUB_OUTPUT
-          jq -r '.executable | select(. != null)' cargo-output.txt >> $GITHUB_OUTPUT
-          echo 'EOF' >> $GITHUB_OUTPUT
+          cargo build --package ${{ matrix.package }} --verbose --release --target ${{ matrix.target }} --message-format=json | tee cargo-output.txt
+          # Grab the path of the binary and store it for later
+          echo "BINARY_FILE=$(jq -r '.executable | select(. != null)' cargo-output.txt)" >> $GITHUB_OUTPUT
 
-      # Just a debug step to make sure we read the list correctly
-      - name: List binaries
-        run: echo "${{ steps.build.outputs.BINARY_FILES }}"
+      # Just a debug step to make sure we read the path correctly
+      - name: List binary
+        run: echo "${{ steps.build.outputs.BINARY_FILE }}"
 
-      - name: Strip binaries (unix)
-        if: matrix.build == 'linux' || matrix.build == 'macos'
-        run: echo "${{ steps.build.outputs.BINARY_FILES }}" | xargs strip
+      - name: Strip binary(Unix only)
+        if: contains(matrix.target, 'linux') || contains(matrix.target, 'apple')
+        run: strip ${{ steps.build.outputs.BINARY_FILE }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: terra-${{ matrix.target }}
-          path: ${{ steps.build.outputs.BINARY_FILES }}
+          path: ${{ steps.build.outputs.BINARY_FILE }}
           if-no-files-found: error

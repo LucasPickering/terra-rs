@@ -2,9 +2,9 @@ cargo-features = ["per-package-target"]
 
 [package]
 authors = ["Lucas Pickering <lucas@lucaspickering.me>"]
-default-target = "wasm32-unknown-unknown"
 description = "WebAssembly bindings for the Terra core crate"
 edition = "2021"
+forced-target = "wasm32-unknown-unknown"
 license = "MIT"
 name = "terra-wasm"
 repository = "https://github.com/LucasPickering/terra-rs"
