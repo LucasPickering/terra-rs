@@ -16,9 +16,10 @@ jobs:
 
       # Caching
       - name: Cache cargo files
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
+            ~/.rustup
             ~/.cargo/registry
             ~/.cargo/git
             target

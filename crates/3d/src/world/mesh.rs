@@ -186,7 +186,7 @@ fn average_normals(vectors: &Vec<Vec3>) -> Vec3 {
         average.z += vector.z.abs() / len;
     }
 
-    return average.normalize();
+    average.normalize()
 }
 
 impl Default for TileMeshBuilder {

@@ -1,2 +1,6 @@
+[build]
+# Set clippy config for all crates
+rustflags = ["-Dclippy::all"]
+
 [target.wasm32-unknown-unknown]
 runner = "wasm-server-runner"
