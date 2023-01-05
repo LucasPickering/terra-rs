@@ -8,14 +8,15 @@ on:
 
 jobs:
   fmt:
-    name: "Rustfmt"
+    name: Rustfmt
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
       - name: Cache cargo files
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
+            ~/.rustup
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-fmt-${{ hashFiles('rust-toolchain') }}
@@ -25,21 +26,31 @@ jobs:
           command: fmt
           args: -- --check
 
-  # This also covers linting because lints are handled through the compiler
   test:
-    name: "Tests"
+    name: Lint & Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
       - name: Cache cargo files
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
+            ~/.rustup
             ~/.cargo/registry
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
-      - name: Run tests
+      - name: Lint
+        uses: actions-rs/cargo@v1
+        # Cargo should be configured to add clippy flags automatically
+        with:
+          command: check
+          # Exclude the terra-wasm crate for now, since it causes a panic in
+          # cargo. Any errors in there should be caught by the demo build job,
+          # so this isn't a huge issue.
+          # TODO re-enable checks on terra-wasm crate
+          args: --workspace --exclude terra-wasm --all-targets --all-features
+      - name: Test
         uses: actions-rs/cargo@v1
         with:
           command: test
