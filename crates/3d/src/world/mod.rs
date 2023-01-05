@@ -126,7 +126,7 @@ fn render_world(
         let tile_mesh_handle =
             meshes.add(TileMeshBuilder::default().build(&renderer));
         let water_mesh_handle = meshes
-            .add(TileMeshBuilder::default().disable_sides().build(&renderer));
+            .add(TileMeshBuilder::default().water().build(&renderer));
         let water_material_handle = materials.add(water_material());
 
         // For each tile entity, we'll attach additional visual components
