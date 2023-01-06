@@ -40,6 +40,13 @@ pub struct Point2 {
     pub y: f64,
 }
 
+impl Point2 {
+    /// Create a new point from (x,y)
+    pub fn new(x: f64, y: f64) -> Self {
+        Self { x, y }
+    }
+}
+
 impl From<nalgebra::Point2<f64>> for Point2 {
     fn from(other: nalgebra::Point2<f64>) -> Self {
         Self {
