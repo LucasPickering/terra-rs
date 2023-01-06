@@ -311,3 +311,53 @@ pub enum TileLens {
     /// Color is based on a combination of runoff and total runoff egress.
     Runoff,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{world::hex::TileVertexPoint, TilePoint};
+    use assert_approx_eq::assert_approx_eq;
+
+    impl Point2 {
+        /// Allows us to use assert_approx_eq
+        #[cfg(test)]
+        pub fn abs(self) -> f64 {
+            self.x.abs() + self.y.abs()
+        }
+    }
+
+    #[test]
+    fn test_hex_to_screen_space() {
+        let renderer = WorldRenderer::new(RenderConfig::default()).unwrap();
+
+        // Tile points
+        assert_approx_eq!(
+            renderer.hex_to_screen_space(TilePoint::new_xy(0, 0)),
+            Point2::new(0.0, 0.0)
+        );
+        assert_approx_eq!(
+            renderer.hex_to_screen_space(TilePoint::new_xy(1, -1)),
+            Point2::new(1.414214, 0.0)
+        );
+        assert_approx_eq!(
+            renderer.hex_to_screen_space(TilePoint::new_xy(1, 1)),
+            Point2::new(0.0, 2.414214)
+        );
+        assert_approx_eq!(
+            renderer.hex_to_screen_space(TilePoint::new_xy(-10, -3)),
+            Point2::new(-4.949747, -15.692388)
+        );
+
+        // Tile vertex points
+        assert_approx_eq!(
+            renderer
+                .hex_to_screen_space(TileVertexPoint::new(-1, 0, 0).unwrap()),
+            Point2::new(-0.707107, -0.402369)
+        );
+        assert_approx_eq!(
+            renderer
+                .hex_to_screen_space(TileVertexPoint::new(1, -1, -2).unwrap()),
+            Point2::new(1.414214, 1.609476)
+        );
+    }
+}
