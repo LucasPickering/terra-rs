@@ -172,9 +172,13 @@ impl<'a> Continent<'a> {
             for dir in TileDirection::iter() {
                 let adj_pos = source_tile.position().adjacent(dir);
                 let adj_elev = match self.tiles.get(&adj_pos) {
-                    // Adjacent tile isn't part of this continent, so assume
-                    // it's ocean
-                    None => World::SEA_LEVEL,
+                    // Adjacent tile isn't part of this continent, so it's
+                    // either ocean or outside the world. Either way, it's an
+                    // infinite sink. Note: we *can't* just use sea level here,
+                    // because if the edge of the continent is below sea level
+                    // (possible near the edge of the map), then we'll build up
+                    // small lakes there.
+                    None => World::ELEVATION_RANGE.min,
                     Some(adj_tile) => adj_tile.elevation(),
                 };
                 let elev_diff = source_tile.elevation() - adj_elev;
@@ -244,7 +248,7 @@ impl<'a> Continent<'a> {
         // Starting at the highest tile, we push the runoff from each tile down
         // to its lower neighbors. At each step, we track the egress in each
         // direction from the donor tile, and the ingress in the appropriate
-        // direction for each donee tile.
+        // direction for each recipient tile.
 
         // Have to copy this into a vec to get around borrow checking
         let positions: Vec<_> = self.tiles.keys().copied().collect();
