@@ -15,7 +15,6 @@ use crate::{
     Tile, World,
 };
 use derive_more::Display;
-use nalgebra::{Matrix3, Point3, Rotation3};
 use serde::{Deserialize, Serialize};
 use std::f64;
 use strum::EnumString;
@@ -98,29 +97,34 @@ impl WorldRenderer {
         &self,
         point: impl HexThing<Component = T>,
     ) -> Point2 {
-        // Let's do some linalg! The goal here is to transform the point from
-        // being on the 3D step function to the plane `z = 0`.
-        let point: Point3<f64> =
-            Point3::new(point.x().into(), point.y().into(), point.z().into());
+        // This is a simplification of some linear algebra. We need to apply
+        // three transformations, in sequence:
+        // 1. Project onto the plane x+y+z=0
+        // 2. Rotate 45° CCW around z
+        // 3. Rotate 45° CCW around x
+        // This should leave us with a bunch of points on the plane z=0
+        // If you create a 3x3 matrix each transformation, then multiply them
+        // together, you get this matrix:
+        // +-                             -+
+        // |     √2/2     -√2/2          0 |
+        // | (1+√2)/6  (1+√2)/6  (-1-√2)/3 |
+        // | (1-√2)/6  (1-√2)/6  (-1+√2)/3 |
+        // +-                             -+
+        // The math below is just multiplying the vector (x,y,z) by that matrix,
+        // then throwing away the third component to get a 2D (x,y). TBH I'm not
+        // sure why the z component doesn't just spit out 0 anyway, since this
+        // is supposed to be the plane z=0. But the math works so I'm not gonna
+        // question it too much.
 
-        // First, project onto the plane x+y+z=0, the plane that defines the hex
-        // system. For tile points, this will do nothing, since they are
-        // already on the plane
-        let projection: Matrix3<f64> =
-            Matrix3::identity() - Matrix3::from_element(1.0 / 3.0);
-
-        // Next, rotate the point to be on the plane `z = 0`. You can imagine
-        // this as rotating the entire `x + y + z = 0` plane to be just the
-        // level plane `z = 0`. Rotate 45 degrees around one axis, then the
-        // other.
-        let rotation_z =
-            Rotation3::from_euler_angles(0.0, 0.0, f64::consts::FRAC_PI_4);
-        let rotation_x =
-            Rotation3::from_euler_angles(f64::consts::FRAC_PI_4, 0.0, 0.0);
-
-        // Apply each transformation to the point. Remember, they apply in
-        // reverse order
-        (rotation_x * rotation_z * projection * point).xy().into()
+        let x: f64 = point.x().into();
+        let y: f64 = point.y().into();
+        let z: f64 = point.z().into();
+        Point2 {
+            x: 2.0f64.sqrt() / 2.0 * x - 2.0f64.sqrt() / 2.0 * y,
+            y: (1.0 + 2.0f64.sqrt()) / 6.0 * x
+                + (1.0 + 2.0f64.sqrt()) / 6.0 * y
+                + (-1.0 - 2.0f64.sqrt()) / 3.0 * z,
+        }
     }
 }
 

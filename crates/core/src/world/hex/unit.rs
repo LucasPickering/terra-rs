@@ -214,7 +214,7 @@ impl TryFrom<UncheckedHexPoint<i16>> for TilePoint {
 
 /// A point in the hex coordinate system that refers to one of a tile's 6
 /// vertices. This is a special case of [HexPoint] that always refers to a tile
-/// center. Applying this restriction has two benefits:
+/// vertex. Applying this restriction has two benefits:
 ///
 /// - Type safety for situations where we only want to refer only to tile
 ///   vertices
