@@ -1,5 +1,5 @@
 use bevy::{
-    prelude::{Mesh, Vec3},
+    prelude::Mesh,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
 use terra::{HexDirection, Point2, TilePoint, VertexDirection, WorldRenderer};
@@ -133,60 +133,19 @@ impl TileMeshBuilder {
             }
         }
 
-        // Compute face normals and group them by the vertex indexes they touch
-        let face_normal_groups: Vec<Vec<Vec3>> = indices.chunks_exact(3).fold(
-            indexes_used.iter().map(|_| Vec::new()).collect(),
-            |mut vector: Vec<Vec<Vec3>>, chunk| {
-                let normal = face_normal(
-                    positions[chunk[0] as usize],
-                    positions[chunk[1] as usize],
-                    positions[chunk[2] as usize],
-                );
-                vector[chunk[0] as usize].push(normal);
-                vector[chunk[1] as usize].push(normal);
-                vector[chunk[2] as usize].push(normal);
-                vector
-            },
-        );
-
-        let vertex_normals: Vec<Vec3> = indexes_used
-            .iter()
-            .map(|i| {
-                let face_normals = &face_normal_groups[*i as usize];
-                average_normals(face_normals)
-            })
-            .collect();
-
         let positions_used: Vec<[f32; 3]> = indexes_used
             .iter()
             .map(|i| positions[*i as usize])
             .collect();
 
-        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vertex_normals);
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions_used);
         mesh.set_indices(Some(Indices::U32(indices)));
 
+        mesh.duplicate_vertices();
+        mesh.compute_flat_normals();
+
         mesh
     }
-}
-
-// Stolen from mesh
-fn face_normal(a: [f32; 3], b: [f32; 3], c: [f32; 3]) -> Vec3 {
-    let (a, b, c) = (Vec3::from(a), Vec3::from(b), Vec3::from(c));
-    (b - a).cross(c - a).normalize()
-}
-
-fn average_normals(vectors: &Vec<Vec3>) -> Vec3 {
-    let mut average = Vec3::new(0.0, 0.0, 0.0);
-    let len = vectors.len() as f32;
-
-    for vector in vectors {
-        average.x += vector.x.abs() / len;
-        average.y += vector.y.abs() / len;
-        average.z += vector.z.abs() / len;
-    }
-
-    average.normalize()
 }
 
 impl Default for TileMeshBuilder {
