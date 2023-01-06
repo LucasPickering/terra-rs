@@ -47,15 +47,6 @@ impl Point2 {
     }
 }
 
-impl From<nalgebra::Point2<f64>> for Point2 {
-    fn from(other: nalgebra::Point2<f64>) -> Self {
-        Self {
-            x: other.x,
-            y: other.y,
-        }
-    }
-}
-
 /// An RGB color. Values are stored as floats between 0 and 1 (inclusive).
 /// This uses f32 because the extra precision from f64 is pointless.
 #[cfg_attr(feature = "js", wasm_bindgen)]
