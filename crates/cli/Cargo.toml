@@ -17,7 +17,7 @@ config = {version = "0.10", default-features = false, features = ["json", "toml"
 log = "*"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
-simple_logger = "1.11"
+simple_logger = "4.0"
 structopt = "0.3"
 strum = "*"
 terra = {path = "../core", features = ["bin", "json", "svg", "stl"]}
