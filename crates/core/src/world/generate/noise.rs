@@ -3,15 +3,18 @@ use crate::{
     world::hex::HexCoordinateValue, NoiseFnConfig, NumRange, RangeValue,
     TilePoint,
 };
-use noise::{Fbm, MultiFractal, NoiseFn, RidgedMulti, Seedable};
+use noise::{
+    BasicMulti, Billow, Fbm, HybridMulti, MultiFractal, NoiseFn, Perlin,
+    RidgedMulti, Seedable,
+};
 use rand::Rng;
 use std::fmt::Debug;
 
 /// Helper trait for the different types of noise functions we use. We need this
 /// in order to create trait objects.
-trait NoiseFnTrait: Debug + NoiseFn<[f64; 3]> {}
+trait NoiseFnTrait: Debug + NoiseFn<f64, 3> {}
 
-impl<T: Debug + NoiseFn<[f64; 3]>> NoiseFnTrait for T {}
+impl<T: Debug + NoiseFn<f64, 3>> NoiseFnTrait for T {}
 
 /// A wrapper around a noise function that makes it easy to use for generating
 /// tile values. This is initialized for a particular function type, and
@@ -32,7 +35,7 @@ pub struct TileNoiseFn<T: Rangeable<f64> = f64> {
     output_range: NumRange<T, f64>,
 }
 
-impl<T> TileNoiseFn<T>
+impl<T: Rangeable<f64>> TileNoiseFn<T>
 where
     T: Rangeable<f64>,
     f64: From<T>,
@@ -42,30 +45,11 @@ where
     /// down by this factor
     const INPUT_SCALE: f64 = 100.0;
     /// The output range of the internal noise function. Used to map the noise
-    /// values to our own output range.
+    /// values to our own output range. Note that in some cases, this is not
+    /// a hard bound, so we need to clamp to this range before mapping to
+    /// elevations.
     const NOISE_FN_OUTPUT_RANGE: NumRange<f64> = NumRange::new(-1.0, 1.0);
 
-    /// Get the function output at the given point
-    pub fn get(&self, point: TilePoint) -> RangeValue<T, f64> {
-        // Scale each point value down. See INPUT_SCALE doc comment for why we
-        // need it
-        let fn_output = self.noise_fn.get([
-            point.x() as f64 / Self::INPUT_SCALE,
-            point.y() as f64 / Self::INPUT_SCALE,
-            point.z() as f64 / Self::INPUT_SCALE,
-        ]);
-        Self::NOISE_FN_OUTPUT_RANGE
-            .value(fn_output)
-            // Map to [0,1] so we can apply the exponent
-            .normalize()
-            .apply(|val| val.powf(self.config.exponent))
-            // Convert to type T so we can map to the output range
-            .convert() // f64 -> T
-            .map_to(self.output_range)
-    }
-}
-
-impl<T: Rangeable<f64>> TileNoiseFn<T> {
     /// Initialize a new function for some underlying noise fn type.
     ///
     /// ### Arguments
@@ -90,6 +74,28 @@ impl<T: Rangeable<f64>> TileNoiseFn<T> {
         }
     }
 
+    /// Get the function output at the given point
+    pub fn get(&self, point: TilePoint) -> RangeValue<T, f64> {
+        // Scale each point value down. See INPUT_SCALE doc comment for why we
+        // need it
+        let fn_output = self.noise_fn.get([
+            point.x() as f64 / Self::INPUT_SCALE,
+            point.y() as f64 / Self::INPUT_SCALE,
+            point.z() as f64 / Self::INPUT_SCALE,
+        ]);
+        Self::NOISE_FN_OUTPUT_RANGE
+            .value(fn_output)
+            // Noise functions are *supposed to* output in a fixed range, but
+            // they can stray outside that so we need to clamp the values
+            .clamp()
+            // Map to [0,1] so we can apply the exponent
+            .normalize()
+            .apply(|val| val.powf(self.config.exponent))
+            // Convert to type T so we can map to the output range
+            .convert() // f64 -> T
+            .map_to(self.output_range)
+    }
+
     /// Create a noise function based on this function config. Since the config
     /// contains the function type, we don't know which struct the function will
     /// be at compile time, so we need a trait object.
@@ -103,7 +109,7 @@ impl<T: Rangeable<f64>> TileNoiseFn<T> {
         // which sucks but 'tis what 'tis.
         match config.noise_type {
             NoiseFnType::BasicMulti => Box::new(
-                Fbm::default()
+                BasicMulti::<Perlin>::default()
                     .set_seed(seed)
                     .set_octaves(config.octaves)
                     .set_frequency(config.frequency)
@@ -111,7 +117,7 @@ impl<T: Rangeable<f64>> TileNoiseFn<T> {
                     .set_persistence(config.persistence),
             ),
             NoiseFnType::Billow => Box::new(
-                Fbm::default()
+                Billow::<Perlin>::default()
                     .set_seed(seed)
                     .set_octaves(config.octaves)
                     .set_frequency(config.frequency)
@@ -119,7 +125,7 @@ impl<T: Rangeable<f64>> TileNoiseFn<T> {
                     .set_persistence(config.persistence),
             ),
             NoiseFnType::Fbm => Box::new(
-                Fbm::default()
+                Fbm::<Perlin>::default()
                     .set_seed(seed)
                     .set_octaves(config.octaves)
                     .set_frequency(config.frequency)
@@ -127,7 +133,7 @@ impl<T: Rangeable<f64>> TileNoiseFn<T> {
                     .set_persistence(config.persistence),
             ),
             NoiseFnType::HybridMulti => Box::new(
-                Fbm::default()
+                HybridMulti::<Perlin>::default()
                     .set_seed(seed)
                     .set_octaves(config.octaves)
                     .set_frequency(config.frequency)
@@ -135,7 +141,7 @@ impl<T: Rangeable<f64>> TileNoiseFn<T> {
                     .set_persistence(config.persistence),
             ),
             NoiseFnType::RidgedMulti => Box::new(
-                RidgedMulti::default()
+                RidgedMulti::<Perlin>::default()
                     .set_seed(seed)
                     .set_octaves(config.octaves)
                     .set_frequency(config.frequency)
