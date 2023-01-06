@@ -320,14 +320,14 @@ impl Basins {
         unwrap!(self.basins.get_mut(&key), "unknown basin key {}", key)
     }
 
-    /// Has `donor` overflowed into `donee` in the past?
+    /// Has `donor` overflowed into `recipient` in the past?
     pub fn has_previously_overflowed(
         &self,
         donor: TilePoint,
-        donee: TilePoint,
+        recipient: TilePoint,
     ) -> bool {
-        let donee_basin = self.get(donee);
-        donee_basin.prev_donors.contains(&donor.into())
+        let recipient_basin = self.get(recipient);
+        recipient_basin.prev_donors.contains(&donor.into())
     }
 
     /// Join one basin into another, and add some amount of residual overflow
