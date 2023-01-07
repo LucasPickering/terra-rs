@@ -340,8 +340,8 @@ mod tests {
             Point2::new(0.0, 0.0)
         );
         assert_approx_eq!(
-            renderer.hex_to_screen_space(TilePoint::new_xy(1, -1)),
-            Point2::new(1.414214, 0.0)
+            renderer.hex_to_screen_space(TilePoint::new_xy(1, -2)),
+            Point2::new(2.121320, -1.207107)
         );
         assert_approx_eq!(
             renderer.hex_to_screen_space(TilePoint::new_xy(1, 1)),
@@ -355,13 +355,13 @@ mod tests {
         // Tile vertex points
         assert_approx_eq!(
             renderer
-                .hex_to_screen_space(TileVertexPoint::new(-1, 0, 0).unwrap()),
-            Point2::new(-0.707107, -0.402369)
+                .hex_to_screen_space(TileVertexPoint::new(-3, 0, 1).unwrap()),
+            Point2::new(-2.121320, -2.011844)
         );
         assert_approx_eq!(
             renderer
-                .hex_to_screen_space(TileVertexPoint::new(1, -1, -2).unwrap()),
-            Point2::new(1.414214, 1.609476)
+                .hex_to_screen_space(TileVertexPoint::new(4, -4, -2).unwrap()),
+            Point2::new(5.656854, 1.609476)
         );
     }
 }
