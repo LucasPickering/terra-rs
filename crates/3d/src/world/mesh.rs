@@ -1,8 +1,93 @@
 use bevy::{
     prelude::Mesh,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
+    utils::HashMap,
 };
-use terra::{HexDirection, Point2, TilePoint, VertexDirection, WorldRenderer};
+use terra::{
+    HasHexPosition, HexDirection, Point2, Tile, TileDirection, TilePoint,
+    VertexDirection, World, WorldRenderer,
+};
+
+pub fn build_mesh(world: &World, renderer: &WorldRenderer) -> Mesh {
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+
+    let mut vertices: Vec<[f32; 3]> =
+    // TODO fix capacity, since vertices get duplicated
+        Vec::with_capacity(world.tiles().len() * 6);
+    for tile in world.tiles().values() {
+        let height = renderer.tile_height(tile);
+
+        // Helper to convert a 2D point to a 3D one that bevy will takea
+
+        let center_vertex = to_vertex(renderer.tile_position(tile), height);
+        let top_vertices: HashMap<_, _> = VertexDirection::CLOCKWISE
+            .iter()
+            .map(|&direction| {
+                (
+                    direction,
+                    to_vertex(
+                        renderer.tile_vertex_position(tile, direction),
+                        height,
+                    ),
+                )
+            })
+            .collect();
+
+        // For each side of the hexagon:
+        // TODO comment
+        // TODO optimize to be 4 triangles instead of 6
+        for &side in TileDirection::CLOCKWISE {
+            let (left_direction, right_direction) =
+                side.adjacent_vertex_directions();
+            // Get the vertices on either end of this side. Perspective is
+            // looking down at the tile from above.
+            let left_vertex = top_vertices[&left_direction];
+            let right_vertex = top_vertices[&right_direction];
+
+            // TODO is this ordering correct?
+            vertices.extend([left_vertex, right_vertex, center_vertex]);
+
+            let neighbor_elevation = world
+                .get_adjacent(tile.position(), side)
+                .map(Tile::elevation)
+                .unwrap_or(World::ELEVATION_RANGE.min);
+            // If our neighbor is lower than us (or if this is the edge of the
+            // world), then we want to draw the vertical side here too
+            if tile.elevation() > neighbor_elevation {
+                let neighbor_height =
+                    renderer.elevation_to_height(neighbor_elevation);
+                let bottom_left_vertex = to_vertex(
+                    renderer.tile_vertex_position(tile, left_direction),
+                    neighbor_height,
+                );
+                let bottom_right_vertex = to_vertex(
+                    renderer.tile_vertex_position(tile, right_direction),
+                    neighbor_height,
+                );
+                // Add two triangles here to form the rectangular side
+                vertices.extend([
+                    // Left side
+                    bottom_right_vertex,
+                    right_vertex,
+                    left_vertex,
+                    // Right side
+                    bottom_left_vertex,
+                    bottom_right_vertex,
+                    left_vertex,
+                ]);
+            }
+        }
+    }
+
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
+    mesh.compute_flat_normals();
+    mesh
+}
+
+/// Convert a 2D point + height to a 3D point that we can give to bevy
+fn to_vertex(point: Point2, height: f64) -> [f32; 3] {
+    [point.x as f32, height as f32, point.y as f32]
+}
 
 #[derive(Copy, Clone, Debug)]
 pub struct TileMeshBuilder {

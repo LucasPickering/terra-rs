@@ -13,7 +13,7 @@ use crate::{
         hex::{TileDirection, TilePointMap},
         tile::Tile,
     },
-    WorldConfig,
+    TilePoint, WorldConfig,
 };
 use anyhow::Context;
 use log::info;
@@ -43,6 +43,7 @@ use wasm_bindgen::prelude::*;
 /// [CBOR](https://cbor.io/), but that is subject to change so beware of that if
 /// you write other programs that load the format.
 #[cfg_attr(feature = "js", wasm_bindgen)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
     /// The config used to generate this world. World generation is
@@ -77,6 +78,20 @@ impl World {
     /// Get a reference to the config that defines this world.
     pub fn config(&self) -> &WorldConfig {
         &self.config
+    }
+
+    /// Get a tile by position
+    pub fn get(&self, position: TilePoint) -> Option<&Tile> {
+        self.tiles.get(&position)
+    }
+
+    /// Get a tile's immediate neighbor in the given direction
+    pub fn get_adjacent(
+        &self,
+        position: TilePoint,
+        direction: TileDirection,
+    ) -> Option<&Tile> {
+        self.tiles.get(&position.adjacent(direction))
     }
 
     /// Get a reference to the map of tiles that make up this world.

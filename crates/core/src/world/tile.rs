@@ -17,8 +17,9 @@ use wasm_bindgen::prelude::*;
 /// generation process. See [World::generate]. They also can't be modified after
 /// world generation.
 #[cfg_attr(feature = "js", wasm_bindgen)]
-#[derive(Clone, Debug, Serialize, Deserialize)]
+// TODO remove this
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::component::Component))]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Tile {
     // These fields are all pub(super) so they can be accessed by the builder
     /// The location of this tile in the world. See [TilePoint] for a

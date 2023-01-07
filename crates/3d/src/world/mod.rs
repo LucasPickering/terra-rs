@@ -2,22 +2,14 @@ pub mod event;
 mod mesh;
 pub mod storage;
 
-use crate::world::{
-    event::{GenerateWorldEvent, RenderWorldEvent},
-    mesh::TileMeshBuilder,
-    storage::TileStorage,
-};
+use crate::world::event::{GenerateWorldEvent, RenderWorldEvent};
 use bevy::prelude::{
-    debug, default, info, AlphaMode, App, Assets, BuildChildren, Color,
-    Commands, DespawnRecursiveExt, DirectionalLight, DirectionalLightBundle,
-    Entity, EventReader, EventWriter, IntoSystemDescriptor, Mesh, PbrBundle,
-    Plugin, Query, Res, ResMut, SpatialBundle, StandardMaterial, Transform,
-    Vec3, With,
+    debug, default, info, AlphaMode, App, Assets, Color, Commands,
+    DespawnRecursiveExt, DirectionalLight, DirectionalLightBundle, Entity,
+    EventReader, EventWriter, IntoSystemDescriptor, Mesh, PbrBundle, Plugin,
+    Query, Res, ResMut, SpatialBundle, StandardMaterial, Transform, Vec3, With,
 };
-use terra::{
-    GeoFeature, HasHexPosition, RenderConfig, Tile, TileLens, World,
-    WorldConfig, WorldRenderer,
-};
+use terra::{RenderConfig, World, WorldConfig, WorldRenderer};
 
 pub struct WorldPlugin;
 
@@ -74,15 +66,9 @@ fn generate_world(
         info!("Generating world");
         let world = World::generate(world_config.to_owned()).unwrap();
 
-        // This will store a mapping of tile position : entity ID
-        let mut tile_storage = TileStorage::default();
-
         // Spawn each tile as a separate entity
-        for tile in world.into_tiles().into_values() {
-            tile_storage.spawn_tile(&mut commands, tile);
-        }
+        commands.spawn(world);
 
-        commands.spawn(tile_storage);
         // We have a new world, it needs to be rendered now
         render_world_events.send(RenderWorldEvent);
     }
@@ -92,13 +78,12 @@ fn generate_world(
 /// data *and* the associated visuals
 fn delete_world(
     mut commands: Commands,
-    tile_storage_query: Query<Entity, With<TileStorage>>,
-    tile_query: Query<Entity, With<Tile>>,
+    world_query: Query<Entity, With<World>>,
     mut generate_world_events: EventReader<GenerateWorldEvent>,
 ) {
     for _ in generate_world_events.iter() {
         info!("Deleting old world");
-        for entity in tile_query.iter().chain(tile_storage_query.iter()) {
+        for entity in world_query.iter() {
             // Make sure to delete all _children_ too, which hold a lot of the
             // visuals
             commands.entity(entity).despawn_recursive();
@@ -110,7 +95,7 @@ fn delete_world(
 /// Run whenever tiles are added to the world.
 fn render_world(
     mut commands: Commands,
-    tile_query: Query<(Entity, &Tile)>,
+    world_query: Query<(Entity, &World)>,
     render_config: Res<RenderConfig>,
     mut render_world_events: EventReader<RenderWorldEvent>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -120,92 +105,19 @@ fn render_world(
         debug!("Rendering tiles");
         let renderer =
             WorldRenderer::new(*render_config).expect("Invalid render config");
+        let (world_entity, world) = world_query.single();
+        let tile_mesh_handle = meshes.add(mesh::build_mesh(world, &renderer));
 
-        // We're duping these meshes on every render, but the old meshes should
-        // just get thrown away so it's fine I guess
-        let tile_mesh_handle =
-            meshes.add(TileMeshBuilder::default().build(&renderer));
-        let water_mesh_handle =
-            meshes.add(TileMeshBuilder::default().water().build(&renderer));
-        let water_material_handle = materials.add(water_material());
-
-        // For each tile entity, we'll attach additional visual components
-        for (entity, tile) in tile_query.iter() {
-            let position_2d = renderer.hex_to_screen_space(tile.position());
-            let tile_height = renderer.tile_height(tile) as f32;
-            let color = renderer.tile_color(tile);
-
-            // We'll add a root transform that provides x/z position. Then add
-            // actual visual objects as children. This makes sure transform stay
-            // isolated, e.g. tile height doesn't affect water or vice/versa
-            commands
-                .entity(entity)
-                .insert(SpatialBundle {
-                    transform: Transform::from_xyz(
-                        position_2d.x as f32,
-                        0.0,
-                        position_2d.y as f32,
-                    ),
-                    ..default()
-                })
-                .with_children(|parent| {
-                    // Spawn the hex mesh
-                    parent.spawn(PbrBundle {
-                        mesh: tile_mesh_handle.clone(),
-                        material: materials.add(StandardMaterial {
-                            base_color: Color::rgb(
-                                color.red,
-                                color.green,
-                                color.blue,
-                            ),
-                            perceptual_roughness: 1.0,
-                            ..default()
-                        }),
-                        transform: Transform::from_scale(
-                            [1.0, tile_height, 1.0].into(),
-                        ),
-                        ..default()
-                    });
-
-                    // Spawn additional visuals for **surface lens only**
-                    if render_config.tile_lens == TileLens::Surface {
-                        // Add water for ocean tiles
-                        if tile.is_water_biome() {
-                            // Span the distance between the tile and sea level
-                            let sea_level_height =
-                                renderer.sea_level_height() as f32;
-                            parent.spawn(PbrBundle {
-                                mesh: water_mesh_handle.clone(),
-                                material: water_material_handle.clone(),
-                                transform: Transform::from_xyz(
-                                    0.0,
-                                    sea_level_height,
-                                    0.0,
-                                ),
-                                ..default()
-                            });
-                        }
-
-                        // Add water for lakes (which is a *feature*, not a
-                        // biome)
-                        if tile.features().contains(&GeoFeature::Lake) {
-                            let runoff_height = renderer
-                                .elevation_to_height(tile.runoff_elevation())
-                                as f32;
-                            parent.spawn(PbrBundle {
-                                mesh: water_mesh_handle.clone(),
-                                material: water_material_handle.clone(),
-                                transform: Transform::from_xyz(
-                                    0.0,
-                                    runoff_height,
-                                    0.0,
-                                ),
-                                ..default()
-                            });
-                        }
-                    }
-                });
-        }
+        // Spawn the hex mesh onto the world
+        commands.entity(world_entity).insert(PbrBundle {
+            mesh: tile_mesh_handle,
+            material: materials.add(StandardMaterial {
+                base_color: Color::rgb(1.0, 1.0, 0.0),
+                perceptual_roughness: 1.0,
+                ..default()
+            }),
+            ..default()
+        });
     }
 }
 
@@ -213,14 +125,14 @@ fn render_world(
 /// Runs whenever the render config changes
 fn unrender_world(
     mut commands: Commands,
-    tile_query: Query<Entity, With<Tile>>,
+    world_query: Query<Entity, With<World>>,
     mut render_world_events: EventReader<RenderWorldEvent>,
 ) {
     // TODO Figure out how to remove "everything but tile" without having to
     // keep track of what we create during rendering
     for _ in render_world_events.iter() {
         debug!("Un-rendering tiles");
-        for entity in tile_query.iter() {
+        for entity in world_query.iter() {
             commands
                 .entity(entity)
                 .remove::<SpatialBundle>()

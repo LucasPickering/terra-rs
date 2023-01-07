@@ -12,7 +12,7 @@ use crate::{
     },
     world::hex::HexThing,
     Biome, BiomeType, GeoFeature, HasHexPosition, Meter, Meter3, NumRange,
-    Tile, World,
+    Tile, VertexDirection, World,
 };
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
@@ -135,6 +135,17 @@ impl WorldRenderer {
     /// at [crate::hex] for a description of screen coordinate space.
     pub fn tile_position(&self, tile: &Tile) -> Point2 {
         self.hex_to_screen_space(tile.position())
+    }
+
+    /// Get the position of a tile *vertex*, in screen space. See the
+    /// module-level doc at [crate::hex] for a description of screen coordinate
+    /// space.
+    pub fn tile_vertex_position(
+        &self,
+        tile: &Tile,
+        direction: VertexDirection,
+    ) -> Point2 {
+        self.hex_to_screen_space(tile.position().vertex(direction))
     }
 
     /// Get the distance between the center of a tile and the midpoint of one
