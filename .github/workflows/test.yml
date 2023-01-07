@@ -42,9 +42,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
       - name: Lint
         uses: actions-rs/cargo@v1
-        # Cargo should be configured to add clippy flags automatically
         with:
-          command: check
+          command: clippy
           args: --all-targets --all-features
       - name: Test
         uses: actions-rs/cargo@v1
