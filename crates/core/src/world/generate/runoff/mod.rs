@@ -357,8 +357,21 @@ impl<'a> Continent<'a> {
                     self.id
                 );
                 let runoff_height = runoff_elev - tile.elevation();
-                // Convert Meter -> Meter3
-                tile.set_runoff(runoff_height * Tile::AREA);
+
+                // HACK ALERT: There are some scenarios where the runoff can
+                // end up being a *very* small negative number. In those cases,
+                // we'll just round to 0 to keep everything clean. This is much
+                // easier than debugging tiny floating point errors.
+                let runoff = if Meter(-1.0e-6) < runoff_height
+                    && runoff_height <= Meter(0.0)
+                {
+                    Meter3(0.0)
+                } else {
+                    // Convert Meter -> Meter3
+                    runoff_height * Tile::AREA
+                };
+
+                tile.set_runoff(runoff);
             }
         }
     }
