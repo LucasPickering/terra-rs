@@ -4,7 +4,7 @@ mod world;
 
 use crate::{camera::CameraPlugin, ui::UiPlugin, world::WorldPlugin};
 use bevy::{
-    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    diagnostic::FrameTimeDiagnosticsPlugin,
     log::LogPlugin,
     prelude::{App, PluginGroup},
     DefaultPlugins,
@@ -19,7 +19,6 @@ fn main() {
             filter: "info,wgpu_core=warn,wgpu_hal=warn,terra=debug,terra-3d=debug".into(),
             level: bevy::log::Level::DEBUG,
         }))
-        .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(UiPlugin)
         .add_plugin(WorldPlugin)
