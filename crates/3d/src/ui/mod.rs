@@ -1,3 +1,4 @@
+mod diagnostics;
 mod render;
 mod world;
 
@@ -16,6 +17,7 @@ impl Plugin for UiPlugin {
         app.add_plugin(EguiPlugin)
             .insert_resource(WorldConfigUiState::default())
             .add_startup_system(world::init_world_config_ui)
+            .add_system(diagnostics::render_diagnostics_ui)
             .add_system(world::world_config_ui)
             .add_system(render::render_config_ui.after(world::world_config_ui));
     }
