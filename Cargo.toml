@@ -1,8 +1,20 @@
 [workspace]
-members = [
-  "crates/*",
-] 
-resolver = "2" # Needed for bevy/wgpu stuff
+members = ["crates/*"]
+resolver = "2"         # Needed for bevy/wgpu stuff
+
+[workspace.package]
+authors = ["Lucas Pickering <lucas@lucaspickering.me>"]
+edition = "2021"
+homepage = "https://terra.lucaspickering.me"
+license = "MIT"
+repository = "https://github.com/LucasPickering/terra-rs"
+version = "0.1.0"
+
+[workspace.dependencies]
+serde = {version = "1.0", default-features = false}
+serde_json = "1.0"
+strum = "0.20"
+terra = {path = "./crates/core"}
 
 # wasm-pack-plugin doesn't allow us to set the mode to 'profiling', so we have
 # to turn dev into profiling (optimized, but with debug symbols). Techincally

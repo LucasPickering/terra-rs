@@ -1,11 +1,12 @@
 [package]
-authors = ["Lucas Pickering <lucas@lucaspickering.me>"]
+authors = {workspace = true}
 description = "3D rendering for Terra worlds"
-edition = "2021"
-license = "MIT"
+edition = {workspace = true}
+homepage = {workspace = true}
+license = {workspace = true}
 name = "terra-3d"
-repository = "https://github.com/LucasPickering/terra-rs"
-version = "0.1.0"
+repository = {workspace = true}
+version = {workspace = true}
 
 [dependencies]
 bevy = {version = "0.9.1", default-features = false, features = [
@@ -14,9 +15,11 @@ bevy = {version = "0.9.1", default-features = false, features = [
   "render",
   "x11",
 ]}
-bevy_egui = {version = "0.18.0", default-features = false, features = ["default_fonts"]}
-serde_json = "^1.0.91"
-terra = {path = "../core", features = ["bevy"]}
+bevy_egui = {version = "0.18.0", default-features = false, features = [
+  "default_fonts",
+]}
+serde_json = {workspace = true}
+terra = {workspace = true, features = ["bevy"]}
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1"

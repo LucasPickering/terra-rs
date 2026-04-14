@@ -1,11 +1,11 @@
 [package]
-authors = ["Lucas Pickering <lucas@lucaspickering.me>"]
+authors = {workspace = true}
 description = "3D terrain generation"
-edition = "2021"
-license = "MIT"
+edition = {workspace = true}
+homepage = {workspace = true}
 name = "terra"
-repository = "https://github.com/LucasPickering/terra-rs"
-version = "0.1.0"
+repository = {workspace = true}
+version = {workspace = true}
 
 [features]
 bevy = ["dep:bevy_ecs"]
@@ -37,8 +37,8 @@ log = "0.4"
 noise = {version = "0.8", default-features = false}
 rand = "0.8"
 rand_pcg = "0.3"
-serde = {version = "1.0", features = ["derive"]}
-strum = {version = "0.20", features = ["derive"]}
+serde = {workspace = true, features = ["derive"]}
+strum = {workspace = true, features = ["derive"]}
 validator = {version = "0.12", default-features = false, features = ["derive"]}
 
 # Dependencies for specific output formats
@@ -51,7 +51,9 @@ svg = {version = "0.8", optional = true}
 console_error_panic_hook = {version = "0.1", optional = true}
 getrandom = {version = "*", features = ["js"], optional = true}
 js-sys = {version = "0.3", optional = true}
-wasm-bindgen = {version = "0.2", features = ["serde-serialize"], optional = true}
+wasm-bindgen = {version = "0.2", features = [
+  "serde-serialize",
+], optional = true}
 wasm-logger = {version = "0.2", optional = true}
 web-sys = {version = "0.3", features = ["console"], optional = true}
 
