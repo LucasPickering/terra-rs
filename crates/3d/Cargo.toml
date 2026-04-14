@@ -6,6 +6,7 @@ homepage = {workspace = true}
 license = {workspace = true}
 name = "terra-3d"
 repository = {workspace = true}
+rust-version = {workspace = true}
 version = {workspace = true}
 
 [dependencies]

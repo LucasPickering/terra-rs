@@ -32,16 +32,6 @@ This will build the project and start an HTTP server on http://localhost:3000.
 
 Deployed through GitHub pages. Any push to master will trigger the CI to rebuild, which will updated the deployment.
 
-## Rust Nightly
-
-Currently we use Rust nightly because of a handful of features. Once this list gets down to zero, we can switch to stable.
-
-- rustc
-  - [const_fn_floating_point_arithmetic](https://github.com/rust-lang/rust/issues/57241)
-- rustfmt
-  - [imports_granularity](https://github.com/rust-lang/rustfmt/blob/master/Configurations.md#imports_granularity)
-  - [wrap_comments](https://github.com/rust-lang/rustfmt/issues/3347)
-
 ## Troubleshooting
 
 ### ARM + wasm-pack

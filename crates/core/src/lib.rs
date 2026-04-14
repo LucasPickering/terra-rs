@@ -26,8 +26,6 @@
 //! - `svg` - Render worlds in 2D SVG format ([World::to_svg])
 //! - `js` - Enable Wasm entrypoint for direct access from JS
 
-#![feature(const_fn_floating_point_arithmetic)]
-
 // TODO rework these to have one level of module depth
 
 mod config;
