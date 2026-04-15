@@ -59,12 +59,12 @@ impl<'a> CloudLine<'a> {
     fn new(config: &'a WorldConfig, wind_direction: HexAxialDirection) -> Self {
         let world_width = (config.radius as usize) * 2 + 1;
         let cloud_volumes: Vec<Meter3> =
-            iter::repeat(Meter3(0.0)).take(world_width).collect();
+            iter::repeat_n(Meter3(0.0), world_width).collect();
 
         let l = (2 * config.rainfall.evaporation_spread_distance + 1) as usize;
         let center_idx = config.rainfall.evaporation_spread_distance as usize;
         let mut spread_coefficients: Vec<f64> =
-            iter::repeat(0.0).take(l).collect();
+            iter::repeat_n(0.0, l).collect();
         let spread_range = NumRange::new(
             0.0,
             config.rainfall.evaporation_spread_distance as f64,
@@ -133,9 +133,8 @@ impl<'a> CloudLine<'a> {
         &mut self,
         tiles: &mut TilePointMap<TileBuilder>,
     ) {
-        let mut evaporation: Vec<Meter3> = iter::repeat(Meter3(0.0))
-            .take(self.cloud_volumes.len())
-            .collect();
+        let mut evaporation: Vec<Meter3> =
+            iter::repeat_n(Meter3(0.0), self.cloud_volumes.len()).collect();
 
         // drop the load
         #[allow(clippy::needless_range_loop)]

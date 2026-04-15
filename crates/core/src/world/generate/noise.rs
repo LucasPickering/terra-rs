@@ -54,10 +54,10 @@ where
     ///
     /// ### Arguments
     /// - `world_config` - The overall world config, needed for seed and world
-    /// radius.
+    ///   radius.
     /// - `config` - Configuration for the underlying noise function.
     /// - `output_range` - The output range of this function. Noise values will
-    /// be mapped to this range during generation.
+    ///   be mapped to this range during generation.
     pub fn new(
         rng: &mut impl Rng,
         config: NoiseFnConfig,

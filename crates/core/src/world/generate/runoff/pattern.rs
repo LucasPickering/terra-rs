@@ -51,7 +51,7 @@ pub struct RunoffPattern {
     /// A destination is a point that collects runoff. There are two types:
     /// - Ocean
     /// - Terminal tile, which is a tile with no exits, i.e. a tile whose
-    /// neighbors all have a higher elevation than it
+    ///   neighbors all have a higher elevation than it
     ///
     /// This map shows where runoff from this pattern will end up. Each key is
     /// a destination and the value is a fraction [0, 1] denoting how much of

@@ -225,7 +225,7 @@ impl<T: Debug> Cluster<T> {
             .adjacents
             .iter()
             .copied()
-            .chain(other.adjacents.into_iter())
+            .chain(other.adjacents)
             .filter(|pos| !self.tiles.contains_key(pos))
             .collect();
     }
