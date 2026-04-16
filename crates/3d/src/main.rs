@@ -18,10 +18,11 @@ fn main() {
         .add_plugins(DefaultPlugins.set(LogPlugin {
             filter: "info,wgpu_core=warn,wgpu_hal=warn,terra=debug,terra-3d=debug".into(),
             level: bevy::log::Level::DEBUG,
+            ..Default::default()
         }))
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(UiPlugin)
-        .add_plugin(WorldPlugin)
-        .add_plugin(CameraPlugin)
+        .add_plugins(FrameTimeDiagnosticsPlugin::default())
+        .add_plugins(UiPlugin)
+        .add_plugins(WorldPlugin)
+        .add_plugins(CameraPlugin)
         .run();
 }

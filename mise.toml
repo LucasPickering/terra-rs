@@ -1,0 +1,7 @@
+[tasks.3d]
+description = "Run the 3D renderer and watch for changes"
+run = '''
+watchexec --on-busy-update=restart --shell=none \
+    --watch=Cargo.toml --watch=Cargo.lock --watch=crates/ \
+    cargo run --bin terra-3d
+'''

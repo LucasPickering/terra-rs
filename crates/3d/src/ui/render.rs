@@ -1,15 +1,15 @@
-use crate::{ui::enum_radio_select, world::event::RenderWorldEvent};
-use bevy::prelude::{DetectChanges, EventWriter, ResMut};
-use bevy_egui::{egui::Window, EguiContext};
+use crate::{ui::enum_radio_select, world::message::RenderWorldMessage};
+use bevy::prelude::{DetectChanges, MessageWriter, ResMut};
+use bevy_egui::{egui::Window, EguiContexts};
 use terra::{RenderConfig, TileLens};
 
 /// UI for editing render config
 pub fn render_config_ui(
-    mut egui_context: ResMut<EguiContext>,
+    mut egui: EguiContexts,
     mut render_config: ResMut<RenderConfig>,
-    mut render_world_events: EventWriter<RenderWorldEvent>,
+    mut render_world_events: MessageWriter<RenderWorldMessage>,
 ) {
-    Window::new("Render Config").show(egui_context.ctx_mut(), |ui| {
+    Window::new("Render Config").show(egui.ctx_mut().unwrap(), |ui| {
         ui.label("Lens");
         let mut lens = render_config.tile_lens;
         ui.vertical(enum_radio_select(
@@ -33,6 +33,6 @@ pub fn render_config_ui(
 
     // If we changed the config at all, then trigger a new render
     if render_config.is_changed() {
-        render_world_events.send(RenderWorldEvent);
+        render_world_events.write(RenderWorldMessage);
     }
 }

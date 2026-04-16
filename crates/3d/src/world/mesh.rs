@@ -1,6 +1,6 @@
 use bevy::{
-    prelude::Mesh,
-    render::{mesh::Indices, render_resource::PrimitiveTopology},
+    asset::RenderAssetUsages, mesh::Indices, prelude::Mesh,
+    render::render_resource::PrimitiveTopology,
 };
 use terra::{HexDirection, Point2, TilePoint, VertexDirection, WorldRenderer};
 
@@ -12,14 +12,27 @@ pub struct TileMeshBuilder {
 }
 
 impl TileMeshBuilder {
-    pub fn water(mut self) -> Self {
-        self.sides = [false; 6];
-        self.top = false;
-        self
+    /// Build solid mesh
+    pub fn solid() -> Self {
+        Self {
+            top: true,
+            sides: [true; 6],
+        }
+    }
+
+    /// Build translucent mesh
+    pub fn water() -> Self {
+        Self {
+            top: false,
+            sides: [false; 6],
+        }
     }
 
     pub fn build(&self, renderer: &WorldRenderer) -> Mesh {
-        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+        let mesh = Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::RENDER_WORLD,
+        );
 
         // A tile has 12 vertices, 6 on top and 6 on bottom. In this order:
         // Bot-N, Bot-ENE, Bot-ESE, Bot-S, Bot-WSW, Bot-WNW
@@ -57,12 +70,12 @@ impl TileMeshBuilder {
         //    /   \
         //   / T1  \
         //  /       \
-        // 5.........1
-        // |       ..|
-        // | T2  ..  |
-        // |   .. T3 |
-        // | ..      |
-        // 4.........2
+        // 5---------1
+        // |       / |
+        // | T2  /   |
+        // |   /  T3 |
+        // | /       |
+        // 4---------2
         //  \       /
         //   \  T4 /
         //    \   /
@@ -75,12 +88,12 @@ impl TileMeshBuilder {
         //    /   \
         //   / T1  \
         //  /       \
-        // 11........7
-        // |       ..|
-        // | T2  ..  |
-        // |   .. T3 |
-        // | ..      |
-        // 10........8
+        // 11--------7
+        // |       / |
+        // | T2  /   |
+        // |   /  T3 |
+        // | /       |
+        // 10--------8
         //  \       /
         //   \  T4 /
         //    \   /
@@ -93,7 +106,7 @@ impl TileMeshBuilder {
         let mut indices: Vec<u32> = Vec::new();
         let mut indexes_used: Vec<u32> = Vec::new();
 
-        indexes_used.extend((0..6).into_iter());
+        indexes_used.extend(0..6);
         indices.extend([
             0, 1, 5, // T1
             1, 4, 5, // T2
@@ -102,7 +115,7 @@ impl TileMeshBuilder {
         ]);
 
         if self.top {
-            indexes_used.extend((6..12).into_iter());
+            indexes_used.extend(6..12);
             indices.extend([
                 6, 7, 11, // T1
                 7, 10, 11, // T2
@@ -138,21 +151,9 @@ impl TileMeshBuilder {
             .map(|i| positions[*i as usize])
             .collect();
 
-        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions_used);
-        mesh.set_indices(Some(Indices::U32(indices)));
-
-        mesh.duplicate_vertices();
-        mesh.compute_flat_normals();
-
-        mesh
-    }
-}
-
-impl Default for TileMeshBuilder {
-    fn default() -> Self {
-        Self {
-            top: true,
-            sides: [true; 6],
-        }
+        mesh.with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions_used)
+            .with_inserted_indices(Indices::U32(indices))
+            .with_duplicated_vertices()
+            .with_computed_flat_normals()
     }
 }
