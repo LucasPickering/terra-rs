@@ -1,7 +1,7 @@
-mod render;
-mod world;
+mod render_config;
+mod world_config;
 
-use crate::ui::world::WorldConfigUiState;
+use crate::ui::world_config::WorldConfigUiState;
 use bevy::{
     app::Startup,
     diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin},
@@ -20,11 +20,15 @@ impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(EguiPlugin::default())
             .insert_resource(WorldConfigUiState::default())
-            .add_systems(Startup, world::init_world_config_ui)
+            .add_systems(Startup, world_config::init_world_config_ui)
             .add_systems(EguiPrimaryContextPass, render_diagnostics_ui)
             .add_systems(
                 EguiPrimaryContextPass,
-                (world::world_config_ui, render::render_config_ui).chain(),
+                (
+                    world_config::world_config_ui,
+                    render_config::render_config_ui,
+                )
+                    .chain(),
             );
     }
 }
