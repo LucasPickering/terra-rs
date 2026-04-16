@@ -20,13 +20,6 @@ use crate::{
 };
 use wasm_bindgen::{prelude::*, JsCast};
 
-/// Executed when the Wasm module is first loaded
-#[wasm_bindgen(start)]
-pub fn main() {
-    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-    wasm_logger::init(wasm_logger::Config::default());
-}
-
 /// Validate the given config and return it as a strictly typed JS object.
 /// Any missing values will be populated with defaults. If the given value
 /// fails to serialize, or has any invalid values, this will fail.

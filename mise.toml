@@ -5,3 +5,7 @@ watchexec --on-busy-update=restart --shell=none --wrap-process=none \
     --watch=Cargo.toml --watch=Cargo.lock --watch=crates/ \
     cargo run --bin terra-3d
 '''
+
+[tasks.web]
+description = "Build the web page and host it"
+run = "cargo run --bin terra-3d --target wasm32-unknown-unknown"
