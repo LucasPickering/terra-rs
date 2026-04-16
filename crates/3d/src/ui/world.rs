@@ -1,11 +1,11 @@
 use crate::{
     ui::{enum_radio_select, section},
-    world::event::GenerateWorldEvent,
+    world::message::GenerateWorldMessage,
 };
-use bevy::prelude::{trace, EventWriter, Res, ResMut, Resource};
+use bevy::prelude::{trace, MessageWriter, Res, ResMut, Resource};
 use bevy_egui::{
     egui::{Slider, Ui, Window},
-    EguiContext,
+    EguiContexts,
 };
 use std::ops::{Deref, RangeInclusive};
 use terra::{Meter3, NoiseFnType, WorldConfig};
@@ -43,9 +43,9 @@ pub(super) fn init_world_config_ui(
 
 /// UI for editing world config
 pub(super) fn world_config_ui(
-    mut egui_context: ResMut<EguiContext>,
+    mut egui: EguiContexts,
     mut world_config: ResMut<WorldConfig>,
-    mut generate_world_events: EventWriter<GenerateWorldEvent>,
+    mut generate_world_events: MessageWriter<GenerateWorldMessage>,
     mut ui_state: ResMut<WorldConfigUiState>,
 ) {
     // Did the JSON editor change on this frame?
@@ -57,7 +57,7 @@ pub(super) fn world_config_ui(
     let mut controls_config = world_config.clone();
 
     Window::new("World Config").vscroll(true).show(
-        egui_context.ctx_mut(),
+        egui.ctx_mut().unwrap(),
         |ui| {
             // Directly edit the config JSON
             ui.collapsing("JSON", |ui| {
@@ -76,7 +76,7 @@ pub(super) fn world_config_ui(
 
                 // Button to trigger a world gen
                 if ui.button("Generate World").clicked() {
-                    generate_world_events.send(GenerateWorldEvent);
+                    generate_world_events.write(GenerateWorldMessage);
                 }
             });
         },

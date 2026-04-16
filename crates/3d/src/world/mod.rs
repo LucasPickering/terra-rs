@@ -1,18 +1,26 @@
-pub mod event;
 mod mesh;
+pub mod message;
 pub mod storage;
 
 use crate::world::{
-    event::{GenerateWorldEvent, RenderWorldEvent},
     mesh::TileMeshBuilder,
+    message::{GenerateWorldMessage, RenderWorldMessage},
     storage::TileStorage,
 };
-use bevy::prelude::{
-    debug, default, info, AlphaMode, App, Assets, BuildChildren, Color,
-    Commands, DespawnRecursiveExt, DirectionalLight, DirectionalLightBundle,
-    Entity, EventReader, EventWriter, IntoSystemDescriptor, Mesh, PbrBundle,
-    Plugin, Query, Res, ResMut, SpatialBundle, StandardMaterial, Transform,
-    Vec3, With,
+use bevy::{
+    app::{Startup, Update},
+    color::LinearRgba,
+    ecs::{
+        message::{MessageReader, MessageWriter},
+        schedule::IntoScheduleConfigs,
+    },
+    mesh::Mesh3d,
+    pbr::MeshMaterial3d,
+    prelude::{
+        debug, default, info, AlphaMode, App, Assets, Commands,
+        DirectionalLight, Entity, Mesh, Plugin, Query, Res, ResMut,
+        StandardMaterial, Transform, Vec3, Visibility, With,
+    },
 };
 use terra::{
     GeoFeature, HasHexPosition, RenderConfig, Tile, TileLens, World,
@@ -28,38 +36,35 @@ impl Plugin for WorldPlugin {
             ..default()
         })
         .insert_resource(RenderConfig::default())
-        .add_event::<GenerateWorldEvent>()
-        .add_event::<RenderWorldEvent>()
-        .add_startup_system(init_scene)
-        .add_startup_system(init_world)
-        .add_system(generate_world)
+        .add_message::<GenerateWorldMessage>()
+        .add_message::<RenderWorldMessage>()
+        .add_systems(Startup, (init_scene, init_world))
         // Always delete *before* generating so we don't clobber new stuff
-        .add_system(delete_world.before(generate_world))
-        .add_system(render_world)
+        .add_systems(Update, (delete_world, generate_world).chain())
         // Always unrender before re-rendering
-        .add_system(unrender_world.before(render_world));
+        .add_systems(Update, (unrender_world, render_world).chain());
     }
 }
 
 /// Add static entities to the scene
 fn init_scene(mut commands: Commands) {
     // Directional light emulates the sun
-    commands.spawn(DirectionalLightBundle {
-        directional_light: DirectionalLight {
+    commands.spawn((
+        DirectionalLight {
             shadows_enabled: true,
             ..default()
         },
-        // This determines the direction. Actual position doesn't matter though,
-        // it's just there to determine rotation from .looking_at
-        transform: Transform::from_xyz(500.0, 100.0, 500.0)
+        // This determines the direction. Actual position doesn't matter
+        // though, it's just there to determine rotation from
+        // .looking_at
+        Transform::from_xyz(500.0, 100.0, 500.0)
             .looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
+    ));
 }
 
 /// Trigger initial world generation
-fn init_world(mut generate_world_events: EventWriter<GenerateWorldEvent>) {
-    generate_world_events.send(GenerateWorldEvent);
+fn init_world(mut generate_world_events: MessageWriter<GenerateWorldMessage>) {
+    generate_world_events.write(GenerateWorldMessage);
 }
 
 /// Generate a world and add each tile as its own entity. This just creates the
@@ -67,10 +72,10 @@ fn init_world(mut generate_world_events: EventWriter<GenerateWorldEvent>) {
 fn generate_world(
     mut commands: Commands,
     world_config: Res<WorldConfig>,
-    mut generate_world_events: EventReader<GenerateWorldEvent>,
-    mut render_world_events: EventWriter<RenderWorldEvent>,
+    mut generate_world_events: MessageReader<GenerateWorldMessage>,
+    mut render_world_events: MessageWriter<RenderWorldMessage>,
 ) {
-    for _ in generate_world_events.iter() {
+    for _ in generate_world_events.read() {
         info!("Generating world");
         let world = World::generate(world_config.to_owned()).unwrap();
 
@@ -84,7 +89,8 @@ fn generate_world(
 
         commands.spawn(tile_storage);
         // We have a new world, it needs to be rendered now
-        render_world_events.send(RenderWorldEvent);
+        println!("write RenderWorldMessage");
+        render_world_events.write(RenderWorldMessage);
     }
 }
 
@@ -94,14 +100,14 @@ fn delete_world(
     mut commands: Commands,
     tile_storage_query: Query<Entity, With<TileStorage>>,
     tile_query: Query<Entity, With<Tile>>,
-    mut generate_world_events: EventReader<GenerateWorldEvent>,
+    mut generate_world_events: MessageReader<GenerateWorldMessage>,
 ) {
-    for _ in generate_world_events.iter() {
+    for _ in generate_world_events.read() {
         info!("Deleting old world");
         for entity in tile_query.iter().chain(tile_storage_query.iter()) {
             // Make sure to delete all _children_ too, which hold a lot of the
             // visuals
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
         }
     }
 }
@@ -112,11 +118,11 @@ fn render_world(
     mut commands: Commands,
     tile_query: Query<(Entity, &Tile)>,
     render_config: Res<RenderConfig>,
-    mut render_world_events: EventReader<RenderWorldEvent>,
+    mut render_world_events: MessageReader<RenderWorldMessage>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    for _ in render_world_events.iter() {
+    for _ in render_world_events.read() {
         debug!("Rendering tiles");
         let renderer =
             WorldRenderer::new(*render_config).expect("Invalid render config");
@@ -124,9 +130,9 @@ fn render_world(
         // We're duping these meshes on every render, but the old meshes should
         // just get thrown away so it's fine I guess
         let tile_mesh_handle =
-            meshes.add(TileMeshBuilder::default().build(&renderer));
+            meshes.add(TileMeshBuilder::solid().build(&renderer));
         let water_mesh_handle =
-            meshes.add(TileMeshBuilder::default().water().build(&renderer));
+            meshes.add(TileMeshBuilder::water().build(&renderer));
         let water_material_handle = materials.add(water_material());
 
         // For each tile entity, we'll attach additional visual components
@@ -140,32 +146,32 @@ fn render_world(
             // isolated, e.g. tile height doesn't affect water or vice/versa
             commands
                 .entity(entity)
-                .insert(SpatialBundle {
-                    transform: Transform::from_xyz(
+                .insert((
+                    Visibility::default(),
+                    Transform::from_xyz(
                         position_2d.x as f32,
                         0.0,
                         position_2d.y as f32,
                     ),
-                    ..default()
-                })
+                ))
                 .with_children(|parent| {
                     // Spawn the hex mesh
-                    parent.spawn(PbrBundle {
-                        mesh: tile_mesh_handle.clone(),
-                        material: materials.add(StandardMaterial {
-                            base_color: Color::rgb(
-                                color.red,
-                                color.green,
-                                color.blue,
-                            ),
-                            perceptual_roughness: 1.0,
-                            ..default()
-                        }),
-                        transform: Transform::from_scale(
-                            [1.0, tile_height, 1.0].into(),
+                    parent.spawn((
+                        Mesh3d(tile_mesh_handle.clone()),
+                        MeshMaterial3d(
+                            materials.add(StandardMaterial {
+                                base_color: LinearRgba::rgb(
+                                    color.red,
+                                    color.green,
+                                    color.blue,
+                                )
+                                .into(),
+                                perceptual_roughness: 1.0,
+                                ..default()
+                            }),
                         ),
-                        ..default()
-                    });
+                        Transform::from_scale([1.0, tile_height, 1.0].into()),
+                    ));
 
                     // Spawn additional visuals for **surface lens only**
                     if render_config.tile_lens == TileLens::Surface {
@@ -174,16 +180,11 @@ fn render_world(
                             // Span the distance between the tile and sea level
                             let sea_level_height =
                                 renderer.sea_level_height() as f32;
-                            parent.spawn(PbrBundle {
-                                mesh: water_mesh_handle.clone(),
-                                material: water_material_handle.clone(),
-                                transform: Transform::from_xyz(
-                                    0.0,
-                                    sea_level_height,
-                                    0.0,
-                                ),
-                                ..default()
-                            });
+                            parent.spawn((
+                                Mesh3d(water_mesh_handle.clone()),
+                                MeshMaterial3d(water_material_handle.clone()),
+                                Transform::from_xyz(0.0, sea_level_height, 0.0),
+                            ));
                         }
 
                         // Add water for lakes (which is a *feature*, not a
@@ -192,16 +193,11 @@ fn render_world(
                             let runoff_height = renderer
                                 .elevation_to_height(tile.runoff_elevation())
                                 as f32;
-                            parent.spawn(PbrBundle {
-                                mesh: water_mesh_handle.clone(),
-                                material: water_material_handle.clone(),
-                                transform: Transform::from_xyz(
-                                    0.0,
-                                    runoff_height,
-                                    0.0,
-                                ),
-                                ..default()
-                            });
+                            parent.spawn((
+                                Mesh3d(water_mesh_handle.clone()),
+                                MeshMaterial3d(water_material_handle.clone()),
+                                Transform::from_xyz(0.0, runoff_height, 0.0),
+                            ));
                         }
                     }
                 });
@@ -214,25 +210,25 @@ fn render_world(
 fn unrender_world(
     mut commands: Commands,
     tile_query: Query<Entity, With<Tile>>,
-    mut render_world_events: EventReader<RenderWorldEvent>,
+    mut render_world_events: MessageReader<RenderWorldMessage>,
 ) {
     // TODO Figure out how to remove "everything but tile" without having to
     // keep track of what we create during rendering
-    for _ in render_world_events.iter() {
+    for _ in render_world_events.read() {
         debug!("Un-rendering tiles");
         for entity in tile_query.iter() {
             commands
                 .entity(entity)
-                .remove::<SpatialBundle>()
+                // TODO remove top-level components too
                 // Sure hope there aren't any children beside the visuals...
-                .despawn_descendants();
+                .despawn_children();
         }
     }
 }
 
 fn water_material() -> StandardMaterial {
     StandardMaterial {
-        base_color: Color::rgba(0.078, 0.302, 0.639, 0.5),
+        base_color: LinearRgba::new(0.078, 0.302, 0.639, 0.5).into(),
         alpha_mode: AlphaMode::Blend,
         metallic: 0.0,
         reflectance: 0.0,

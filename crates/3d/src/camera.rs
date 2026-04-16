@@ -1,15 +1,20 @@
 //! https://bevy-cheatbook.github.io/cookbook/pan-orbit-camera.html
 
 use bevy::{
-    input::mouse::{MouseMotion, MouseWheel},
-    prelude::{
-        Camera3dBundle, Commands, Component, EventReader, Input, Mat3,
-        MouseButton, Plugin, Projection, Quat, Query, Res, ResMut, Transform,
-        Vec2, Vec3,
+    app::{Startup, Update},
+    camera::Camera3d,
+    ecs::{message::MessageReader, query::With},
+    input::{
+        mouse::{MouseMotion, MouseWheel},
+        ButtonInput,
     },
-    window::Windows,
+    prelude::{
+        Commands, Component, Mat3, MouseButton, Plugin, Projection, Quat,
+        Query, Res, ResMut, Transform, Vec2, Vec3,
+    },
+    window::{PrimaryWindow, Window},
 };
-use bevy_egui::EguiContext;
+use bevy_egui::input::EguiWantsInput;
 
 const ZOOM_SPEED: f32 = 0.02;
 const MIN_RADIUS: f32 = 0.1;
@@ -18,9 +23,25 @@ pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_startup_system(spawn_camera)
-            .add_system(pan_orbit_camera);
+        app.add_systems(Startup, spawn_camera)
+            .add_systems(Update, pan_orbit_camera);
     }
+}
+
+/// Spawn a camera
+fn spawn_camera(mut commands: Commands) {
+    let translation = Vec3::new(200.0, 250.0, -200.0);
+    let radius = translation.length();
+
+    commands.spawn((
+        Camera3d::default(),
+        PanOrbitCamera {
+            radius,
+            ..Default::default()
+        },
+        Transform::from_translation(translation)
+            .looking_at(Vec3::ZERO, Vec3::Y),
+    ));
 }
 
 /// Tags an entity as capable of panning and orbiting.
@@ -46,17 +67,15 @@ impl Default for PanOrbitCamera {
 /// Pan the camera with middle mouse click, zoom with scroll wheel, orbit with
 /// right mouse click.
 fn pan_orbit_camera(
-    windows: Res<Windows>,
-    mut egui_context: ResMut<EguiContext>,
-    mut ev_motion: EventReader<MouseMotion>,
-    mut ev_scroll: EventReader<MouseWheel>,
-    input_mouse: Res<Input<MouseButton>>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    egui_input: ResMut<EguiWantsInput>,
+    mut ev_motion: MessageReader<MouseMotion>,
+    mut ev_scroll: MessageReader<MouseWheel>,
+    input_mouse: Res<ButtonInput<MouseButton>>,
     mut query: Query<(&mut PanOrbitCamera, &mut Transform, &Projection)>,
 ) {
     // If the UI has the cursor captured, ignore all input events
-    let egui_context = egui_context.ctx_mut();
-    if egui_context.is_pointer_over_area() || egui_context.wants_pointer_input()
-    {
+    if egui_input.is_pointer_over_area() || egui_input.wants_pointer_input() {
         return;
     }
 
@@ -70,16 +89,16 @@ fn pan_orbit_camera(
     let mut orbit_button_changed = false;
 
     if input_mouse.pressed(orbit_button) {
-        for ev in ev_motion.iter() {
+        for ev in ev_motion.read() {
             rotation_move += ev.delta;
         }
     } else if input_mouse.pressed(pan_button) {
         // Pan only if we're not rotating at the moment
-        for ev in ev_motion.iter() {
+        for ev in ev_motion.read() {
             pan += ev.delta;
         }
     }
-    for ev in ev_scroll.iter() {
+    for ev in ev_scroll.read() {
         scroll += ev.y;
     }
     if input_mouse.just_released(orbit_button)
@@ -101,7 +120,7 @@ fn pan_orbit_camera(
         let mut any = false;
         if rotation_move.length_squared() > 0.0 {
             any = true;
-            let window = get_primary_window_size(&windows);
+            let window = get_primary_window_size(windows);
             let delta_x = {
                 let delta =
                     rotation_move.x / window.x * std::f32::consts::PI * 2.0;
@@ -119,7 +138,7 @@ fn pan_orbit_camera(
         } else if pan.length_squared() > 0.0 {
             any = true;
             // make panning distance independent of resolution and FOV,
-            let window = get_primary_window_size(&windows);
+            let window = get_primary_window_size(windows);
             if let Projection::Perspective(projection) = projection {
                 pan *= Vec2::new(
                     projection.fov * projection.aspect_ratio,
@@ -150,25 +169,9 @@ fn pan_orbit_camera(
     }
 }
 
-fn get_primary_window_size(windows: &Res<Windows>) -> Vec2 {
-    let window = windows.get_primary().unwrap();
+fn get_primary_window_size(
+    windows: Query<&Window, With<PrimaryWindow>>,
+) -> Vec2 {
+    let window = windows.iter().next().unwrap();
     Vec2::new(window.width(), window.height())
-}
-
-/// Spawn a camera like this
-fn spawn_camera(mut commands: Commands) {
-    let translation = Vec3::new(200.0, 250.0, -200.0);
-    let radius = translation.length();
-
-    commands.spawn((
-        Camera3dBundle {
-            transform: Transform::from_translation(translation)
-                .looking_at(Vec3::ZERO, Vec3::Y),
-            ..Default::default()
-        },
-        PanOrbitCamera {
-            radius,
-            ..Default::default()
-        },
-    ));
 }

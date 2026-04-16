@@ -15,7 +15,7 @@ use validator::Validate;
 /// Configuration that defines a world gen process. Two worlds generated with
 /// same config will always be identical.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Validate)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::system::Resource))]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::resource::Resource))]
 #[serde(default)]
 pub struct WorldConfig {
     /// RNG seed to use for all randomized processes during world gen. See the
